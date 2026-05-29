@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, MapPin, Landmark, QrCode, Wallet, 
@@ -9,7 +9,7 @@ import {
 // IMPORT SUPABASE
 import { supabase } from '@/lib/supabase';
 
-const PaymentPage = () => {
+const PaymentContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -287,4 +287,10 @@ const PaymentPage = () => {
   );
 };
 
-export default PaymentPage;
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-fluent-bg text-text-muted">Memuat pembayaran...</div>}>
+      <PaymentContent />
+    </Suspense>
+  );
+}
