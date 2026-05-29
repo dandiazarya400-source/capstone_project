@@ -2,11 +2,12 @@
 // @ts-nocheck
 /* eslint-disable */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { Search, Home, User, History, BadgeCheck, SlidersHorizontal, X, Check } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/BottomNav';
+
 
 interface ProductProps {
   id: string;
