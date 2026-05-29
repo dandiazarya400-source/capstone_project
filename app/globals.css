@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  /* ========================================================
+     PALET WARNA "DEEP DARK PURPLE" (Berdasarkan referensi)
+     ======================================================== */
+  
+  /* Latar Belakang Utama (Ungu sangat gelap/hampir hitam) */
+  --color-fluent-bg: #1A0B2E; 
+  
+  /* Latar Belakang Kartu & Navigasi (Ungu gelap tapi lebih terang dari background) */
+  --color-fluent-card: #2B164D;
+  
+  /* Warna Aksen Bercahaya (Lavender/Ungu Terang untuk tombol & ikon) */
+  --color-fluent-accent: #A374FF; 
+  
+  /* Teks Utama (Putih bersih) */
+  --color-text-main: #FFFFFF;
+  
+  /* Teks Redup (Abu-abu keunguan untuk deskripsi/placeholder) */
+  --color-text-muted: #A198BA;
+  
+  /* Sudut membulat */
+  --radius-fluent-rounded: 24px;
+}
+
+body {
+  /* Latar belakang luar HP dibuat sangat gelap agar menyatu */
+  background-color: #0B0416; 
+  color: #FFFFFF;
+}
+
+@layer utilities {
+  /* Untuk Chrome, Safari, dan Edge */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Untuk Firefox */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE dan Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+}

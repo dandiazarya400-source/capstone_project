@@ -1,0 +1,228 @@
+"use client";
+
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { 
+  ArrowLeft, Copy, Timer, Landmark, 
+  Info, CheckCircle2, Loader2 
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase'; // PASTIKAN IMPORT SUPABASE
+
+const CheckoutInstructionContent = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // 1. TANGKAP SEMUA DATA DARI URL
+  const totalParam = searchParams.get('total');
+  const totalPayment = totalParam ? parseInt(totalParam) : 291000; 
+  
+  const itemId = searchParams.get('id');
+  const startDay = searchParams.get('start');
+  const endDay = searchParams.get('end');
+  const deliveryParam = searchParams.get('delivery');
+
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Fungsi Format Rupiah
+  const formatRupiah = (angka: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+  };
+
+  // State untuk timer (Hitung mundur 24 jam)
+  const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 59 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59, hours: prev.hours };
+        return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert('Tersalin ke papan klip!');
+  };
+
+  // ================= LOGIKA SIMPAN KE DATABASE =================
+  const handlePaymentConfirm = async () => {
+    // Validasi pencegahan jika URL tidak lengkap
+    if (!itemId || !startDay || !endDay) {
+      alert("Data pesanan tidak lengkap (ID atau Tanggal hilang). Silakan ulangi proses dari awal.");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // 1. Ambil User ID yang sedang login
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) throw new Error("Sesi tidak valid. Silakan login kembali.");
+
+      // 2. Format Tanggal (Sesuai mockup kalendermu: April 2025)
+      const formattedStart = `2025-04-${startDay.padStart(2, '0')}`;
+      const formattedEnd = `2025-04-${endDay.padStart(2, '0')}`;
+      
+      // PERBAIKAN DI SINI: Kirim kode mentah ('owner' atau 'self') agar lolos Check Constraint Supabase
+      const methodStr = deliveryParam === 'self' ? 'self' : 'owner';
+
+      // 3. Masukkan ke tabel transactions
+      const { error: insertError } = await supabase.from('transactions').insert([{
+        tenant_id: authData.user.id,
+        item_id: itemId,
+        start_date: formattedStart,
+        end_date: formattedEnd,
+        total_price: totalPayment,
+        delivery_method: methodStr,
+        status: 'menunggu' // Status awal pesanan masuk
+      }]);
+
+      if (insertError) throw insertError;
+
+      // 4. Lanjut ke halaman sukses jika berhasil!
+      router.push('/payment/success');
+
+    } catch (error: any) {
+      console.error("Gagal memproses pesanan:", error);
+      alert(error.message || "Terjadi kendala saat menghubungi server.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+      
+      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
+        <button 
+          onClick={() => router.back()} 
+          className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <h1 className="text-xl font-bold ml-2">Intruksi Pembayaran</h1>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-4 pt-6 pb-10 scrollbar-hide space-y-6">
+        
+        <div className="bg-gradient-to-r from-fluent-accent/20 to-transparent border border-fluent-accent/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <Timer className="w-6 h-6 text-fluent-accent animate-pulse" />
+            <div>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Batas Waktu Bayar</p>
+              <p className="text-lg font-black text-text-main">
+                {String(timeLeft.hours).padStart(2, '0')}:
+                {String(timeLeft.minutes).padStart(2, '0')}:
+                {String(timeLeft.seconds).padStart(2, '0')}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-text-muted">Jatuh Tempo</p>
+            <p className="text-xs font-bold text-text-main">Besok, 14:20 WIB</p>
+          </div>
+        </div>
+
+        <div className="bg-fluent-card rounded-[32px] p-6 shadow-xl border border-white/5">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+              <Landmark className="w-6 h-6 text-black" />
+            </div>
+            <div>
+              <h3 className="font-bold text-text-main">Transfer Bank BCA</h3>
+              <p className="text-xs text-text-muted">Dicek Otomatis • Asoka Lensa</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-[#1A0B2E] rounded-2xl p-4 border border-white/5">
+              <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Nomor Rekening / Virtual Account</p>
+              <div className="flex justify-between items-center">
+                <span className="text-xl font-black text-fluent-accent tracking-wider">125 0895 1679 9498</span>
+                <button 
+                  onClick={() => handleCopy('125089516799498')}
+                  className="flex items-center gap-1.5 text-xs font-bold text-text-main hover:text-fluent-accent transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                  Salin
+                </button>
+              </div>
+            </div>
+
+        <div className="bg-[#1A0B2E] rounded-2xl p-4 border border-white/5">
+          <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Total Pembayaran</p>
+          <div className="flex justify-between items-center">
+            <span className="text-xl font-black text-text-main">
+              {formatRupiah(totalPayment)}
+            </span>
+            <button 
+              onClick={() => handleCopy(totalPayment.toString())}
+              className="flex items-center gap-1.5 text-xs font-bold text-text-main hover:text-fluent-accent transition-colors"
+            >
+              <Copy className="w-4 h-4" />
+              Salin
+            </button>
+          </div>
+        </div>
+          </div>
+        </div>
+
+        <div className="px-2">
+          <h4 className="text-sm font-bold text-text-main mb-4 flex items-center gap-2">
+            <Info className="w-4 h-4 text-fluent-accent" />
+            Cara Pembayaran
+          </h4>
+          <ul className="space-y-4">
+            {[
+              "Pilih menu Transfer ke Rekening Virtual Account.",
+              "Masukkan nomor Virtual Account yang tertera di atas.",
+              "Pastikan nominal bayar sesuai hingga 3 digit terakhir.",
+              "Simpan bukti transfer hingga status transaksi berubah."
+            ].map((step, i) => (
+              <li key={i} className="flex gap-4 items-start">
+                <span className="w-5 h-5 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold text-fluent-accent shrink-0 mt-0.5 border border-white/10">
+                  {i + 1}
+                </span>
+                <p className="text-xs text-text-muted leading-relaxed">{step}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+      </main>
+
+      <div className="w-full bg-fluent-card/95 backdrop-blur-xl p-5 md:pb-8 pb-5 rounded-t-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] border-t border-white/10 z-50 shrink-0">
+        <div className="flex flex-col gap-3">
+          <button 
+            disabled={isProcessing}
+            onClick={handlePaymentConfirm} // PANGGIL FUNGSI DATABASE DI SINI
+            className="w-full bg-fluent-accent text-white font-bold py-4 rounded-2xl flex justify-center items-center space-x-2 shadow-lg shadow-fluent-accent/30 hover:bg-[#b58eff] transition-all disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+            <span>{isProcessing ? 'Memverifikasi...' : 'Saya Sudah Bayar'}</span>
+          </button>
+          
+          <button 
+            onClick={() => router.push('/')}
+            className="w-full bg-transparent text-text-muted text-xs font-bold py-2 hover:text-text-main transition-colors"
+          >
+            Nanti saja, Kembali ke Beranda
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
+};
+
+// Bungkus dengan Suspense agar aman saat di-build Next.js
+export default function CheckoutInstructionPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-fluent-bg text-text-muted">Memuat instruksi...</div>}>
+      <CheckoutInstructionContent />
+    </Suspense>
+  );
+}
