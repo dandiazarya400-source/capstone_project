@@ -35,13 +35,26 @@ const EditProductPage = () => {
 
     const fetchItem = async () => {
       try {
+        // [BARU] Dapatkan ID Admin yang sedang login
+        const { data: authData } = await supabase.auth.getUser();
+        const currentUserId = authData.user?.id;
+
+        if (!currentUserId) return;
+
+        // [UBAH] Tarik data barang, dan tambahkan filter owner_id
         const { data, error } = await supabase
           .from('items')
           .select('*')
           .eq('id', id)
+          .eq('owner_id', currentUserId) // <--- KUNCI GEMBOKNYA DI SINI
           .single();
 
-        if (error) throw error;
+        if (error) {
+          // [BARU] Jika error (barang bukan miliknya/tidak ada), usir kembali ke daftar barang
+          showToast('error', 'Akses ditolak! Ini bukan barang milik Anda.');
+          setTimeout(() => router.push('/admin/items'), 2000);
+          return;
+        }
 
         if (data) {
           setName(data.name || '');

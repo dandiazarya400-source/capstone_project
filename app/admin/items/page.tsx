@@ -15,28 +15,49 @@ const AdminManageItems = () => {
   const [filter, setFilter] = useState<'semua' | 'live' | 'draft'>('semua');
 
   const filteredItems = items.filter(item => {
-  if (filter === 'live') return item.is_available === true;
-  if (filter === 'draft') return item.is_available === false;
-  return true;
-});
+    if (filter === 'live') return item.is_available === true;
+    if (filter === 'draft') return item.is_available === false;
+    return true;
+  });
 
-  // 1. Ambil SEMUA barang
+  // ================= PERUBAHAN UTAMA DI SINI =================
   const fetchItems = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('created_at', { ascending: false });
 
-    if (data) setItems(data);
-    setLoading(false);
+    try {
+      // 1. Dapatkan ID Admin yang sedang login
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const currentUserId = authData.user?.id;
+
+      if (authError || !currentUserId) {
+        console.error("Gagal mendapatkan sesi user");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Tarik SEMUA barang, TAPI hanya yang owner_id-nya milik Admin ini
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .eq('owner_id', currentUserId) // <--- KUNCI PEMISAH RUANGAN
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      if (data) setItems(data);
+
+    } catch (error) {
+      console.error("Gagal menarik data barang:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+  // ===========================================================
 
   useEffect(() => {
     fetchItems();
   }, []);
 
-  // 2. Fungsi Toggle Publish (Menggunakan is_available sesuai database-mu)
+  // 2. Fungsi Toggle Publish
   const handleTogglePublish = async (id: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
     
@@ -71,11 +92,8 @@ const AdminManageItems = () => {
   };
 
   return (
-    // DITAMBAHKAN PENGHILANG SCROLLBAR DI SINI
     <div className="h-full w-full overflow-y-auto bg-fluent-bg text-text-main p-5 pb-24 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       
-      
-
       {/* Header */}
       <header className="flex justify-between items-center mb-6">
         <div>
@@ -94,21 +112,21 @@ const AdminManageItems = () => {
       </header>
 
       {/* Filter Tab */}
-    <div className="flex gap-2 mb-6 px-1 overflow-x-auto scrollbar-hide">
-      {(['semua', 'live', 'draft'] as const).map((tab) => (
-        <button
-          key={tab}
-          onClick={() => setFilter(tab)}
-          className={`px-4 py-1.5 rounded-full text-[11px] font-bold capitalize transition-all ${
-            filter === tab 
-              ? 'bg-fluent-accent text-white shadow-lg' 
-              : 'bg-white/5 text-text-muted hover:bg-white/10'
-          }`}
-        >
-          {tab}
-        </button>
-      ))}
-    </div>
+      <div className="flex gap-2 mb-6 px-1 overflow-x-auto scrollbar-hide">
+        {(['semua', 'live', 'draft'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setFilter(tab)}
+            className={`px-4 py-1.5 rounded-full text-[11px] font-bold capitalize transition-all ${
+              filter === tab 
+                ? 'bg-fluent-accent text-white shadow-lg' 
+                : 'bg-white/5 text-text-muted hover:bg-white/10'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
 
       {/* List Barang */}
       {loading ? (
@@ -120,11 +138,9 @@ const AdminManageItems = () => {
           {filteredItems.map((item) => (
             <div key={item.id} className="bg-fluent-card border border-white/5 rounded-2xl p-3 shadow-lg flex flex-col gap-3 relative overflow-hidden transition-all">
               
-              {/* Indikator Garis Warna di Kiri (Hijau = Live, Merah = Draft) */}
               <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${item.is_available ? 'bg-green-500' : 'bg-red-500/50'}`}></div>
 
               <div className="flex gap-3 ml-2">
-                {/* Thumbnail Foto */}
                 <div className="w-16 h-16 rounded-xl bg-[#1A0B2E] border border-white/10 overflow-hidden shrink-0">
                   <img 
                     src={item.image_urls?.[0] || 'https://via.placeholder.com/150'} 
@@ -133,7 +149,6 @@ const AdminManageItems = () => {
                   />
                 </div>
 
-                {/* Info Utama */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-bold text-sm truncate pr-2 text-text-main">{item.name}</h3>
@@ -159,17 +174,14 @@ const AdminManageItems = () => {
                 </div>
               </div>
 
-              {/* Garis Pemisah */}
               <div className="h-px w-full bg-white/5 ml-2"></div>
 
-              {/* Baris Bawah: Stok & Tombol Aksi */}
               <div className="flex justify-between items-center ml-2">
                 <div className="text-[11px] text-text-muted font-medium bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
                   Sisa Stok: <span className="text-text-main font-bold">{item.stock} unit</span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  {/* Tombol Hapus */}
                   <button 
                     onClick={() => handleDelete(item.id)}
                     className="p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors border border-red-500/20"
@@ -178,7 +190,6 @@ const AdminManageItems = () => {
                     <Trash2 className="w-4 h-4" />
                   </button>
 
-                  {/* Tombol Edit */}
                   <button 
                     onClick={() => router.push(`/admin/items/edit/${item.id}`)}
                     className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-text-main transition-colors border border-white/5"
@@ -187,7 +198,6 @@ const AdminManageItems = () => {
                     <Edit className="w-4 h-4" />
                   </button>
 
-                  {/* Tombol Toggle Publish */}
                   <button 
                     onClick={() => handleTogglePublish(item.id, item.is_available)}
                     className={`p-2 rounded-xl border transition-colors ${
