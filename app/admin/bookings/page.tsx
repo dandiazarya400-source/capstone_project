@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, CalendarClock, CheckCircle2, 
-  Package, PackageCheck, PackageOpen, Clock, AlertCircle, Search
+  Package, PackageCheck, PackageOpen, Clock, AlertCircle, Search, XCircle, Undo2
 } from 'lucide-react';
 
 const AdminBookingsPage = () => {
@@ -24,39 +24,37 @@ const AdminBookingsPage = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      // Asumsi tabel bernama 'bookings' dan berelasi dengan 'items' dan 'profiles'
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          items (name, image_urls),
-          profiles (full_name)
-        `)
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      setBookings(data || []);
+      // ================= LOGIKA MARKETPLACE (JURUS 2 LANGKAH) =================
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData.user?.id;
+      if (!currentUserId) return;
+
+      // Langkah 1: Cari tau ID barang milik admin ini
+      const { data: myItems } = await supabase.from('items').select('id').eq('owner_id', currentUserId);
+      const myItemIds = myItems ? myItems.map(item => item.id) : [];
+
+      // Langkah 2: Tarik pesanan hanya jika barangnya milik admin ini
+      if (myItemIds.length > 0) {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            items (name, image_urls),
+            profiles (full_name)
+          `)
+          .in('item_id', myItemIds) // <--- Mencegah admin lain mengintip!
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setBookings(data || []);
+      } else {
+        setBookings([]); // Jika belum punya barang, kosongkan daftar
+      }
+      // ========================================================================
+
     } catch (err) {
       console.error("Gagal memuat booking:", err);
-      // JIKA TABEL BELUM DIBUAT DI SUPABASE, KITA PAKAI DATA DUMMY SEMENTARA AGAR UI TETAP TAMPIL
-      setBookings([
-        {
-          id: '1', start_date: '2026-05-30', end_date: '2026-06-02', total_price: 150000, status: 'menunggu',
-          items: { name: 'Speaker JBL GO 2', image_urls: ['https://via.placeholder.com/150'] },
-          profiles: { full_name: 'Budi Santoso' }
-        },
-        {
-          id: '2', start_date: '2026-05-25', end_date: '2026-05-28', total_price: 300000, status: 'diserahkan',
-          items: { name: 'Earphone Pro', image_urls: ['https://via.placeholder.com/150'] },
-          profiles: { full_name: 'Siti Aminah' }
-        },
-        {
-          id: '3', start_date: '2026-05-20', end_date: '2026-05-21', total_price: 50000, status: 'selesai',
-          items: { name: 'Kabel HDMI 5 Meter', image_urls: ['https://via.placeholder.com/150'] },
-          profiles: { full_name: 'Reza Rahadian' }
-        }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -66,8 +64,14 @@ const AdminBookingsPage = () => {
     fetchBookings();
   }, []);
 
-  // Fungsi untuk mengubah status pesanan
+  // Fungsi untuk mengubah status pesanan (Berlaku juga untuk Undo/Cancel)
   const handleUpdateStatus = async (id: string, newStatus: string) => {
+    // Jika tombolnya "Batal/Hapus", beri peringatan dulu
+    if (newStatus === 'dibatalkan') {
+      const confirm = window.confirm("Yakin ingin membatalkan dan menolak pesanan ini?");
+      if (!confirm) return;
+    }
+
     try {
       // 1. Update di Database
       const { error } = await supabase
@@ -77,25 +81,20 @@ const AdminBookingsPage = () => {
 
       if (error) throw error;
 
-      // 2. Update UI secara instan tanpa perlu refresh
+      // 2. Update UI secara instan
       setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
-      
-      showToast('success', `Status pesanan berhasil diubah menjadi ${newStatus}!`);
+      showToast('success', `Status pesanan diubah menjadi ${newStatus}!`);
     } catch (err: any) {
       console.error("Gagal update:", err);
-      // Fallback untuk data dummy agar tombol tetap bereaksi di UI
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
-      showToast('success', `(Mode Demo) Status pesanan diubah ke ${newStatus}!`);
+      showToast('error', `Gagal merubah status pesanan.`);
     }
   };
 
-  // Filter berdasarkan Tab
   const filteredBookings = bookings.filter(b => {
     if (activeTab === 'Semua') return true;
     return b.status.toLowerCase() === activeTab.toLowerCase();
   });
 
-  // Konversi format tanggal
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
     return new Date(dateString).toLocaleDateString('id-ID', options);
@@ -116,9 +115,8 @@ const AdminBookingsPage = () => {
         </div>
       )}
 
-      {/* BLOK ATAS (Sticky Header & Tabs) */}
+      {/* BLOK ATAS */}
       <div className="w-full relative z-40 bg-fluent-bg/95 backdrop-blur-md shrink-0 border-b border-white/5">
-        
         <header className="w-full px-5 py-4 flex items-center space-x-3">
           <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors cursor-pointer p-1 -ml-1">
             <ArrowLeft className="w-6 h-6" />
@@ -129,9 +127,9 @@ const AdminBookingsPage = () => {
           </h1>
         </header>
 
-        {/* Tab Filter (Horizontal Scroll) */}
+        {/* [BARU] Tambah tab 'Dibatalkan' */}
         <section className="w-full px-5 pb-4 flex items-center space-x-2.5 overflow-x-auto scrollbar-hide">
-          {['Semua', 'Menunggu', 'Diserahkan', 'Selesai'].map((tab) => (
+          {['Semua', 'Menunggu', 'Diserahkan', 'Selesai', 'Dibatalkan'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -178,15 +176,17 @@ const AdminBookingsPage = () => {
                     </div>
                   </div>
                   
-                  {/* Badge Status */}
+                  {/* Badge Status Diperbarui */}
                   <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
                     booking.status === 'menunggu' ? 'bg-yellow-500/20 text-yellow-400' :
                     booking.status === 'diserahkan' ? 'bg-blue-500/20 text-blue-400' :
+                    booking.status === 'dibatalkan' ? 'bg-red-500/20 text-red-400' :
                     'bg-green-500/20 text-green-400'
                   }`}>
                     {booking.status === 'menunggu' && <Clock className="w-3 h-3" />}
                     {booking.status === 'diserahkan' && <PackageOpen className="w-3 h-3" />}
                     {booking.status === 'selesai' && <CheckCircle2 className="w-3 h-3" />}
+                    {booking.status === 'dibatalkan' && <XCircle className="w-3 h-3" />}
                     {booking.status}
                   </div>
                 </div>
@@ -208,28 +208,67 @@ const AdminBookingsPage = () => {
                   </div>
                 </div>
 
-                {/* Bagian Bawah: Tombol Aksi */}
-                {booking.status !== 'selesai' && (
-                  <div className="pt-2">
-                    {booking.status === 'menunggu' ? (
+                {/* ================= UI TOMBOL AKSI LENGKAP & UNDO ================= */}
+                <div className="pt-2 flex flex-col gap-2">
+                  
+                  {/* Jika Status: MENUNGGU */}
+                  {booking.status === 'menunggu' && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleUpdateStatus(booking.id, 'dibatalkan')}
+                        className="flex-1 py-2.5 bg-red-500/10 text-red-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-500/20 transition-colors border border-red-500/20"
+                      >
+                        <XCircle className="w-4 h-4" /> Batal
+                      </button>
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'diserahkan')}
-                        className="w-full py-2.5 bg-fluent-accent text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#b58eff] transition-colors shadow-[0_4px_15px_rgba(163,116,255,0.3)]"
+                        className="flex-[2] py-2.5 bg-fluent-accent text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-[#b58eff] transition-colors shadow-lg"
                       >
-                        <PackageCheck className="w-4 h-4" />
-                        Konfirmasi Barang Diserahkan
+                        <PackageCheck className="w-4 h-4" /> Serahkan Barang
                       </button>
-                    ) : (
+                    </div>
+                  )}
+
+                  {/* Jika Status: DISERAHKAN */}
+                  {booking.status === 'diserahkan' && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleUpdateStatus(booking.id, 'menunggu')}
+                        className="flex-1 py-2.5 bg-white/5 text-text-muted text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border border-white/5"
+                      >
+                        <Undo2 className="w-4 h-4" /> Batal Serahkan
+                      </button>
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'selesai')}
-                        className="w-full py-2.5 bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors shadow-[0_4px_15px_rgba(16,185,129,0.3)]"
+                        className="flex-[2] py-2.5 bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-emerald-400 transition-colors shadow-lg"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Konfirmasi Barang Dikembalikan
+                        <CheckCircle2 className="w-4 h-4" /> Barang Kembali
                       </button>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+
+                  {/* Jika Status: SELESAI (Salah klik selesai) */}
+                  {booking.status === 'selesai' && (
+                    <button 
+                      onClick={() => handleUpdateStatus(booking.id, 'diserahkan')}
+                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-white/5"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" /> Batal Selesai (Barang belum kembali)
+                    </button>
+                  )}
+
+                  {/* Jika Status: DIBATALKAN (Salah klik tolak) */}
+                  {booking.status === 'dibatalkan' && (
+                    <button 
+                      onClick={() => handleUpdateStatus(booking.id, 'menunggu')}
+                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-white/5"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" /> Pulihkan Pesanan (Batal Tolak)
+                    </button>
+                  )}
+
+                </div>
+                {/* ================================================================ */}
 
               </div>
             ))}
