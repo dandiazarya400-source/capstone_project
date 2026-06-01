@@ -7,7 +7,7 @@ import {
   MessageCircle, Headphones, Wallet, Box, Truck, 
   CheckCircle2, Star, Banknote, Coins, Store, 
   Link2, Ticket, Heart, MapPin, BadgeCheck, LogOut, Edit3,
-  LayoutDashboard, ChevronRight
+  LayoutDashboard, ChevronRight, Loader2
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 // IMPORT SUPABASE
@@ -57,6 +57,11 @@ const ProfilePage = () => {
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'
   });
 
+  // State untuk Modal Top Up
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupAmount, setTopupAmount] = useState('');
+  const [isProcessingTopup, setIsProcessingTopup] = useState(false);
+
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: authData } = await supabase.auth.getUser();
@@ -95,43 +100,45 @@ const ProfilePage = () => {
     }
   };
 
-  // ================= FUNGSI SIMULASI TOP UP =================
-  const handleTopup = async () => {
-    const amountInput = window.prompt("Masukkan nominal saldo yang ingin diisi (Contoh: 500000):", "500000");
-    if (!amountInput) return;
+  // Buka pop-up
+  const handleTopup = () => {
+    setTopupAmount(''); // Kosongkan input
+    setShowTopupModal(true);
+  };
 
-    const amount = Number(amountInput.replace(/\D/g, ''));
+  // Eksekusi ke database
+  const submitTopup = async () => {
+    const amount = Number(topupAmount);
     if (amount <= 0) return;
 
+    setIsProcessingTopup(true);
     try {
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) return;
 
       const newBalance = profile.balance + amount;
 
-      // 1. Update Saldo di tabel profiles
-      await supabase
-        .from('profiles')
-        .update({ balance: newBalance })
-        .eq('id', authData.user.id);
+      // Update Saldo
+      await supabase.from('profiles').update({ balance: newBalance }).eq('id', authData.user.id);
 
-      // 2. Catat riwayat di tabel wallet_transactions
-      await supabase
-        .from('wallet_transactions')
-        .insert([{
-          user_id: authData.user.id,
-          amount: amount,
-          type: 'topup',
-          status: 'Berhasil'
-        }]);
+      // Catat Riwayat
+      await supabase.from('wallet_transactions').insert([{
+        user_id: authData.user.id,
+        amount: amount,
+        type: 'topup',
+        status: 'Berhasil'
+      }]);
 
-      // 3. Update UI langsung tanpa refresh
       setProfile(prev => ({ ...prev, balance: newBalance }));
+      setShowTopupModal(false); // Tutup pop-up
+      
+      // Opsional: Bisa ganti alert ini dengan Toast Notification nanti
       alert(`Berhasil isi saldo sebesar Rp ${amount.toLocaleString('id-ID')}!`);
-
     } catch (error) {
       console.error("Gagal topup:", error);
       alert("Terjadi kesalahan sistem.");
+    } finally {
+      setIsProcessingTopup(false);
     }
   };
 
@@ -177,7 +184,9 @@ const ProfilePage = () => {
           
           {/* Tombol Logout & CS */}
           <div className="flex flex-col space-y-3">
-            <button className="p-2 bg-white/5 hover:bg-white/10 rounded-full backdrop-blur-sm transition-colors border border-white/10">
+            <button
+            onClick={() => router.push('/chat')} 
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-full backdrop-blur-sm transition-colors border border-white/10">
               <Headphones className="w-5 h-5 text-fluent-accent" />
             </button>
             <button onClick={handleLogout} className="p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-full backdrop-blur-sm transition-colors border border-rose-500/20">
@@ -255,35 +264,34 @@ const ProfilePage = () => {
 
         {/* ... (Lanjutan kode Saldo, Menu Tambahan, dan Rekomendasi biarkan persis sama seperti yang kamu tulis) ... */}
         
-        {/* ================= SALDO & POIN ================= */}
-        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-white/5 shadow-lg flex justify-between items-center">
-          <div className="flex-1 border-r border-white/10 pr-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Banknote className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]" />
-              {/* UBAH ANGKA STATIS MENJADI DINAMIS */}
-              <h3 className="font-extrabold text-text-main">
-                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(profile.balance)}
-              </h3>
+        {/* ================= SALDO DOMPET ================= */}
+        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-white/5 shadow-lg relative overflow-hidden">
+          {/* Efek Glow Latar Belakang */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shadow-inner">
+                  <Banknote className="w-6 h-6 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-text-muted mb-0.5">Saldo Aktif</p>
+                  <h3 className="font-extrabold text-text-main text-2xl tracking-tight">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(profile.balance)}
+                  </h3>
+                </div>
+              </div>
             </div>
-            <div className="flex space-x-2 mt-3">
-              {/* TAMBAHKAN EVENT onClick DI SINI */}
-              <button onClick={handleTopup} className="flex-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 py-1.5 rounded-full text-xs font-bold hover:bg-emerald-500/30 transition">
+
+            <div className="flex space-x-3 mt-1">
+              <button onClick={handleTopup} className="flex-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-500/30 transition-colors shadow-sm">
                 Isi Saldo
               </button>
-              <button className="flex-1 bg-rose-500/20 text-rose-400 border border-rose-500/50 py-1.5 rounded-full text-xs font-bold hover:bg-rose-500/30 transition">
-                Tarik
+              <button className="flex-1 bg-rose-500/20 text-rose-400 border border-rose-500/50 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-500/30 transition-colors shadow-sm">
+                Tarik Dana
               </button>
             </div>
-          </div>
-          
-          <div className="flex-1 pl-4 flex flex-col items-center">
-            <div className="flex items-center space-x-2 mb-2">
-              <Coins className="w-5 h-5 text-fluent-accent drop-shadow-[0_0_5px_rgba(163,116,255,0.5)]" />
-              <h3 className="font-extrabold text-text-main">1500 <span className="text-xs font-normal text-text-muted">Poin</span></h3>
-            </div>
-            <button className="w-full mt-3 bg-fluent-accent text-white py-1.5 rounded-full text-xs font-bold shadow-[0_2px_10px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition">
-              Tukar Poin
-            </button>
           </div>
         </section>
 
@@ -327,6 +335,58 @@ const ProfilePage = () => {
         </section>
 
       </main>
+      {/* ================= MODAL ISI SALDO ================= */}
+      {showTopupModal && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm">
+          <div className="bg-fluent-card border border-white/10 w-full max-w-[300px] rounded-[28px] p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            
+            {/* Efek Cahaya Hijau di Belakang */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl"></div>
+
+            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-4 shadow-inner border border-emerald-500/30 relative z-10">
+              <Banknote className="w-7 h-7 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+            </div>
+
+            <h3 className="text-lg font-bold text-text-main mb-1 relative z-10">Isi Saldo</h3>
+            <p className="text-xs text-text-muted mb-6 relative z-10 leading-relaxed">
+              Masukkan nominal uang yang ingin kamu tambahkan ke dompet.
+            </p>
+
+           
+            <div className="w-full relative z-10 mb-6">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-main font-bold">Rp</span>
+              <input
+                type="text" // Ubah dari "number" ke "text" untuk menghilangkan panah
+                value={topupAmount ? new Intl.NumberFormat('id-ID').format(Number(topupAmount)) : ''}
+                onChange={(e) => {
+                  // Hanya ambil angka, buang semua karakter lain (seperti titik)
+                  const rawValue = e.target.value.replace(/\D/g, '');
+                  setTopupAmount(rawValue);
+                }}
+                placeholder="500.000"
+                className="w-full bg-[#1A0B2E] border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-text-main focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-white/20"
+              />
+            </div>
+
+            {/* Tombol Aksi */}
+            <div className="flex w-full gap-3 relative z-10">
+              <button
+                onClick={() => setShowTopupModal(false)}
+                className="flex-1 py-3 rounded-2xl text-xs font-bold text-text-muted bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+              >
+                Batal
+              </button>
+              <button
+                disabled={isProcessingTopup || !topupAmount || Number(topupAmount) <= 0}
+                onClick={submitTopup}
+                className="flex-1 py-3 rounded-2xl text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-400 transition-colors shadow-[0_4px_20px_rgba(16,185,129,0.3)] disabled:opacity-50 flex justify-center items-center gap-2"
+              >
+                {isProcessingTopup ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Konfirmasi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
       
