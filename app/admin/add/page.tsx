@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, PackagePlus, Type, AlignLeft,
-  Box, Folder, Save, UploadCloud, Tag, CheckCircle2, AlertCircle, X, Plus
+  Box, Folder, Save, UploadCloud, Tag, CheckCircle2, AlertCircle, X, Plus,
+  Truck
 } from 'lucide-react';
 
 const AddProductPage = () => {
@@ -17,6 +18,7 @@ const AddProductPage = () => {
   const [stock, setStock] = useState('1');
   const [condition, setCondition] = useState('Baik');
   const [categoryId, setCategoryId] = useState('1'); 
+  const [deliveryOption, setDeliveryOption] = useState('both');
   
   // STATE BARU: Menggunakan Array untuk menampung banyak file
   const [files, setFiles] = useState<File[]>([]);
@@ -126,7 +128,9 @@ const AddProductPage = () => {
           stock: Number(stock), condition, category_id: Number(categoryId), 
           image_urls: uploadedImageUrls, // Disimpan sebagai array link
           is_available: false,
-          owner_id: currentUserId
+          owner_id: currentUserId,
+          delivery_option: deliveryOption
+          
         }]);
 
       if (dbError) throw dbError;
@@ -234,11 +238,25 @@ const AddProductPage = () => {
               <div className="relative flex items-center">
                 <Tag className="absolute left-3 w-4 h-4 text-text-muted" />
                 <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
+                  
                   <option value="Sangat Baik" className="bg-[#1A0B2E]">Sangat Baik</option>
                   <option value="Baik" className="bg-[#1A0B2E]">Baik</option>
                   <option value="Cukup" className="bg-[#1A0B2E]">Cukup</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* ================= [BARU] UI OPSI PENGIRIMAN ================= */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Opsi Pengiriman</label>
+            <div className="relative flex items-center">
+              <Truck className="absolute left-3 w-4 h-4 text-text-muted" />
+              <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
+                <option value="both" className="bg-[#1A0B2E]">Bisa Diantar & Ambil Sendiri</option>
+                <option value="pickup_only" className="bg-[#1A0B2E]">Hanya Ambil Sendiri (Ke Toko)</option>
+                <option value="delivery_only" className="bg-[#1A0B2E]">Hanya Diantar (Oleh Pemilik)</option>
+              </select>
             </div>
           </div>
 

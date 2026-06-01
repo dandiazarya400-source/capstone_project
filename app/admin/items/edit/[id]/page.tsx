@@ -5,7 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, PackagePlus, Type, AlignLeft,
-  Box, Folder, Save, UploadCloud, Tag, CheckCircle2, AlertCircle, X, Plus, Edit
+  Box, Folder, Save, UploadCloud, Tag, CheckCircle2, AlertCircle, X, Plus, Edit,
+  Truck
 } from 'lucide-react';
 
 const EditProductPage = () => {
@@ -19,6 +20,7 @@ const EditProductPage = () => {
   const [stock, setStock] = useState('1');
   const [condition, setCondition] = useState('Baik');
   const [categoryId, setCategoryId] = useState('1'); 
+  const [deliveryOption, setDeliveryOption] = useState('both');
   
   // STATE BARU UNTUK EDIT FOTO MULTIPLE
   const [existingImages, setExistingImages] = useState<string[]>([]); // Foto dari database
@@ -63,6 +65,7 @@ const EditProductPage = () => {
           setStock(data.stock ? String(data.stock) : '1');
           setCondition(data.condition || 'Baik');
           setCategoryId(data.category_id ? String(data.category_id) : '1');
+          setDeliveryOption(data.delivery_option || 'both');
           
           // Masukkan array foto dari DB ke state existingImages
           setExistingImages(data.image_urls || []);
@@ -187,7 +190,8 @@ const EditProductPage = () => {
           stock: Number(stock), 
           condition, 
           category_id: Number(categoryId), 
-          image_urls: finalImageUrls // Update array foto
+          image_urls: finalImageUrls, 
+          delivery_option: deliveryOption
         })
         .eq('id', id);
 
@@ -301,6 +305,19 @@ const EditProductPage = () => {
                   <option value="Cukup" className="bg-[#1A0B2E]">Cukup</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* ================= [BARU] UI OPSI PENGIRIMAN ================= */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Opsi Pengiriman</label>
+            <div className="relative flex items-center">
+              <Truck className="absolute left-3 w-4 h-4 text-text-muted" />
+              <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
+                <option value="both" className="bg-[#1A0B2E]">Bisa Diantar & Ambil Sendiri</option>
+                <option value="pickup_only" className="bg-[#1A0B2E]">Hanya Ambil Sendiri (Ke Toko)</option>
+                <option value="delivery_only" className="bg-[#1A0B2E]">Hanya Diantar (Oleh Pemilik)</option>
+              </select>
             </div>
           </div>
 
