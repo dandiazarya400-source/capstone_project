@@ -229,6 +229,7 @@ const AddProductPage = () => {
                   <option value="1" className="bg-[#1A0B2E]">Elektronik</option>
                   <option value="2" className="bg-[#1A0B2E]">Musik</option>
                   <option value="3" className="bg-[#1A0B2E]">Kamera</option>
+                  <option value="4" className="bg-[#1A0B2E]">Fashion</option>
                 </select>
               </div>
             </div>

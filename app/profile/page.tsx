@@ -7,13 +7,12 @@ import {
   MessageCircle, Headphones, Wallet, Box, Truck, 
   CheckCircle2, Star, Banknote, Coins, Store, 
   Link2, Ticket, Heart, MapPin, BadgeCheck, LogOut, Edit3,
-  LayoutDashboard, ChevronRight, Loader2
+  LayoutDashboard, ChevronRight, Loader2, AlertCircle, Clock, ShieldCheck
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
-// IMPORT SUPABASE
 import { supabase } from '@/lib/supabase';
 
-// --- Komponen Kartu Produk (Tetap sama) ---
+// --- Komponen Kartu Produk ---
 interface ProductProps {
   id: string;
   title: string;
@@ -53,11 +52,11 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState({
     full_name: 'Memuat...',
     is_admin: false,
-    balance: 0, // <--- TAMBAH INI
+    balance: 0,
+    verification_status: 'unverified', // <--- STATE BARU UNTUK VERIFIKASI
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'
   });
 
-  // State untuk Modal Top Up
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupAmount, setTopupAmount] = useState('');
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
@@ -71,7 +70,6 @@ const ProfilePage = () => {
         return;
       }
 
-      // Pakai .maybeSingle() agar tidak error meskipun datanya kosong/terkunci
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -83,6 +81,7 @@ const ProfilePage = () => {
           full_name: data.full_name || 'Pengguna Baru',
           is_admin: data.is_admin || false,
           balance: data.balance || 0,
+          verification_status: data.verification_status || 'unverified', // <--- MENGAMBIL DATA DARI DB
           avatar_url: data.avatar_url || profile.avatar_url 
         });
       }
@@ -91,7 +90,6 @@ const ProfilePage = () => {
     fetchProfile();
   }, [router]);
 
-  // ================= FUNGSI LOGOUT =================
   const handleLogout = async () => {
     const confirmLogout = window.confirm("Apakah kamu yakin ingin keluar?");
     if (confirmLogout) {
@@ -100,13 +98,11 @@ const ProfilePage = () => {
     }
   };
 
-  // Buka pop-up
   const handleTopup = () => {
-    setTopupAmount(''); // Kosongkan input
+    setTopupAmount('');
     setShowTopupModal(true);
   };
 
-  // Eksekusi ke database
   const submitTopup = async () => {
     const amount = Number(topupAmount);
     if (amount <= 0) return;
@@ -118,10 +114,7 @@ const ProfilePage = () => {
 
       const newBalance = profile.balance + amount;
 
-      // Update Saldo
       await supabase.from('profiles').update({ balance: newBalance }).eq('id', authData.user.id);
-
-      // Catat Riwayat
       await supabase.from('wallet_transactions').insert([{
         user_id: authData.user.id,
         amount: amount,
@@ -130,9 +123,8 @@ const ProfilePage = () => {
       }]);
 
       setProfile(prev => ({ ...prev, balance: newBalance }));
-      setShowTopupModal(false); // Tutup pop-up
+      setShowTopupModal(false);
       
-      // Opsional: Bisa ganti alert ini dengan Toast Notification nanti
       alert(`Berhasil isi saldo sebesar Rp ${amount.toLocaleString('id-ID')}!`);
     } catch (error) {
       console.error("Gagal topup:", error);
@@ -142,7 +134,6 @@ const ProfilePage = () => {
     }
   };
 
-  // Data Dummy untuk Rekomendasi
   const recommendations: ProductProps[] = [
     { id: "2", title: "Samyang AF 35mm f/1.8 Sony", price: "Rp. 250.000", rating: "5.0", sold: "20", owner: "Asoka Maju", image: "https://via.placeholder.com/150", isVerified: true },
     { id: "5", title: "Setelan Jas Formal", price: "Rp. 100.000", rating: "4.8", sold: "198", owner: "Asoka Maju", image: "https://via.placeholder.com/150", isVerified: true },
@@ -157,7 +148,7 @@ const ProfilePage = () => {
         
         <div className="flex items-center justify-between relative z-10">
           <div className="flex items-center space-x-4">
-            {/* Foto Profil */}
+            
             <div className="w-20 h-20 rounded-full bg-white p-1 ring-2 ring-fluent-accent ring-offset-2 ring-offset-fluent-bg shadow-[0_0_15px_rgba(163,116,255,0.4)] shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
@@ -174,15 +165,13 @@ const ProfilePage = () => {
                 {profile.is_admin ? 'Administrator' : 'Pengguna Reguler'}
               </p>
               
-              {/* Tombol ke halaman Edit Profil */}
-              <Link href="/profile/edit" className="inline-flex items-center gap-1.5 text-[10px] text-white/80 bg-white/10 px-2.5 py-1 rounded-full border border-white/10 hover:bg-white/20 transition-colors">
+              <Link href="/profile/edit" className="inline-flex items-center gap-1.5 text-[10px] text-white/80 bg-white/10 px-2.5 py-1 rounded-full border border-white/10 hover:bg-white/20 transition-colors mt-1">
                 <Edit3 className="w-3 h-3" />
                 Ubah Alamat
               </Link>
             </div>
           </div>
           
-          {/* Tombol Logout & CS */}
           <div className="flex flex-col space-y-3">
             <button
             onClick={() => router.push('/chat')} 
@@ -197,6 +186,81 @@ const ProfilePage = () => {
       </div>
 
       <main className="px-4 mt-6 space-y-6">
+
+        {/* ================= [BARU] MENU STATUS VERIFIKASI KTP (DI ATAS TRANSAKSI) ================= */}
+        {!profile.is_admin && (
+          <section className="animate-in fade-in slide-in-from-bottom-3 duration-300">
+            {/* Keadaan 1: Belum Verifikasi */}
+            {profile.verification_status === 'unverified' && (
+              <Link href="/verify">
+                <div className="bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20 p-4 rounded-fluent-rounded flex items-center justify-between hover:bg-red-500/15 transition-colors group cursor-pointer shadow-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 group-hover:scale-105 transition-transform shadow-inner">
+                      <AlertCircle className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-text-main text-sm">Verifikasi KTP Belum Lengkap</h2>
+                      <p className="text-[11px] text-text-muted mt-0.5">Lengkapi KTP & Selfie untuk bisa menyewa alat</p>
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+                    <ChevronRight className="w-4 h-4 text-red-400" />
+                  </div>
+                </div>
+              </Link>
+            )}
+
+            {/* Keadaan 2: Menunggu Verifikasi */}
+            {profile.verification_status === 'pending' && (
+              <div className="bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20 p-4 rounded-fluent-rounded flex items-center justify-between shadow-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 shadow-inner">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-text-main text-sm">Verifikasi Sedang Diproses</h2>
+                    <p className="text-[11px] text-text-muted mt-0.5">Mohon tunggu, admin sedang memeriksa berkas Anda</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Keadaan 3: Terverifikasi Sukses */}
+            {profile.verification_status === 'verified' && (
+              <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 p-4 rounded-fluent-rounded flex items-center justify-between shadow-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 shadow-inner">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-text-main text-sm">Akun Terverifikasi</h2>
+                    <p className="text-[11px] text-text-muted mt-0.5">Identitas Anda valid. Selamat menyewa dengan aman!</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Keadaan 4: Verifikasi Ditolak */}
+            {profile.verification_status === 'rejected' && (
+              <Link href="/verify">
+                <div className="bg-gradient-to-r from-rose-500/10 to-transparent border border-rose-500/20 p-4 rounded-fluent-rounded flex items-center justify-between hover:bg-rose-500/15 transition-colors group cursor-pointer shadow-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-rose-500/20 rounded-full flex items-center justify-center text-rose-400 shadow-inner">
+                      <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-rose-400 text-sm">Verifikasi KTP Ditolak</h2>
+                      <p className="text-[11px] text-text-muted mt-0.5">Klik di sini untuk mengirim ulang foto yang lebih jelas</p>
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
+                    <ChevronRight className="w-4 h-4 text-rose-400" />
+                  </div>
+                </div>
+              </Link>
+            )}
+          </section>
+        )}
 
         {/* ================= TOMBOL KHUSUS ADMIN ================= */}
         {profile.is_admin && (
@@ -215,18 +279,14 @@ const ProfilePage = () => {
                 <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center relative z-10 group-hover:bg-fluent-accent transition-colors">
                   <ChevronRight className="w-5 h-5 text-white" />
                 </div>
-                
-                {/* Efek kilauan latar belakang */}
                 <div className="absolute -right-6 -top-6 w-24 h-24 bg-fluent-accent/20 rounded-full blur-2xl"></div>
               </div>
             </Link>
           </section>
         )}
         
-        {/* ================= TRANSAKSI ================= */}
         <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-white/5 shadow-lg">
           <h2 className="font-bold text-text-main mb-4">Transaksi</h2>
-          {/* ... (Isi transaksi biarkan persis sama) ... */}
           <div className="flex justify-between items-center px-2">
             <div className="flex flex-col items-center space-y-2">
               <div className="w-10 h-10 rounded-full bg-fluent-accent/10 flex items-center justify-center">
@@ -262,11 +322,7 @@ const ProfilePage = () => {
           </div>
         </section>
 
-        {/* ... (Lanjutan kode Saldo, Menu Tambahan, dan Rekomendasi biarkan persis sama seperti yang kamu tulis) ... */}
-        
-        {/* ================= SALDO DOMPET ================= */}
         <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-white/5 shadow-lg relative overflow-hidden">
-          {/* Efek Glow Latar Belakang */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
           
           <div className="relative z-10 flex flex-col gap-4">
@@ -295,7 +351,6 @@ const ProfilePage = () => {
           </div>
         </section>
 
-        {/* ================= MENU TAMBAHAN ================= */}
         <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-white/5 shadow-lg">
           <div className="grid grid-cols-5 gap-y-4">
             <div className="flex flex-col items-center space-y-2">
@@ -321,7 +376,6 @@ const ProfilePage = () => {
           </div>
         </section>
 
-        {/* ================= REKOMENDASI ================= */}
         <section>
           <div className="flex items-center space-x-2 mb-4">
             <div className="w-1 h-5 bg-fluent-accent rounded-full"></div>
@@ -335,12 +389,11 @@ const ProfilePage = () => {
         </section>
 
       </main>
-      {/* ================= MODAL ISI SALDO ================= */}
+
       {showTopupModal && (
         <div className="absolute inset-0 z-[100] flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm">
           <div className="bg-fluent-card border border-white/10 w-full max-w-[300px] rounded-[28px] p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200 relative overflow-hidden">
             
-            {/* Efek Cahaya Hijau di Belakang */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl"></div>
 
             <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-4 shadow-inner border border-emerald-500/30 relative z-10">
@@ -352,14 +405,12 @@ const ProfilePage = () => {
               Masukkan nominal uang yang ingin kamu tambahkan ke dompet.
             </p>
 
-           
             <div className="w-full relative z-10 mb-6">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-main font-bold">Rp</span>
               <input
-                type="text" // Ubah dari "number" ke "text" untuk menghilangkan panah
+                type="text"
                 value={topupAmount ? new Intl.NumberFormat('id-ID').format(Number(topupAmount)) : ''}
                 onChange={(e) => {
-                  // Hanya ambil angka, buang semua karakter lain (seperti titik)
                   const rawValue = e.target.value.replace(/\D/g, '');
                   setTopupAmount(rawValue);
                 }}
@@ -368,7 +419,6 @@ const ProfilePage = () => {
               />
             </div>
 
-            {/* Tombol Aksi */}
             <div className="flex w-full gap-3 relative z-10">
               <button
                 onClick={() => setShowTopupModal(false)}
