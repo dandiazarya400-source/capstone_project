@@ -23,9 +23,10 @@ const EditProductPage = () => {
   const [deliveryOption, setDeliveryOption] = useState('both');
   
   // STATE BARU UNTUK EDIT FOTO MULTIPLE
-  const [existingImages, setExistingImages] = useState<string[]>([]); // Foto dari database
-  const [newFiles, setNewFiles] = useState<File[]>([]); // Foto baru yang ditambahkan
-  const [newPreviewUrls, setNewPreviewUrls] = useState<string[]>([]); // Preview untuk foto baru
+  const [existingImages, setExistingImages] = useState<string[]>([]); 
+  const [newFiles, setNewFiles] = useState<File[]>([]); 
+  const [newPreviewUrls, setNewPreviewUrls] = useState<string[]>([]); 
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -134,6 +135,10 @@ const EditProductPage = () => {
 
   // LOGIKA HAPUS FOTO LAMA (Dari DB)
   const removeExistingImage = (indexToRemove: number) => {
+    // [FIX STORAGE] Masukkan URL ke keranjang sampah dulu sebelum dihilangkan dari UI
+    const urlToRemove = existingImages[indexToRemove];
+    setImagesToDelete(prev => [...prev, urlToRemove]);
+    
     setExistingImages(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
@@ -197,6 +202,11 @@ const EditProductPage = () => {
 
       if (dbError) throw dbError;
 
+      if (imagesToDelete.length > 0) {
+        const filesToRemove = imagesToDelete.map(url => url.substring(url.lastIndexOf('/') + 1));
+        await supabase.storage.from('product-images').remove(filesToRemove);
+      }
+
       showToast('success', 'Perubahan berhasil disimpan!');
       
       setTimeout(() => {
@@ -218,7 +228,8 @@ const EditProductPage = () => {
   const totalCurrentImages = existingImages.length + newFiles.length;
 
   return (
-    <div className="h-full w-full overflow-y-auto overflow-x-hidden bg-fluent-bg text-text-main pb-12 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    // [FIX SCROLL] Hapus h-full dan overflow-y-auto
+    <div className="w-full flex flex-col text-text-main pb-12">
       {toast.show && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-5 fade-in duration-300 w-[90%] max-w-[320px]">
           <div className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl ${

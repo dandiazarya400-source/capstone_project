@@ -51,16 +51,41 @@ export default function AdminUsersPage() {
       setLoading(true);
       try {
         const { data: authData } = await supabase.auth.getUser();
-        if (authData.user) setAdminId(authData.user.id);
+        const currentAdminId = authData.user?.id;
+        
+        if (!currentAdminId) return;
+        setAdminId(currentAdminId);
 
+        // [FIX PRIVASI: TAHAP 1] Cari semua barang milik admin ini
+        const { data: myItems } = await supabase.from('items').select('id').eq('owner_id', currentAdminId);
+        const myItemIds = myItems?.map(item => item.id) || [];
+
+        if (myItemIds.length === 0) {
+          setUsers([]); 
+          return;
+        }
+
+        // [FIX PRIVASI: TAHAP 2] Cari ID user (tenant_id) yang pernah menyewa barang-barang tersebut
+        const { data: txData } = await supabase.from('transactions').select('tenant_id').in('item_id', myItemIds);
+        const tenantIds = txData?.map(tx => tx.tenant_id) || [];
+        const uniqueTenantIds = Array.from(new Set(tenantIds)); // Hapus ID ganda jika dia sewa berkali-kali
+
+        if (uniqueTenantIds.length === 0) {
+          setUsers([]);
+          return;
+        }
+
+        // [FIX PRIVASI: TAHAP 3] Tarik profil HANYA untuk user-user tersebut
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
+          .in('id', uniqueTenantIds)
           .eq('is_admin', false)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         if (data) setUsers(data);
+
       } catch (error) {
         console.error("Gagal memuat pengguna:", error);
       } finally {

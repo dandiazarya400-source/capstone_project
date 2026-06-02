@@ -147,6 +147,12 @@ const AdminStoreSettings = () => {
       const fileName = `store-${adminId}-${Math.random()}.jpg`;
       const croppedFile = new File([croppedBlob], fileName, { type: 'image/jpeg' });
       
+      // [FIX STORAGE] Hapus logo lama dari storage jika sudah ada sebelumnya
+      if (formData.avatar_url && formData.avatar_url.includes('supabase.co')) {
+        const oldFileName = formData.avatar_url.substring(formData.avatar_url.lastIndexOf('/') + 1);
+        await supabase.storage.from('avatars').remove([oldFileName]);
+      }
+
       const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, croppedFile);
       if (uploadError) throw uploadError;
       

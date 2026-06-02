@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -19,6 +19,20 @@ const AddProductPage = () => {
   const [condition, setCondition] = useState('Baik');
   const [categoryId, setCategoryId] = useState('1'); 
   const [deliveryOption, setDeliveryOption] = useState('both');
+  
+  // [FIX] State untuk Kategori dari Database
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase.from('categories').select('id, name');
+      if (data && data.length > 0) {
+        setCategories(data);
+        setCategoryId(String(data[0].id)); // Set default ke kategori pertama
+      }
+    };
+    fetchCategories();
+  }, []);
   
   // STATE BARU: Menggunakan Array untuk menampung banyak file
   const [files, setFiles] = useState<File[]>([]);
@@ -100,9 +114,8 @@ const AddProductPage = () => {
       const currentUserId = authData.user.id;
       const uploadedImageUrls: string[] = [];
 
-      // LOGIKA BARU: Loop upload semua foto satu per satu
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      // [FIX PERFORMA] Upload semua foto secara bersamaan (Paralel/Serentak)
+      const uploadPromises = files.map(async (file) => {
         const fileExt = file.name.split('.').pop();
         const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         
@@ -116,8 +129,12 @@ const AddProductPage = () => {
           .from('product-images')
           .getPublicUrl(uniqueFileName);
         
-        uploadedImageUrls.push(urlData.publicUrl);
-      }
+        return urlData.publicUrl;
+      });
+
+      // Tunggu semua proses upload selesai dalam 1 waktu
+      const resolvedUrls = await Promise.all(uploadPromises);
+      uploadedImageUrls.push(...resolvedUrls);
       
       const dbPrice = Number(pricePerDay.replace(/\./g, ''));
 
@@ -150,7 +167,8 @@ const AddProductPage = () => {
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto overflow-x-hidden bg-fluent-bg text-text-main pb-12 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    // [FIX SCROLL] Hapus h-full dan overflow-y-auto agar tidak bentrok dengan Layout
+    <div className="w-full flex flex-col text-text-main pb-12">
       {toast.show && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-5 fade-in duration-300 w-[90%] max-w-[320px]">
           <div className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl ${
@@ -226,10 +244,9 @@ const AddProductPage = () => {
               <div className="relative flex items-center">
                 <Folder className="absolute left-3 w-4 h-4 text-text-muted" />
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                  <option value="1" className="bg-[#1A0B2E]">Elektronik</option>
-                  <option value="2" className="bg-[#1A0B2E]">Musik</option>
-                  <option value="3" className="bg-[#1A0B2E]">Kamera</option>
-                  <option value="4" className="bg-[#1A0B2E]">Fashion</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id} className="bg-[#1A0B2E]">{cat.name}</option>
+                  ))}
                 </select>
               </div>
             </div>

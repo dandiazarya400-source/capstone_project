@@ -127,9 +127,9 @@ const AdminBookingsPage = () => {
           </h1>
         </header>
 
-        {/* [BARU] Tambah tab 'Dibatalkan' */}
+        {/* [FIX BUG TAB STATUS] Sesuaikan dengan Default Database */}
         <section className="w-full px-5 pb-4 flex items-center space-x-2.5 overflow-x-auto scrollbar-hide">
-          {['Semua', 'Menunggu', 'Diserahkan', 'Selesai', 'Dibatalkan'].map((tab) => (
+          {['Semua', 'Menunggu Konfirmasi', 'Diserahkan', 'Selesai', 'Dibatalkan'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -178,15 +178,15 @@ const AdminBookingsPage = () => {
                   
                   {/* Badge Status Diperbarui */}
                   <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                    booking.status === 'menunggu' ? 'bg-yellow-500/20 text-yellow-400' :
-                    booking.status === 'diserahkan' ? 'bg-blue-500/20 text-blue-400' :
-                    booking.status === 'dibatalkan' ? 'bg-red-500/20 text-red-400' :
+                    booking.status === 'Menunggu Konfirmasi' ? 'bg-yellow-500/20 text-yellow-400' :
+                    booking.status === 'Diserahkan' ? 'bg-blue-500/20 text-blue-400' :
+                    booking.status === 'Dibatalkan' ? 'bg-red-500/20 text-red-400' :
                     'bg-green-500/20 text-green-400'
                   }`}>
-                    {booking.status === 'menunggu' && <Clock className="w-3 h-3" />}
-                    {booking.status === 'diserahkan' && <PackageOpen className="w-3 h-3" />}
-                    {booking.status === 'selesai' && <CheckCircle2 className="w-3 h-3" />}
-                    {booking.status === 'dibatalkan' && <XCircle className="w-3 h-3" />}
+                    {booking.status === 'Menunggu Konfirmasi' && <Clock className="w-3 h-3" />}
+                    {booking.status === 'Diserahkan' && <PackageOpen className="w-3 h-3" />}
+                    {booking.status === 'Selesai' && <CheckCircle2 className="w-3 h-3" />}
+                    {booking.status === 'Dibatalkan' && <XCircle className="w-3 h-3" />}
                     {booking.status}
                   </div>
                 </div>
@@ -212,16 +212,16 @@ const AdminBookingsPage = () => {
                 <div className="pt-2 flex flex-col gap-2">
                   
                   {/* Jika Status: MENUNGGU */}
-                  {booking.status === 'menunggu' && (
+                  {booking.status === 'Menunggu Konfirmasi' && (
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => handleUpdateStatus(booking.id, 'dibatalkan')}
+                        onClick={() => handleUpdateStatus(booking.id, 'Dibatalkan')}
                         className="flex-1 py-2.5 bg-red-500/10 text-red-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-500/20 transition-colors border border-red-500/20"
                       >
                         <XCircle className="w-4 h-4" /> Batal
                       </button>
                       <button 
-                        onClick={() => handleUpdateStatus(booking.id, 'diserahkan')}
+                        onClick={() => handleUpdateStatus(booking.id, 'Diserahkan')}
                         className="flex-[2] py-2.5 bg-fluent-accent text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-[#b58eff] transition-colors shadow-lg"
                       >
                         <PackageCheck className="w-4 h-4" /> Serahkan Barang
@@ -230,16 +230,16 @@ const AdminBookingsPage = () => {
                   )}
 
                   {/* Jika Status: DISERAHKAN */}
-                  {booking.status === 'diserahkan' && (
+                  {booking.status === 'Diserahkan' && (
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => handleUpdateStatus(booking.id, 'menunggu')}
+                        onClick={() => handleUpdateStatus(booking.id, 'Menunggu Konfirmasi')}
                         className="flex-1 py-2.5 bg-white/5 text-text-muted text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border border-white/5"
                       >
                         <Undo2 className="w-4 h-4" /> Batal Serahkan
                       </button>
                       <button 
-                        onClick={() => handleUpdateStatus(booking.id, 'selesai')}
+                        onClick={() => handleUpdateStatus(booking.id, 'Selesai')}
                         className="flex-[2] py-2.5 bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-emerald-400 transition-colors shadow-lg"
                       >
                         <CheckCircle2 className="w-4 h-4" /> Barang Kembali
@@ -248,9 +248,9 @@ const AdminBookingsPage = () => {
                   )}
 
                   {/* Jika Status: SELESAI (Salah klik selesai) */}
-                  {booking.status === 'selesai' && (
+                  {booking.status === 'Selesai' && (
                     <button 
-                      onClick={() => handleUpdateStatus(booking.id, 'diserahkan')}
+                      onClick={() => handleUpdateStatus(booking.id, 'Diserahkan')}
                       className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-white/5"
                     >
                       <Undo2 className="w-3.5 h-3.5" /> Batal Selesai (Barang belum kembali)
@@ -258,9 +258,9 @@ const AdminBookingsPage = () => {
                   )}
 
                   {/* Jika Status: DIBATALKAN (Salah klik tolak) */}
-                  {booking.status === 'dibatalkan' && (
+                  {booking.status === 'Dibatalkan' && (
                     <button 
-                      onClick={() => handleUpdateStatus(booking.id, 'menunggu')}
+                      onClick={() => handleUpdateStatus(booking.id, 'Menunggu Konfirmasi')}
                       className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-white/5"
                     >
                       <Undo2 className="w-3.5 h-3.5" /> Pulihkan Pesanan (Batal Tolak)

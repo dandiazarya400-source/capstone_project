@@ -71,8 +71,10 @@ const AdminDashboard = () => {
             const uniqueCustomers = new Set(myTransactions.map(tx => tx.tenant_id));
             totalCustomersCount = uniqueCustomers.size;
 
-            // Hitung Pendapatan (Menjumlahkan semua total_price)
-            totalRevenue = myTransactions.reduce((sum, tx) => sum + (Number(tx.total_price) || 0), 0);
+            // [FIX BUG PENDAPATAN] Hanya hitung jika statusnya 'Selesai' atau 'Diserahkan'
+            totalRevenue = myTransactions
+              .filter(tx => ['Selesai', 'Diserahkan'].includes(tx.status))
+              .reduce((sum, tx) => sum + (Number(tx.total_price) || 0), 0);
           }
         }
 

@@ -87,7 +87,8 @@ const BookingContent = () => {
   const duration = startDate && endDate ? (endDate - startDate) + 1 : (startDate ? 1 : 0);
 
   return (
-    <div className="h-full w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+    // [FIX SCROLL] Bebaskan ketinggian dan hapus overflow-hidden
+    <div className="w-full flex flex-col text-text-main relative">
       
       {/* HEADER */}
       <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
@@ -101,7 +102,7 @@ const BookingContent = () => {
       </header>
 
       {/* AREA SCROLL */}
-      <main className="flex-1 overflow-y-auto px-5 pt-6 pb-10 scrollbar-hide">
+      <main className="w-full px-5 pb-24 pt-4">
         
         {/* LEGENDA */}
         <div className="mb-6">

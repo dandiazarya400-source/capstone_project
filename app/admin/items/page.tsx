@@ -76,14 +76,29 @@ const AdminManageItems = () => {
     const isConfirm = window.confirm("Yakin ingin menghapus barang ini secara permanen? Data tidak bisa dikembalikan.");
     if (!isConfirm) return;
 
+    // [FIX STORAGE] Cari data barangnya dulu sebelum dihapus dari UI
+    const itemToDelete = items.find(item => item.id === id);
+
     // Hapus dari UI sementara
     setItems(items.filter(item => item.id !== id));
 
     // Hapus dari database
     const { error } = await supabase.from('items').delete().eq('id', id);
+    
     if (error) {
       alert("Gagal menghapus barang.");
       fetchItems();
+    } else {
+      // [FIX STORAGE] Jika berhasil dihapus dari DB, hapus juga file fotonya di Storage
+      if (itemToDelete?.image_urls && itemToDelete.image_urls.length > 0) {
+        // Ambil nama file dari ujung URL
+        const filesToRemove = itemToDelete.image_urls.map((url: string) => {
+          return url.substring(url.lastIndexOf('/') + 1);
+        });
+        
+        // Hapus fisik gambarnya secara serentak
+        await supabase.storage.from('product-images').remove(filesToRemove);
+      }
     }
   };
 
@@ -92,48 +107,56 @@ const AdminManageItems = () => {
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-fluent-bg text-text-main p-5 pb-24 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    // 1. [UBAH BUNGKUS LUAR] Hapus h-full, overflow-y-auto, dan p-5
+    <div className="w-full flex flex-col text-text-main pb-24">
       
-      {/* Header */}
-      <header className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <PackageSearch className="w-6 h-6 text-fluent-accent" />
-            Manajemen Barang
-          </h1>
-          <p className="text-xs text-text-muted mt-1">Atur data dan visibilitas alat sewaan</p>
-        </div>
-        <button 
-          onClick={() => router.push('/admin/add')}
-          className="bg-fluent-accent hover:bg-[#b58eff] text-white p-2.5 rounded-xl shadow-[0_4px_20px_rgba(163,116,255,0.4)] transition-colors shrink-0"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-      </header>
+      {/* 2. [BUAT AREA STICKY] Bungkus Header & Filter agar selalu menempel cantik di atas */}
+      <div className="sticky top-0 z-30 bg-fluent-bg/95 backdrop-blur-md px-5 pt-5 pb-3 border-b border-white/5">
+        
+        {/* Header */}
+        <header className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <PackageSearch className="w-6 h-6 text-fluent-accent" />
+              Manajemen Barang
+            </h1>
+            <p className="text-xs text-text-muted mt-1">Atur data dan visibilitas alat sewaan</p>
+          </div>
+          <button 
+            onClick={() => router.push('/admin/add')}
+            className="bg-fluent-accent hover:bg-[#b58eff] text-white p-2.5 rounded-xl shadow-[0_4px_20px_rgba(163,116,255,0.4)] transition-colors shrink-0"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </header>
 
       {/* Filter Tab */}
-      <div className="flex gap-2 mb-6 px-1 overflow-x-auto scrollbar-hide">
-        {(['semua', 'live', 'draft'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            className={`px-4 py-1.5 rounded-full text-[11px] font-bold capitalize transition-all ${
-              filter === tab 
-                ? 'bg-fluent-accent text-white shadow-lg' 
-                : 'bg-white/5 text-text-muted hover:bg-white/10'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="flex gap-2 mb-1 px-1 overflow-x-auto scrollbar-hide">
+          {(['semua', 'live', 'draft'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={`px-4 py-1.5 rounded-full text-[11px] font-bold capitalize transition-all ${
+                filter === tab 
+                  ? 'bg-fluent-accent text-white shadow-lg' 
+                  : 'bg-white/5 text-text-muted hover:bg-white/10'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
       </div>
 
       {/* List Barang */}
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="w-8 h-8 text-fluent-accent animate-spin" />
-        </div>
-      ) : (
+      <main className="px-5 pt-5">
+        {/* List Barang */}
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-8 h-8 text-fluent-accent animate-spin" />
+          </div>
+        ) : (
         <div className="space-y-4">
           {filteredItems.map((item) => (
             <div key={item.id} className="bg-fluent-card border border-white/5 rounded-2xl p-3 shadow-lg flex flex-col gap-3 relative overflow-hidden transition-all">
@@ -216,20 +239,21 @@ const AdminManageItems = () => {
           ))}
           
           {items.length === 0 && (
-            <div className="text-center py-16 bg-fluent-card rounded-2xl border border-white/5 border-dashed">
-              <PackageSearch className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-bold text-text-main">Belum ada barang</p>
-              <p className="text-xs text-text-muted mt-1 mb-4">Silakan tambah alat baru ke katalog Anda.</p>
-              <button onClick={() => router.push('/admin/add')} className="text-xs font-bold text-fluent-accent bg-fluent-accent/10 px-4 py-2 rounded-full hover:bg-fluent-accent/20 transition-colors">
-                + Tambah Sekarang
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+              <div className="text-center py-16 bg-fluent-card rounded-2xl border border-white/5 border-dashed">
+                <PackageSearch className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-bold text-text-main">Belum ada barang</p>
+                <p className="text-xs text-text-muted mt-1 mb-4">Silakan tambah alat baru ke katalog Anda.</p>
+                <button onClick={() => router.push('/admin/add')} className="text-xs font-bold text-fluent-accent bg-fluent-accent/10 px-4 py-2 rounded-full hover:bg-fluent-accent/20 transition-colors">
+                  + Tambah Sekarang
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
 
     </div>
   );
-};
+}
 
 export default AdminManageItems;
