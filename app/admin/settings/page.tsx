@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Store, Clock, Phone, MapPin, Save, BadgeCheck, Camera, Loader2, Crop, X, Calendar } from 'lucide-react';
+import { 
+  ArrowLeft, Store, Clock, Phone, MapPin, Save, 
+  BadgeCheck, Camera, Loader2, Crop, X, Calendar, Check 
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-// Pustaka crop foto (sama dengan profil user)
 import Cropper from 'react-easy-crop';
 
 // FUNGSI UTILITY CROP
@@ -34,16 +36,36 @@ const AdminStoreSettings = () => {
   
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  // Simpan ID admin yang sedang login untuk keperluan update
   const [adminId, setAdminId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     store_name: '',
     phone_number: '',
     address: '',
-    open_days: '',
-    open_hours: '',
-    avatar_url: '' // Avatar toko
+    avatar_url: '' 
+  });
+
+  const defaultSchedule = [
+    { day: 'Senin', open: '08:00', close: '17:00', isClosed: false },
+    { day: 'Selasa', open: '08:00', close: '17:00', isClosed: false },
+    { day: 'Rabu', open: '08:00', close: '17:00', isClosed: false },
+    { day: 'Kamis', open: '08:00', close: '17:00', isClosed: false },
+    { day: 'Jumat', open: '08:00', close: '17:00', isClosed: false },
+    { day: 'Sabtu', open: '08:00', close: '17:00', isClosed: false },
+    { day: 'Minggu', open: '08:00', close: '17:00', isClosed: true }, 
+  ];
+  const [schedule, setSchedule] = useState(defaultSchedule);
+
+  const updateSchedule = (index: number, field: string, value: any) => {
+    const newSchedule = [...schedule];
+    newSchedule[index] = { ...newSchedule[index], [field]: value };
+    setSchedule(newSchedule);
+  };
+
+  const timeOptions = Array.from({ length: 48 }, (_, i) => {
+    const hour = Math.floor(i / 2).toString().padStart(2, '0');
+    const minute = i % 2 === 0 ? '00' : '30';
+    return `${hour}:${minute}`;
   });
 
   // State Fitur Crop
@@ -57,7 +79,6 @@ const AdminStoreSettings = () => {
   useEffect(() => {
     const fetchStoreData = async () => {
       try {
-        // Ambil sesi user yang sedang login saat ini (Admin yang sedang buka HP ini)
         const { data: authData } = await supabase.auth.getUser();
         if (!authData.user) {
           router.push('/login');
@@ -67,17 +88,14 @@ const AdminStoreSettings = () => {
         const currentUserId = authData.user.id;
         setAdminId(currentUserId);
 
-        // Ambil data profilnya dari database 
-        // Menggunakan .maybeSingle() agar aman dari error "0 rows"
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, phone_number, address, open_days, open_hours, avatar_url, is_admin')
+          .select('full_name, phone_number, address, avatar_url, is_admin, operational_schedule')
           .eq('id', currentUserId)
           .maybeSingle();
 
         if (error) throw error;
 
-        // Peringatan jika ternyata akun ini BUKAN admin
         if (data && !data.is_admin) {
           alert('Akun ini bukan admin!');
           router.push('/');
@@ -85,14 +103,18 @@ const AdminStoreSettings = () => {
         }
 
         if (data) {
+          const storeData = data as any;
           setFormData({
-            store_name: data.full_name || '', 
-            phone_number: data.phone_number || '',
-            address: data.address || '',
-            open_days: data.open_days || '',
-            open_hours: data.open_hours || '',
-            avatar_url: data.avatar_url || ''
+            store_name: storeData.full_name || '', 
+            phone_number: storeData.phone_number || '',
+            address: storeData.address || '',
+            avatar_url: storeData.avatar_url || ''
           });
+          
+          // Sinkronisasi jadwal dari JSON database jika ada
+          if (storeData.operational_schedule) {
+            setSchedule(storeData.operational_schedule);
+          }
         }
       } catch (error) {
         console.error("Gagal mengambil data toko:", error);
@@ -122,7 +144,6 @@ const AdminStoreSettings = () => {
       setUploadingImage(true);
       setImageToCrop(null); 
       const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
-      // Nama unik file logo toko
       const fileName = `store-${adminId}-${Math.random()}.jpg`;
       const croppedFile = new File([croppedBlob], fileName, { type: 'image/jpeg' });
       
@@ -130,7 +151,7 @@ const AdminStoreSettings = () => {
       if (uploadError) throw uploadError;
       
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      setFormData({ ...formData, avatar_url: data.publicUrl });
+      setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
     } catch (error: any) {
       console.error('Error upload:', error);
       alert('Gagal memproses gambar logo toko.');
@@ -147,16 +168,14 @@ const AdminStoreSettings = () => {
     setLoading(true);
 
     try {
-      // Update profil berdasarkan ID admin yang sedang login
       const { error } = await supabase
         .from('profiles')
         .update({
           full_name: formData.store_name, 
           phone_number: formData.phone_number,
           address: formData.address,
-          open_days: formData.open_days,
-          open_hours: formData.open_hours,
-          avatar_url: formData.avatar_url
+          avatar_url: formData.avatar_url,
+          operational_schedule: schedule // Simpan data array JSON jadwal terstruktur
         })
         .eq('id', adminId);
 
@@ -173,16 +192,10 @@ const AdminStoreSettings = () => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0 relative">
-        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <h1 className="text-xl font-bold ml-2">Pengaturan Toko</h1>
-      </header>
+    <div className="w-full flex flex-col text-text-main relative">
 
       {/* NOTIFIKASI TOAST */}
-      <div className="absolute top-20 md:top-28 left-0 w-full flex justify-center z-50 pointer-events-none px-4">
+      <div className="fixed top-24 left-0 w-full flex justify-center z-50 pointer-events-none px-4">
         {success && (
           <div className="flex items-center gap-2 bg-[#1a2e23]/90 backdrop-blur-md border border-green-500/30 text-green-400 px-4 py-2.5 rounded-full shadow-lg shadow-green-500/20 animate-in slide-in-from-top-5 fade-in duration-300">
             <BadgeCheck className="w-4 h-4" />
@@ -191,8 +204,19 @@ const AdminStoreSettings = () => {
         )}
       </div>
 
-      <main className="flex-1 overflow-y-auto px-5 pt-6 pb-10 scrollbar-hide relative z-10">
-        
+      <main className="w-full px-5 pt-4 pb-24">
+
+        {/* HEADER PENGATURAN TOKO (Model Card Dalam) */}
+        <div className="flex items-center gap-3 mb-6 bg-fluent-card p-3 rounded-2xl border border-white/5 shadow-lg">
+          <button type="button" onClick={() => router.back()} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-base font-bold text-text-main leading-tight">Pengaturan Toko</h1>
+            <p className="text-[10px] text-text-muted">Kelola identitas dan jadwal operasional</p>
+          </div>
+        </div>
+
         {/* Banner Info */}
         <div className="bg-fluent-accent/10 border border-fluent-accent/20 rounded-2xl p-4 mb-6 flex items-center gap-3">
           <BadgeCheck className="w-8 h-8 text-fluent-accent shrink-0" />
@@ -207,7 +231,6 @@ const AdminStoreSettings = () => {
             {uploadingImage ? (
               <Loader2 className="w-10 h-10 animate-spin text-fluent-accent/50" />
             ) : formData.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={formData.avatar_url} alt="Logo Toko" className="w-full h-full object-cover" />
             ) : (
               <Store className="w-12 h-12 text-text-muted/50" />
@@ -240,25 +263,6 @@ const AdminStoreSettings = () => {
             </div>
           </div>
 
-          {/* KOLOM HARI & JAM BERDAMPINGAN */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Hari Buka</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fluent-accent" />
-                <input type="text" placeholder="Senin - Sabtu" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-9 pr-3 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.open_days} onChange={(e) => setFormData({...formData, open_days: e.target.value})} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Jam Buka</label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fluent-accent" />
-                <input type="text" placeholder="09:00 - 21:00" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-9 pr-3 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.open_hours} onChange={(e) => setFormData({...formData, open_hours: e.target.value})} />
-              </div>
-            </div>
-          </div>
-
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Alamat Lengkap Toko</label>
             <div className="relative">
@@ -267,34 +271,102 @@ const AdminStoreSettings = () => {
             </div>
           </div>
 
-          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-2 bg-fluent-accent text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-fluent-accent/30 hover:bg-[#b58eff] transition-all disabled:opacity-50">
+          {/* ================= UI JADWAL OPERASIONAL TERPADU ================= */}
+          <div className="space-y-2 pt-2">
+            <div className="flex justify-between items-end mb-1 px-1">
+              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Jadwal Operasional</label>
+              <span className="text-[9px] text-text-muted uppercase tracking-wider">Buka - Tutup &nbsp;&nbsp;&nbsp; Libur</span>
+            </div>
+            
+            {/* Card Besar Gabungan Anti-Aneh */}
+            <div className="bg-fluent-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5 shadow-md">
+              {schedule.map((item, idx) => (
+                <div key={item.day} className="flex items-center justify-between p-3.5 transition-colors hover:bg-white/[0.01]">
+                  
+                  {/* Nama Hari */}
+                  <div className="w-16 shrink-0">
+                    <span className={`text-xs font-bold transition-all ${item.isClosed ? 'text-text-muted line-through opacity-40' : 'text-text-main'}`}>
+                      {item.day}
+                    </span>
+                  </div>
+                  
+                  {/* Jam Operasional (Ubah jadi Select Dropdown) */}
+                  <div className="flex items-center gap-1">
+                    <select 
+                      value={item.open} 
+                      onChange={(e) => updateSchedule(idx, 'open', e.target.value)}
+                      disabled={item.isClosed}
+                      className={`bg-[#1A0B2E] border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
+                    >
+                      {timeOptions.map(time => (
+                        <option key={`open-${time}`} value={time} className="bg-[#1A0B2E]">{time}</option>
+                      ))}
+                    </select>
+
+                    <span className="text-text-muted text-xs opacity-50 px-0.5">-</span>
+                    
+                    <select 
+                      value={item.close} 
+                      onChange={(e) => updateSchedule(idx, 'close', e.target.value)}
+                      disabled={item.isClosed}
+                      className={`bg-[#1A0B2E] border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
+                    >
+                      {timeOptions.map(time => (
+                        <option key={`close-${time}`} value={time} className="bg-[#1A0B2E]">{time}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Tombol Centang Box Minimalis (Menggantikan Slide Toggle) */}
+                  <button 
+                    type="button"
+                    onClick={() => updateSchedule(idx, 'isClosed', !item.isClosed)}
+                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                      item.isClosed 
+                        ? 'bg-rose-500 border-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]' 
+                        : 'border-white/20 text-transparent hover:border-fluent-accent/50 bg-white/[0.02]'
+                    }`}
+                  >
+                    <Check className={`w-3.5 h-3.5 transition-transform duration-200 ${item.isClosed ? 'scale-100' : 'scale-0'}`} />
+                  </button>
+
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* ========================================================================= */}
+
+          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-4 bg-fluent-accent text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-fluent-accent/30 hover:bg-[#b58eff] transition-all disabled:opacity-50 cursor-pointer">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {loading ? 'Menyimpan...' : 'Simpan Pengaturan Toko'}
           </button>
         </form>
       </main>
 
-      {/* MODAL CROP (GLASSMORPHISM) */}
+      {/* MODAL CROP FIX (Aman & Berjarak Pasti) */}
       {imageToCrop && (
-        <div className="absolute inset-0 z-[100] bg-black/90 backdrop-blur-md p-5 flex flex-col animate-in fade-in duration-300">
-          <div className="flex items-center justify-between mb-6 shrink-0 relative z-10 pt-4">
+        <div className="absolute inset-0 z-[100] bg-black/95 p-5 flex flex-col animate-in fade-in duration-300">
+          <div className="flex items-center justify-between mb-4 shrink-0 pt-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Crop className="w-4 h-4 text-fluent-accent" />
               Sesuaikan Logo Toko
             </h3>
-            <button onClick={() => setImageToCrop(null)} className="p-1 text-white/50 hover:text-rose-400 transition-colors">
+            <button type="button" onClick={() => setImageToCrop(null)} className="p-1 text-white/50 hover:text-rose-400 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex-1 relative w-full bg-fluent-card rounded-2xl border border-white/5 shadow-2xl overflow-hidden mb-5">
+          
+          {/* Wadah dengan tinggi absolut (h-72) agar tidak menghilang di Mobile Frame */}
+          <div className="relative w-full h-72 bg-neutral-900 rounded-2xl border border-white/5 overflow-hidden mb-4 shrink-0 shadow-inner">
             <Cropper image={imageToCrop} crop={crop} zoom={zoom} aspect={1} cropShape="round" showGrid={true} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} classes={{ containerClassName: "bg-transparent", cropAreaClassName: "border-2 border-fluent-accent shadow-[0_0_20px_rgba(163,116,255,0.6)]" }} />
           </div>
-          <div className="bg-fluent-card/70 backdrop-blur-md p-5 rounded-2xl border border-white/5 space-y-4 shrink-0 relative z-10 mb-2">
+          
+          <div className="bg-fluent-card p-5 rounded-2xl border border-white/5 space-y-4 shadow-xl">
             <div className="space-y-1.5">
               <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest pl-1">Perbesar / Perkecil</label>
               <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="w-full h-1.5 bg-fluent-bg rounded-full appearance-none cursor-pointer accent-fluent-accent" />
             </div>
-            <button onClick={handleCropSaveAndUpload} disabled={uploadingImage} className="w-full bg-fluent-accent text-white text-sm font-bold py-3.5 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:bg-[#b58eff] transition-all disabled:opacity-50">
+            <button type="button" onClick={handleCropSaveAndUpload} disabled={uploadingImage} className="w-full bg-fluent-accent text-white text-sm font-bold py-3.5 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:bg-[#b58eff] transition-all disabled:opacity-50">
               <BadgeCheck className="w-5 h-5" /> Terapkan Logo
             </button>
           </div>

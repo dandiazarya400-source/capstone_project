@@ -45,6 +45,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     checkAdmin();
   }, [router]);
 
+  const handleLogout = async () => {
+    const confirmLogout = window.confirm("Yakin ingin keluar dari Admin Panel?");
+    if (confirmLogout) {
+      await supabase.auth.signOut();
+      router.replace('/login');
+    }
+  };
+
   if (loading) return <div className="h-[100dvh] w-full flex items-center justify-center bg-fluent-bg text-fluent-accent">Memverifikasi Akses...</div>;
   if (!isAdmin) return null; 
 
@@ -60,15 +68,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex h-[100dvh] w-full bg-fluent-bg text-text-main overflow-hidden relative">
       
-      {/* 1. OVERLAY GELAP (Muncul saat sidebar terbuka) */}
+      {/* 1. OVERLAY GELAP (Selalu absolute agar tidak keluar dari frame HP) */}
       {isSidebarOpen && (
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
-          onClick={() => setIsSidebarOpen(false)} // Tutup sidebar jika area gelap diklik
+          onClick={() => setIsSidebarOpen(false)} 
         />
       )}
 
-      {/* 2. SIDEBAR KIRI (Geser dari kiri ke kanan) */}
+      {/* 2. SIDEBAR KIRI (Selalu melayang absolute di atas frame) */}
       <aside 
         className={`absolute top-0 left-0 h-full w-64 bg-[#1A0B2E] border-r border-white/5 flex flex-col z-50 shadow-2xl transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -96,7 +104,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link 
                 key={item.name} 
                 href={item.path}
-                onClick={() => setIsSidebarOpen(false)} // Tutup otomatis saat menu diklik!
+                onClick={() => setIsSidebarOpen(false)} 
               >
                 <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive 
@@ -111,20 +119,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* --- BAGIAN BAWAH SIDEBAR --- */}
         <div className="p-4 border-t border-white/5 space-y-2">
-          
-          {/* Tombol Ke Halaman Utama */}
           <Link href="/" onClick={() => setIsSidebarOpen(false)}>
             <div className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-text-muted hover:bg-white/5 hover:text-white transition-colors font-medium">
               <Home className="w-5 h-5" />
               <span className="text-sm">Lihat Beranda</span>
             </div>
           </Link>
-          </div>
+        </div>
 
         <div className="p-4 border-t border-white/5">
-          <button className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-500/10 transition-colors font-medium">
+          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-500/10 transition-colors font-medium cursor-pointer">
             <LogOut className="w-5 h-5" />
             <span className="text-sm">Keluar</span>
           </button>
@@ -132,9 +137,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* 3. KONTEN UTAMA */}
-      <main className="flex-1 h-full overflow-y-auto bg-fluent-bg flex flex-col relative w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <main className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-fluent-bg flex flex-col relative w-full min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
-        {/* HEADER TOP-BAR (Untuk memunculkan Hamburger Menu) */}
+        {/* HEADER TOP-BAR */}
         <header className="w-full px-5 pt-12 pb-4 border-b border-white/5 flex items-center bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-30 shrink-0">
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -145,7 +150,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <h1 className="text-lg font-bold">Admin Workspace</h1>
         </header>
 
-        {/* AREA ISI HALAMAN (Dashboard, dll) */}
         <div className="flex-1">
           {children}
         </div>
