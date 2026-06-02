@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Store, Clock, Phone, MapPin, Save, BadgeCheck, Camera, Loader2, Crop, X } from 'lucide-react';
+import { ArrowLeft, Store, Clock, Phone, MapPin, Save, BadgeCheck, Camera, Loader2, Crop, X, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 // Pustaka crop foto (sama dengan profil user)
 import Cropper from 'react-easy-crop';
@@ -41,6 +41,7 @@ const AdminStoreSettings = () => {
     store_name: '',
     phone_number: '',
     address: '',
+    open_days: '',
     open_hours: '',
     avatar_url: '' // Avatar toko
   });
@@ -70,7 +71,7 @@ const AdminStoreSettings = () => {
         // Menggunakan .maybeSingle() agar aman dari error "0 rows"
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, phone_number, address, open_hours, avatar_url, is_admin')
+          .select('full_name, phone_number, address, open_days, open_hours, avatar_url, is_admin')
           .eq('id', currentUserId)
           .maybeSingle();
 
@@ -88,6 +89,7 @@ const AdminStoreSettings = () => {
             store_name: data.full_name || '', 
             phone_number: data.phone_number || '',
             address: data.address || '',
+            open_days: data.open_days || '',
             open_hours: data.open_hours || '',
             avatar_url: data.avatar_url || ''
           });
@@ -152,6 +154,7 @@ const AdminStoreSettings = () => {
           full_name: formData.store_name, 
           phone_number: formData.phone_number,
           address: formData.address,
+          open_days: formData.open_days,
           open_hours: formData.open_hours,
           avatar_url: formData.avatar_url
         })
@@ -237,11 +240,22 @@ const AdminStoreSettings = () => {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Jam Operasional</label>
-            <div className="relative">
-              <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
-              <input type="text" placeholder="09:00 - 21:00 WIB" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.open_hours} onChange={(e) => setFormData({...formData, open_hours: e.target.value})} />
+          {/* KOLOM HARI & JAM BERDAMPINGAN */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Hari Buka</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fluent-accent" />
+                <input type="text" placeholder="Senin - Sabtu" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-9 pr-3 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.open_days} onChange={(e) => setFormData({...formData, open_days: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Jam Buka</label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fluent-accent" />
+                <input type="text" placeholder="09:00 - 21:00" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-9 pr-3 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.open_hours} onChange={(e) => setFormData({...formData, open_hours: e.target.value})} />
+              </div>
             </div>
           </div>
 

@@ -54,7 +54,7 @@ const ProfilePage = () => {
     is_admin: false,
     balance: 0,
     verification_status: 'unverified', // <--- STATE BARU UNTUK VERIFIKASI
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'
+    avatar_url: 'https://ui-avatars.com/api/?name=User&background=2B164D&color=A374FF&bold=true'
   });
 
   const [showTopupModal, setShowTopupModal] = useState(false);
