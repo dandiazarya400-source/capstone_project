@@ -273,9 +273,9 @@ const AdminStoreSettings = () => {
 
           {/* ================= UI JADWAL OPERASIONAL TERPADU ================= */}
           <div className="space-y-2 pt-2">
-            <div className="flex justify-between items-end mb-1 px-1">
+            <div className="flex justify-between items-end mb-2 px-1">
               <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Jadwal Operasional</label>
-              <span className="text-[9px] text-text-muted uppercase tracking-wider">Buka - Tutup &nbsp;&nbsp;&nbsp; Libur</span>
+              <span className="text-[9px] text-text-muted/70 font-bold uppercase tracking-wider">Tutup / Libur</span>
             </div>
             
             {/* Card Besar Gabungan Anti-Aneh */}
