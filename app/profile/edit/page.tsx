@@ -183,7 +183,7 @@ const EditProfilePage = () => {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative animate-in fade-in duration-300">
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
+      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
         <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
@@ -229,21 +229,21 @@ const EditProfilePage = () => {
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Nama Lengkap</label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
-              <input type="text" placeholder="Masukkan nama" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-fluent-accent/50 transition-all shadow-inner" value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} />
+              <input type="text" placeholder="Masukkan nama" required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-fluent-accent/50 transition-all shadow-inner" value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} />
             </div>
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Nomor WhatsApp</label>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
-              <input type="tel" placeholder="0895..." required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-fluent-accent/50 transition-all shadow-inner" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
+              <input type="tel" placeholder="0895..." required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-fluent-accent/50 transition-all shadow-inner" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
             </div>
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Alamat Pengiriman</label>
             <div className="relative">
               <MapPin className="absolute left-4 top-3.5 w-4.5 h-4.5 text-fluent-accent" />
-              <textarea rows={3} placeholder="Jalan, RT/RW, Kota..." required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-fluent-accent/50 transition-all shadow-inner resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
+              <textarea rows={3} placeholder="Jalan, RT/RW, Kota..." required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-fluent-accent/50 transition-all shadow-inner resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
             </div>
           </div>
           <button type="submit" disabled={loading || uploadingImage} className="w-full mt-2 bg-fluent-accent text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:bg-[#b58eff] disabled:opacity-50 transition-all">
@@ -267,7 +267,7 @@ const EditProfilePage = () => {
             </button>
           </div>
 
-          <div className="flex-1 relative w-full bg-fluent-card rounded-3xl border border-white/5 shadow-2xl overflow-hidden mb-6">
+          <div className="flex-1 relative w-full bg-fluent-card rounded-3xl border border-fluent-accent/10 shadow-2xl overflow-hidden mb-6">
             <Cropper
               image={imageToCrop}
               crop={crop}
@@ -285,7 +285,7 @@ const EditProfilePage = () => {
             />
           </div>
 
-          <div className="bg-fluent-card/70 backdrop-blur-md p-6 rounded-3xl border border-white/5 space-y-5 shrink-0 relative z-10 mb-6">
+          <div className="bg-fluent-card/70 backdrop-blur-md p-6 rounded-3xl border border-fluent-accent/10 space-y-5 shrink-0 relative z-10 mb-6">
             <div className="space-y-1.5">
               <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest pl-1">Perbesar / Perkecil</label>
               <input

@@ -143,7 +143,7 @@ const CheckoutInstructionContent = () => {
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
       
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
+      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
         <button 
           onClick={() => router.back()} 
           className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors"
@@ -173,7 +173,7 @@ const CheckoutInstructionContent = () => {
           </div>
         </div>
 
-        <div className="bg-fluent-card rounded-[32px] p-6 shadow-xl border border-white/5">
+        <div className="bg-fluent-card rounded-[32px] p-6 shadow-xl border border-fluent-accent/10">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg">
               <Landmark className="w-6 h-6 text-black" />
@@ -185,7 +185,7 @@ const CheckoutInstructionContent = () => {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-[#1A0B2E] rounded-2xl p-4 border border-white/5">
+            <div className="bg-fluent-bg rounded-2xl p-4 border border-fluent-accent/10">
               <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Nomor Rekening / Virtual Account</p>
               <div className="flex justify-between items-center">
                 <span className="text-xl font-black text-fluent-accent tracking-wider">125 0895 1679 9498</span>
@@ -199,7 +199,7 @@ const CheckoutInstructionContent = () => {
               </div>
             </div>
 
-        <div className="bg-[#1A0B2E] rounded-2xl p-4 border border-white/5">
+        <div className="bg-fluent-bg rounded-2xl p-4 border border-fluent-accent/10">
           <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Total Pembayaran</p>
           <div className="flex justify-between items-center">
             <span className="text-xl font-black text-text-main flex items-center gap-2">
@@ -230,7 +230,7 @@ const CheckoutInstructionContent = () => {
               "Simpan bukti transfer hingga status transaksi berubah."
             ].map((step, i) => (
               <li key={i} className="flex gap-4 items-start">
-                <span className="w-5 h-5 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold text-fluent-accent shrink-0 mt-0.5 border border-white/10">
+                <span className="w-5 h-5 rounded-full bg-fluent-accent/5 flex items-center justify-center text-[10px] font-bold text-fluent-accent shrink-0 mt-0.5 border border-white/10">
                   {i + 1}
                 </span>
                 <p className="text-xs text-text-muted leading-relaxed">{step}</p>

@@ -143,7 +143,7 @@ const AdminDashboard = () => {
       {/* ================= GRID STATISTIK ================= */}
       <div className="grid grid-cols-2 gap-3">
         
-        <div className="bg-fluent-card border border-white/5 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
+        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
           <div className="w-8 h-8 bg-fluent-accent/20 rounded-xl text-fluent-accent flex justify-center items-center">
             <Package className="w-4 h-4" />
           </div>
@@ -153,7 +153,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-fluent-card border border-white/5 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
+        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
           <div className="w-8 h-8 bg-blue-500/20 rounded-xl text-blue-400 flex justify-center items-center">
             <CalendarCheck className="w-4 h-4" />
           </div>
@@ -163,7 +163,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-fluent-card border border-white/5 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
+        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
           <div className="w-8 h-8 bg-green-500/20 rounded-xl text-green-400 flex justify-center items-center">
             <Users className="w-4 h-4" />
           </div>
@@ -173,7 +173,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-fluent-card border border-white/5 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
+        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
           <div className="w-8 h-8 bg-yellow-500/20 rounded-xl text-yellow-400 flex justify-center items-center">
             <TrendingUp className="w-4 h-4" />
           </div>

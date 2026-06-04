@@ -25,7 +25,7 @@ interface ProductProps {
 
 const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, owner, image, is_verified }) => (
   <Link href={`/product/${id}`} className="block h-full">
-    <div className="bg-fluent-card rounded-fluent-rounded p-3 shadow-lg border border-white/5 hover:scale-[1.02] transition-transform cursor-pointer h-full flex flex-col">
+    <div className="bg-fluent-card rounded-fluent-rounded p-3 shadow-lg border border-fluent-accent/10 hover:scale-[1.02] transition-transform cursor-pointer h-full flex flex-col">
       {/* Gambar Persegi (Aspect Ratio 1:1) anti penyok */}
       <div className="w-full aspect-square overflow-hidden rounded-[14px] mb-3 relative bg-fluent-bg/50">
         <img src={image} alt={title} className="absolute inset-0 w-full h-full object-cover" />
@@ -169,7 +169,7 @@ const HomePage = () => {
                 <SlidersHorizontal className="w-5 h-5 text-fluent-accent" />
                 Filter Pencarian
               </h2>
-              <button onClick={() => setIsFilterOpen(false)} className="p-2 bg-white/5 rounded-full text-text-muted hover:text-white transition">
+              <button onClick={() => setIsFilterOpen(false)} className="p-2 bg-fluent-accent/5 rounded-full text-text-muted hover:text-white transition">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -178,7 +178,7 @@ const HomePage = () => {
               <label className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 block">Urutkan</label>
               <div className="flex flex-wrap gap-2">
                 {['terbaru', 'termurah', 'termahal'].map((sortType) => (
-                  <button key={sortType} onClick={() => setSortBy(sortType)} className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${sortBy === sortType ? 'bg-fluent-accent/20 text-fluent-accent border border-fluent-accent/50' : 'bg-white/5 text-text-muted border border-transparent hover:bg-white/10'}`}>
+                  <button key={sortType} onClick={() => setSortBy(sortType)} className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${sortBy === sortType ? 'bg-fluent-accent/20 text-fluent-accent border border-fluent-accent/50' : 'bg-fluent-accent/5 text-text-muted border border-transparent hover:bg-white/10'}`}>
                     {sortType}
                   </button>
                 ))}
@@ -197,7 +197,7 @@ const HomePage = () => {
               <label className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 block">Kondisi Alat</label>
               <div className="grid grid-cols-2 gap-2">
                 {['Semua', 'Sangat Baik', 'Baik', 'Cukup'].map((kondisi) => (
-                  <button key={kondisi} onClick={() => setFilterCondition(kondisi)} className={`px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all flex justify-between items-center ${filterCondition === kondisi ? 'bg-fluent-accent text-white shadow-lg border-fluent-accent' : 'bg-white/5 text-text-muted border border-transparent hover:bg-white/10'}`}>
+                  <button key={kondisi} onClick={() => setFilterCondition(kondisi)} className={`px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all flex justify-between items-center ${filterCondition === kondisi ? 'bg-fluent-accent text-white shadow-lg border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border border-transparent hover:bg-white/10'}`}>
                     {kondisi}
                     {filterCondition === kondisi && <Check className="w-4 h-4" />}
                   </button>
@@ -206,7 +206,7 @@ const HomePage = () => {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={handleResetFilter} className="flex-1 py-3.5 rounded-xl font-bold text-text-muted bg-white/5 hover:bg-white/10 transition-colors">Reset</button>
+              <button onClick={handleResetFilter} className="flex-1 py-3.5 rounded-xl font-bold text-text-muted bg-fluent-accent/5 hover:bg-white/10 transition-colors">Reset</button>
               <button onClick={() => setIsFilterOpen(false)} className="flex-[2] py-3.5 rounded-xl font-bold text-white bg-fluent-accent hover:bg-[#b58eff] shadow-[0_4px_20px_rgba(163,116,255,0.4)] transition-colors">Terapkan</button>
             </div>
 
@@ -233,7 +233,7 @@ const HomePage = () => {
                 </div>
               </div>
             </div>
-            <button type="button" onClick={() => setIsFilterOpen(true)} className="bg-fluent-card p-3 rounded-full text-text-muted hover:text-fluent-accent hover:bg-white/5 border border-white/5 shadow-lg transition-colors shrink-0 relative">
+            <button type="button" onClick={() => setIsFilterOpen(true)} className="bg-fluent-card p-3 rounded-full text-text-muted hover:text-fluent-accent hover:bg-fluent-accent/5 border border-fluent-accent/10 shadow-lg transition-colors shrink-0 relative">
               <SlidersHorizontal className="w-5 h-5" />
               {(sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMax !== '') && (
                 <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-fluent-accent rounded-full border border-fluent-bg"></span>
@@ -270,7 +270,7 @@ const HomePage = () => {
               className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-200 cursor-pointer border ${
                 activeCategory === kat
                   ? 'bg-white/10 text-white shadow-lg border-white/20' 
-                  : 'bg-fluent-card text-text-muted border-white/5 hover:bg-white/10' 
+                  : 'bg-fluent-card text-text-muted border-fluent-accent/10 hover:bg-white/10' 
               }`}
             >
               {kat}
@@ -287,7 +287,7 @@ const HomePage = () => {
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-4">
               <Search className="w-8 h-8 opacity-50" />
             </div>
             <p className="text-sm font-bold text-text-main">Barang tidak ditemukan</p>

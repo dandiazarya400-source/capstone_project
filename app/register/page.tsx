@@ -68,11 +68,11 @@ const RegisterPage = () => {
       
       {/* ================= CONTAINER UTAMA ================= */}
       {/* max-h-[90dvh] dan overflow-y-auto memastikan konten bisa di-scroll jika layar HP sangat kecil */}
-      <div className="w-full max-w-[320px] bg-fluent-card/70 backdrop-blur-sm border border-white/5 rounded-[28px] p-5 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto scrollbar-hide">
+      <div className="w-full max-w-[320px] bg-fluent-card/70 backdrop-blur-sm border border-fluent-accent/10 rounded-[28px] p-5 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto scrollbar-hide">
         
         {/* Logo Area */}
         <div className="flex flex-col items-center mb-4">
-          <div className="w-12 h-12 bg-fluent-bg/80 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner border border-white/5 mb-2">
+          <div className="w-12 h-12 bg-fluent-bg/80 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner border border-fluent-accent/10 mb-2">
             <Briefcase className="w-6 h-6 text-fluent-accent" />
           </div>
           <h1 className="text-lg font-bold text-text-main">Buat Akun</h1>
@@ -101,7 +101,7 @@ const RegisterPage = () => {
               <User className="absolute left-3 w-4 h-4 text-text-muted/60" />
               <input 
                 type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Contoh: Jecky"
-                className="w-full bg-fluent-bg border border-white/5 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
+                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
               />
             </div>
           </div>
@@ -114,7 +114,7 @@ const RegisterPage = () => {
               <input 
                 type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com"
                 autoComplete="off"
-                className="w-full bg-fluent-bg border border-white/5 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
+                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
               />
             </div>
           </div>
@@ -127,7 +127,7 @@ const RegisterPage = () => {
               <input 
                 type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 karakter"
                 autoComplete="new-password"
-                className="w-full bg-fluent-bg border border-white/5 rounded-xl py-2.5 pl-9 pr-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
+                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 pr-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 text-text-muted/60 hover:text-text-main">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

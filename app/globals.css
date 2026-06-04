@@ -2,32 +2,32 @@
 
 @theme {
   /* ========================================================
-     PALET WARNA "DEEP DARK PURPLE" (Berdasarkan referensi)
+     PALET WARNA "AURORA LIGHT PURPLE" (Mode Terang)
      ======================================================== */
   
-  /* Latar Belakang Utama (Ungu sangat gelap/hampir hitam) */
-  --color-fluent-bg: #1A0B2E; 
+  /* Latar Belakang Utama (Putih dengan rona ungu/lavender sangat lembut) */
+  --color-fluent-bg: #F8F5FF; 
   
-  /* Latar Belakang Kartu & Navigasi (Ungu gelap tapi lebih terang dari background) */
-  --color-fluent-card: #2B164D;
+  /* Latar Belakang Kartu & Navigasi (Putih bersih memantulkan cahaya) */
+  --color-fluent-card: #FFFFFF;
   
-  /* Warna Aksen Bercahaya (Lavender/Ungu Terang untuk tombol & ikon) */
+  /* Warna Aksen Bercahaya (Tetap ungu khas Pinjam Dong agar identitas brand tidak hilang) */
   --color-fluent-accent: #A374FF; 
   
-  /* Teks Utama (Putih bersih) */
-  --color-text-main: #FFFFFF;
+  /* Teks Utama (Ungu sangat gelap/hampir hitam - Kita ambil dari warna background lama!) */
+  --color-text-main: #1A0B2E;
   
-  /* Teks Redup (Abu-abu keunguan untuk deskripsi/placeholder) */
-  --color-text-muted: #A198BA;
+  /* Teks Redup (Abu-abu dengan sedikit campuran ungu) */
+  --color-text-muted: #7A7289;
   
   /* Sudut membulat */
   --radius-fluent-rounded: 24px;
 }
 
 body {
-  /* Latar belakang luar HP dibuat sangat gelap agar menyatu */
-  background-color: #0B0416; 
-  color: #FFFFFF;
+  /* Latar belakang luar HP dibuat abu-abu ungu pucat agar frame HP (putih) terlihat menonjol */
+  background-color: #EBE5F5; 
+  color: var(--color-text-main);
 }
 
 @layer utilities {

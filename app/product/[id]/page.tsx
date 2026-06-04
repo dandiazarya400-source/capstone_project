@@ -222,7 +222,7 @@ const ProductDetailPage = () => {
           {product.images.length > 1 && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-1.5 z-10">
               {product.images.map((_: any, index: number) => (
-                <div key={index} className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === index ? 'bg-fluent-accent w-4' : 'bg-white/50 w-1.5'}`} />
+                <div key={index} className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === index ? 'bg-fluent-accent w-4' : 'bg-fluent-accent/50 w-1.5'}`} />
               ))}
             </div>
           )}
@@ -250,10 +250,10 @@ const ProductDetailPage = () => {
             </div>
           </div>
 
-          <div className="bg-fluent-card rounded-[24px] p-4 border border-white/5 shadow-lg mb-6">
-            <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-4">
+          <div className="bg-fluent-card rounded-[24px] p-4 border border-fluent-accent/10 shadow-lg mb-6">
+            <div className="flex justify-between items-center border-b border-fluent-accent/10 pb-4 mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-[#1A0B2E] border border-fluent-accent/30 rounded-full flex items-center justify-center shadow-inner overflow-hidden">
+                <div className="w-12 h-12 bg-fluent-bg border border-fluent-accent/30 rounded-full flex items-center justify-center shadow-inner overflow-hidden">
                   <span className="text-text-main font-black text-xl tracking-tighter">A<span className="text-fluent-accent">M</span></span>
                 </div>
                 <div>
@@ -299,7 +299,7 @@ const ProductDetailPage = () => {
                 <MessageCircle className="w-5 h-5 mr-2 text-fluent-accent" />
                 Ulasan Penyewa
               </div>
-              <span className="text-sm font-medium text-text-muted bg-white/5 px-3 py-1 rounded-full">
+              <span className="text-sm font-medium text-text-muted bg-fluent-accent/5 px-3 py-1 rounded-full">
                 <Star className="w-3.5 h-3.5 inline text-yellow-400 mr-1 mb-0.5" />
                 {averageRating} ({reviews.length} Ulasan)
               </span>
@@ -322,7 +322,7 @@ const ProductDetailPage = () => {
                   value={userComment}
                   onChange={(e) => setUserComment(e.target.value)}
                   placeholder="Bagaimana kondisi alat ini saat kamu gunakan?"
-                  className="w-full bg-[#1A0B2E] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-fluent-accent resize-none mb-3 shadow-inner"
+                  className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-fluent-accent resize-none mb-3 shadow-inner"
                   rows={3}
                 ></textarea>
                 
@@ -339,10 +339,10 @@ const ProductDetailPage = () => {
             {/* DAFTAR ULASAN */}
             <div className="space-y-4">
               {reviews.length === 0 ? (
-                <p className="text-xs text-text-muted text-center py-6 bg-white/5 rounded-2xl border border-white/5 border-dashed">Belum ada ulasan untuk barang ini.</p>
+                <p className="text-xs text-text-muted text-center py-6 bg-fluent-accent/5 rounded-2xl border border-fluent-accent/10 border-dashed">Belum ada ulasan untuk barang ini.</p>
               ) : (
                 reviews.map((review) => (
-                  <div key={review.id} className="bg-fluent-card p-4 rounded-2xl border border-white/5 shadow-md">
+                  <div key={review.id} className="bg-fluent-card p-4 rounded-2xl border border-fluent-accent/10 shadow-md">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2.5">
                         <img src={review.profiles?.avatar_url || 'https://via.placeholder.com/40'} alt="User" className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10" />
@@ -368,7 +368,7 @@ const ProductDetailPage = () => {
 
     
 
-      <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-white/5 z-50 shrink-0">
+      <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-fluent-accent/10 z-50 shrink-0">
         <div className="flex items-center space-x-3">
           <button onClick={() => router.push('/chat')} className="flex-1 bg-transparent border-2 border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors">
             <MessageCircle className="w-5 h-5" />

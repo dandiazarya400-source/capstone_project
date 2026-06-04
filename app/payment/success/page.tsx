@@ -23,7 +23,7 @@ const SuccessPage = () => {
     <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
       
       {/* ================= HEADER ================= */}
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
+      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
         <button 
           onClick={() => router.back()} 
           className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors"
@@ -37,7 +37,7 @@ const SuccessPage = () => {
       <main className="flex-1 overflow-y-auto px-5 pt-10 pb-10 scrollbar-hide flex flex-col items-center">
         
         {/* KARTU SUKSES */}
-        <div className="bg-fluent-card w-full rounded-[32px] p-8 shadow-2xl border border-white/5 relative flex flex-col items-center text-center mt-4">
+        <div className="bg-fluent-card w-full rounded-[32px] p-8 shadow-2xl border border-fluent-accent/10 relative flex flex-col items-center text-center mt-4">
           
           {/* Tombol Unduh (Kanan Atas) */}
           <button className="absolute top-5 right-5 p-2 text-fluent-accent hover:bg-fluent-accent/10 rounded-full transition-colors">

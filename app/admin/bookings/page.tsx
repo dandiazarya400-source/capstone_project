@@ -124,7 +124,7 @@ const AdminBookingsPage = () => {
       )}
 
       {/* BLOK ATAS */}
-      <div className="w-full relative z-40 bg-fluent-bg/95 backdrop-blur-md shrink-0 border-b border-white/5">
+      <div className="w-full relative z-40 bg-fluent-bg/95 backdrop-blur-md shrink-0 border-b border-fluent-accent/10">
         <header className="w-full px-5 py-4 flex items-center space-x-3">
           <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors cursor-pointer p-1 -ml-1">
             <ArrowLeft className="w-6 h-6" />
@@ -144,7 +144,7 @@ const AdminBookingsPage = () => {
               className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-200 border ${
                 activeTab === tab
                   ? 'bg-fluent-accent/20 text-fluent-accent border-fluent-accent/50 shadow-lg'
-                  : 'bg-transparent text-text-muted border-white/10 hover:bg-white/5'
+                  : 'bg-transparent text-text-muted border-white/10 hover:bg-fluent-accent/5'
               }`}
             >
               {tab}
@@ -161,7 +161,7 @@ const AdminBookingsPage = () => {
           </div>
         ) : filteredBookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-4">
               <Search className="w-8 h-8 opacity-50" />
             </div>
             <p className="text-sm font-bold text-text-main">Belum ada pesanan</p>
@@ -170,10 +170,10 @@ const AdminBookingsPage = () => {
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-fluent-card border border-white/5 rounded-2xl p-4 shadow-lg flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4">
+              <div key={booking.id} className="bg-fluent-card border border-fluent-accent/10 rounded-2xl p-4 shadow-lg flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4">
                 
                 {/* Bagian Atas: Profil User & Status */}
-                <div className="flex justify-between items-start border-b border-white/5 pb-3">
+                <div className="flex justify-between items-start border-b border-fluent-accent/10 pb-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 bg-fluent-accent/20 rounded-full flex items-center justify-center text-fluent-accent font-bold text-xs">
                       {booking.profiles?.full_name?.charAt(0) || 'U'}
@@ -201,7 +201,7 @@ const AdminBookingsPage = () => {
 
                 {/* Bagian Tengah: Info Barang & Tanggal */}
                 <div className="flex gap-3">
-                  <div className="w-16 h-16 bg-fluent-bg rounded-xl overflow-hidden shrink-0 border border-white/5">
+                  <div className="w-16 h-16 bg-fluent-bg rounded-xl overflow-hidden shrink-0 border border-fluent-accent/10">
                     <img src={booking.items?.image_urls?.[0] || 'https://via.placeholder.com/150'} alt="Item" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 flex flex-col justify-center">
@@ -243,7 +243,7 @@ const AdminBookingsPage = () => {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Menunggu Konfirmasi')}
-                        className="flex-1 py-2.5 bg-white/5 text-text-muted text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border border-white/5"
+                        className="flex-1 py-2.5 bg-fluent-accent/5 text-text-muted text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border border-fluent-accent/10"
                       >
                         <Undo2 className="w-4 h-4" /> Batal Serahkan
                       </button>
@@ -260,7 +260,7 @@ const AdminBookingsPage = () => {
                   {booking.status === 'Selesai' && (
                     <button 
                       onClick={() => handleUpdateStatus(booking.id, 'Diserahkan')}
-                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-white/5"
+                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-fluent-accent/5"
                     >
                       <Undo2 className="w-3.5 h-3.5" /> Batal Selesai (Barang belum kembali)
                     </button>
@@ -270,7 +270,7 @@ const AdminBookingsPage = () => {
                   {booking.status === 'Dibatalkan' && (
                     <button 
                       onClick={() => handleUpdateStatus(booking.id, 'Menunggu Konfirmasi')}
-                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-white/5"
+                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-fluent-accent/5"
                     >
                       <Undo2 className="w-3.5 h-3.5" /> Pulihkan Pesanan (Batal Tolak)
                     </button>

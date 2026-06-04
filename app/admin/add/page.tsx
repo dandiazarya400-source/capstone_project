@@ -182,7 +182,7 @@ const AddProductPage = () => {
         </div>
       )}
 
-      <header className="w-full px-5 py-4 border-b border-white/5 flex items-center space-x-3 bg-fluent-bg">
+      <header className="w-full px-5 py-4 border-b border-fluent-accent/10 flex items-center space-x-3 bg-fluent-bg">
         <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
           <PackagePlus className="w-5 h-5 text-fluent-accent" />
           Tambah Alat Sewa
@@ -245,7 +245,7 @@ const AddProductPage = () => {
                 <Folder className="absolute left-3 w-4 h-4 text-text-muted" />
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id} className="bg-[#1A0B2E]">{cat.name}</option>
+                    <option key={cat.id} value={cat.id} className="bg-fluent-bg">{cat.name}</option>
                   ))}
                 </select>
               </div>
@@ -257,9 +257,9 @@ const AddProductPage = () => {
                 <Tag className="absolute left-3 w-4 h-4 text-text-muted" />
                 <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
                   
-                  <option value="Sangat Baik" className="bg-[#1A0B2E]">Sangat Baik</option>
-                  <option value="Baik" className="bg-[#1A0B2E]">Baik</option>
-                  <option value="Cukup" className="bg-[#1A0B2E]">Cukup</option>
+                  <option value="Sangat Baik" className="bg-fluent-bg">Sangat Baik</option>
+                  <option value="Baik" className="bg-fluent-bg">Baik</option>
+                  <option value="Cukup" className="bg-fluent-bg">Cukup</option>
                 </select>
               </div>
             </div>
@@ -271,9 +271,9 @@ const AddProductPage = () => {
             <div className="relative flex items-center">
               <Truck className="absolute left-3 w-4 h-4 text-text-muted" />
               <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                <option value="both" className="bg-[#1A0B2E]">Bisa Diantar & Ambil Sendiri</option>
-                <option value="pickup_only" className="bg-[#1A0B2E]">Hanya Ambil Sendiri (Ke Toko)</option>
-                <option value="delivery_only" className="bg-[#1A0B2E]">Hanya Diantar (Oleh Pemilik)</option>
+                <option value="both" className="bg-fluent-bg">Bisa Diantar & Ambil Sendiri</option>
+                <option value="pickup_only" className="bg-fluent-bg">Hanya Ambil Sendiri (Ke Toko)</option>
+                <option value="delivery_only" className="bg-fluent-bg">Hanya Diantar (Oleh Pemilik)</option>
               </select>
             </div>
           </div>
@@ -304,9 +304,9 @@ const AddProductPage = () => {
 
               {/* Tombol Tambah (Jika belum 5) */}
               {files.length < 5 && (
-                <div className="relative w-28 h-28 shrink-0 flex flex-col items-center justify-center bg-fluent-card border-2 border-dashed border-white/20 rounded-xl hover:border-fluent-accent/70 hover:bg-white/5 transition-all cursor-pointer group">
+                <div className="relative w-28 h-28 shrink-0 flex flex-col items-center justify-center bg-fluent-card border-2 border-dashed border-white/20 rounded-xl hover:border-fluent-accent/70 hover:bg-fluent-accent/5 transition-all cursor-pointer group">
                   <input type="file" multiple accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mb-1 group-hover:scale-110 group-hover:text-fluent-accent transition-transform">
+                  <div className="w-10 h-10 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-1 group-hover:scale-110 group-hover:text-fluent-accent transition-transform">
                     {files.length === 0 ? <UploadCloud className="w-5 h-5 text-text-muted group-hover:text-fluent-accent" /> : <Plus className="w-6 h-6 text-text-muted group-hover:text-fluent-accent" />}
                   </div>
                   <p className="text-[10px] font-bold text-text-muted">{files.length === 0 ? 'Pilih Foto' : 'Tambah'}</p>

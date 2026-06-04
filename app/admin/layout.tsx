@@ -87,11 +87,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* 2. SIDEBAR KIRI (Selalu melayang absolute di atas frame) */}
       <aside 
-        className={`absolute top-0 left-0 h-full w-64 bg-[#1A0B2E] border-r border-white/5 flex flex-col z-50 shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`absolute top-0 left-0 h-full w-64 bg-fluent-bg border-r border-fluent-accent/10 flex flex-col z-50 shadow-2xl transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-6 border-b border-white/5 flex justify-between items-center">
+        <div className="p-6 border-b border-fluent-accent/10 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fluent-accent to-white">
               Admin Panel
@@ -99,7 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <p className="text-[10px] text-text-muted mt-1 uppercase tracking-widest">Workspace</p>
           </div>
           {/* Tombol Tutup Sidebar */}
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 bg-white/5 rounded-full text-text-muted hover:text-white">
+          <button onClick={() => setIsSidebarOpen(false)} className="p-2 bg-fluent-accent/5 rounded-full text-text-muted hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -118,7 +118,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive 
                     ? 'bg-fluent-accent text-white shadow-lg shadow-fluent-accent/20 font-bold' 
-                    : 'text-text-muted hover:bg-white/5 hover:text-text-main font-medium'
+                    : 'text-text-muted hover:bg-fluent-accent/5 hover:text-text-main font-medium'
                 }`}>
                   <Icon className="w-5 h-5" />
                   <span className="text-sm">{item.name}</span>
@@ -128,16 +128,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/5 space-y-2">
+        <div className="p-4 border-t border-fluent-accent/10 space-y-2">
           <Link href="/" onClick={() => setIsSidebarOpen(false)}>
-            <div className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-text-muted hover:bg-white/5 hover:text-white transition-colors font-medium">
+            <div className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-text-muted hover:bg-fluent-accent/5 hover:text-white transition-colors font-medium">
               <Home className="w-5 h-5" />
               <span className="text-sm">Lihat Beranda</span>
             </div>
           </Link>
         </div>
 
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-fluent-accent/10">
           <button onClick={() => {
         setIsSidebarOpen(false); // Tutup sidebar dulu biar rapi
         setShowLogoutModal(true); // Tampilkan modal custom
@@ -154,7 +154,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         
         {/* 🌟 PERBAIKAN: Sembunyikan Header bawaan Admin jika di halaman Inbox */}
         {pathname !== '/admin/inbox' && (
-          <header className="w-full px-5 pt-12 pb-4 border-b border-white/5 flex items-center bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-30 shrink-0">
+          <header className="w-full px-5 pt-12 pb-4 border-b border-fluent-accent/10 flex items-center bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-30 shrink-0">
             <button 
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 -ml-2 bg-transparent text-text-main hover:bg-white/10 rounded-full transition-colors mr-3"
@@ -190,7 +190,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex w-full gap-2.5">
               <button 
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-white/5 border border-white/5 hover:bg-white/10 hover:text-text-main transition-colors"
+                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-fluent-accent/5 border border-fluent-accent/10 hover:bg-white/10 hover:text-text-main transition-colors"
               >
                 Batal
               </button>

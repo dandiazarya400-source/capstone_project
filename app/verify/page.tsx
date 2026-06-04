@@ -172,7 +172,7 @@ const VerifyPage = () => {
       )}
 
       {/* Header */}
-      <header className="w-full px-5 py-4 border-b border-white/5 flex items-center space-x-3 bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-50 shrink-0">
+      <header className="w-full px-5 py-4 border-b border-fluent-accent/10 flex items-center space-x-3 bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-50 shrink-0">
         <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors p-1 -ml-1 rounded-full">
           <ArrowLeft className="w-6 h-6" />
         </button>
@@ -211,7 +211,7 @@ const VerifyPage = () => {
                   <img src={ktpPreview} alt="KTP" className="w-full h-full object-cover" />
                 ) : (
                   <div className="flex flex-col items-center text-text-muted group-hover:text-fluent-accent transition-colors">
-                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-2">
+                    <div className="w-12 h-12 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-2">
                       <IdCard className="w-6 h-6" />
                     </div>
                     <span className="text-xs font-bold">Ambil Foto KTP</span>
@@ -233,7 +233,7 @@ const VerifyPage = () => {
                   <img src={selfiePreview} alt="Selfie" className="w-full h-full object-cover" />
                 ) : (
                   <div className="flex flex-col items-center text-text-muted group-hover:text-fluent-accent transition-colors">
-                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-2">
+                    <div className="w-12 h-12 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-2">
                       <Camera className="w-6 h-6" />
                     </div>
                     <span className="text-xs font-bold">Ambil Selfie</span>
@@ -251,7 +251,7 @@ const VerifyPage = () => {
               <label className="text-xs font-bold text-text-muted">Nomor Induk Kependudukan (NIK)</label>
               <div className="relative flex items-center">
                 <CreditCard className="absolute left-3 w-4 h-4 text-text-muted" />
-                <input type="number" required value={nik} onChange={(e) => setNik(e.target.value.slice(0, 16))} placeholder="16 Digit NIK KTP" className="w-full bg-[#1A0B2E] border border-white/10 rounded-xl p-3.5 pl-10 text-sm font-bold tracking-widest text-text-main focus:outline-none focus:border-fluent-accent transition-all" />
+                <input type="number" required value={nik} onChange={(e) => setNik(e.target.value.slice(0, 16))} placeholder="16 Digit NIK KTP" className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3.5 pl-10 text-sm font-bold tracking-widest text-text-main focus:outline-none focus:border-fluent-accent transition-all" />
               </div>
             </div>
 
@@ -259,7 +259,7 @@ const VerifyPage = () => {
               <label className="text-xs font-bold text-text-muted">Nama Lengkap (Sesuai KTP)</label>
               <div className="relative flex items-center">
                 <User className="absolute left-3 w-4 h-4 text-text-muted" />
-                <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="NAMA LENGKAP" className="w-full bg-[#1A0B2E] border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all uppercase" />
+                <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="NAMA LENGKAP" className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all uppercase" />
               </div>
             </div>
 
@@ -267,7 +267,7 @@ const VerifyPage = () => {
               <label className="text-xs font-bold text-text-muted">Alamat Domisili</label>
               <div className="relative flex">
                 <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-text-muted" />
-                <textarea required value={address} onChange={(e) => setAddress(e.target.value)} rows={3} placeholder="Alamat lengkap saat ini..." className="w-full bg-[#1A0B2E] border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all resize-none"></textarea>
+                <textarea required value={address} onChange={(e) => setAddress(e.target.value)} rows={3} placeholder="Alamat lengkap saat ini..." className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all resize-none"></textarea>
               </div>
             </div>
           </section>

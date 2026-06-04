@@ -241,7 +241,7 @@ const EditProductPage = () => {
         </div>
       )}
 
-      <header className="w-full px-5 py-4 border-b border-white/5 flex items-center space-x-3 bg-fluent-bg sticky top-0 z-50">
+      <header className="w-full px-5 py-4 border-b border-fluent-accent/10 flex items-center space-x-3 bg-fluent-bg sticky top-0 z-50">
         <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors cursor-pointer p-1 -ml-1">
           <ArrowLeft className="w-6 h-6" />
         </button>
@@ -299,10 +299,10 @@ const EditProductPage = () => {
               <div className="relative flex items-center">
                 <Folder className="absolute left-3 w-4 h-4 text-text-muted" />
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                  <option value="1" className="bg-[#1A0B2E]">Elektronik</option>
-                  <option value="2" className="bg-[#1A0B2E]">Musik</option>
-                  <option value="3" className="bg-[#1A0B2E]">Kamera</option>
-                  <option value="4" className="bg-[#1A0B2E]">Fashion</option>
+                  <option value="1" className="bg-fluent-bg">Elektronik</option>
+                  <option value="2" className="bg-fluent-bg">Musik</option>
+                  <option value="3" className="bg-fluent-bg">Kamera</option>
+                  <option value="4" className="bg-fluent-bg">Fashion</option>
                 </select>
               </div>
             </div>
@@ -312,9 +312,9 @@ const EditProductPage = () => {
               <div className="relative flex items-center">
                 <Tag className="absolute left-3 w-4 h-4 text-text-muted" />
                 <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                  <option value="Sangat Baik" className="bg-[#1A0B2E]">Sangat Baik</option>
-                  <option value="Baik" className="bg-[#1A0B2E]">Baik</option>
-                  <option value="Cukup" className="bg-[#1A0B2E]">Cukup</option>
+                  <option value="Sangat Baik" className="bg-fluent-bg">Sangat Baik</option>
+                  <option value="Baik" className="bg-fluent-bg">Baik</option>
+                  <option value="Cukup" className="bg-fluent-bg">Cukup</option>
                 </select>
               </div>
             </div>
@@ -326,9 +326,9 @@ const EditProductPage = () => {
             <div className="relative flex items-center">
               <Truck className="absolute left-3 w-4 h-4 text-text-muted" />
               <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                <option value="both" className="bg-[#1A0B2E]">Bisa Diantar & Ambil Sendiri</option>
-                <option value="pickup_only" className="bg-[#1A0B2E]">Hanya Ambil Sendiri (Ke Toko)</option>
-                <option value="delivery_only" className="bg-[#1A0B2E]">Hanya Diantar (Oleh Pemilik)</option>
+                <option value="both" className="bg-fluent-bg">Bisa Diantar & Ambil Sendiri</option>
+                <option value="pickup_only" className="bg-fluent-bg">Hanya Ambil Sendiri (Ke Toko)</option>
+                <option value="delivery_only" className="bg-fluent-bg">Hanya Diantar (Oleh Pemilik)</option>
               </select>
             </div>
           </div>
@@ -373,9 +373,9 @@ const EditProductPage = () => {
 
               {/* 3. Tombol Tambah Foto (Jika masih bisa ditambah) */}
               {totalCurrentImages < 5 && (
-                <div className="relative w-28 h-28 shrink-0 flex flex-col items-center justify-center bg-fluent-card border-2 border-dashed border-white/20 rounded-xl hover:border-fluent-accent/70 hover:bg-white/5 transition-all cursor-pointer group">
+                <div className="relative w-28 h-28 shrink-0 flex flex-col items-center justify-center bg-fluent-card border-2 border-dashed border-white/20 rounded-xl hover:border-fluent-accent/70 hover:bg-fluent-accent/5 transition-all cursor-pointer group">
                   <input type="file" multiple accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mb-1 group-hover:scale-110 group-hover:text-fluent-accent transition-transform">
+                  <div className="w-10 h-10 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-1 group-hover:scale-110 group-hover:text-fluent-accent transition-transform">
                     <Plus className="w-6 h-6 text-text-muted group-hover:text-fluent-accent" />
                   </div>
                   <p className="text-[10px] font-bold text-text-muted">Tambah Foto</p>

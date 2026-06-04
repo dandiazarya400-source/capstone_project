@@ -107,7 +107,7 @@ const PaymentContent = () => {
     <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
       
       {/* ================= HEADER ================= */}
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
+      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
         <button 
           onClick={() => {
              const startParam = searchParams.get('start');
@@ -136,7 +136,7 @@ const PaymentContent = () => {
             {isPickUp ? 'Alamat Pengambilan (Toko)' : 'Alamat Pengiriman'}
           </h2>
           
-          <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-white/5 relative overflow-hidden group cursor-pointer hover:border-fluent-accent/50 transition-colors">
+          <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10 relative overflow-hidden group cursor-pointer hover:border-fluent-accent/50 transition-colors">
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-fluent-accent to-[#ff7e67]"></div>
             
             <div className="flex gap-4 relative z-10">
@@ -162,7 +162,7 @@ const PaymentContent = () => {
         {/* 2. KARTU METODE PEMBAYARAN */}
         <section>
           <h2 className="text-sm font-bold text-text-muted mb-3 uppercase tracking-wider ml-1">Metode Pembayaran</h2>
-          <div className="bg-fluent-card rounded-[24px] p-2 shadow-lg border border-white/5 flex flex-col gap-1">
+          <div className="bg-fluent-card rounded-[24px] p-2 shadow-lg border border-fluent-accent/10 flex flex-col gap-1">
             {paymentMethods.map((method) => {
               const Icon = method.icon;
               const isSelected = selectedPayment === method.id;
@@ -174,12 +174,12 @@ const PaymentContent = () => {
                   className={`flex items-center justify-between p-3 rounded-2xl transition-all duration-200 ${
                     isSelected 
                       ? 'bg-fluent-accent/15 border border-fluent-accent/30' 
-                      : 'bg-transparent border border-transparent hover:bg-white/5'
+                      : 'bg-transparent border border-transparent hover:bg-fluent-accent/5'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-inner ${
-                      isSelected ? 'bg-fluent-accent text-white' : 'bg-[#1A0B2E] text-text-muted'
+                      isSelected ? 'bg-fluent-accent text-white' : 'bg-fluent-bg text-text-muted'
                     }`}>
                       <Icon className="w-5 h-5" />
                     </div>
@@ -207,11 +207,11 @@ const PaymentContent = () => {
         {/* 3. KARTU RINCIAN PESANAN & PEMBAYARAN */}
         <section>
           <h2 className="text-sm font-bold text-text-muted mb-3 uppercase tracking-wider ml-1">Rincian Pembayaran</h2>
-          <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-white/5">
+          <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10">
             
             <div className="flex justify-between items-center pb-4 border-b border-white/10 mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-[#1A0B2E] rounded-full flex items-center justify-center border border-fluent-accent/30 overflow-hidden shadow-inner">
+                <div className="w-10 h-10 bg-fluent-bg rounded-full flex items-center justify-center border border-fluent-accent/30 overflow-hidden shadow-inner">
                   <span className="text-text-main font-black text-lg tracking-tighter">A<span className="text-fluent-accent">L</span></span>
                 </div>
                 <div>

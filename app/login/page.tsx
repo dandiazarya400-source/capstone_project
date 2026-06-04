@@ -68,11 +68,11 @@ const LoginPage = () => {
       <div className="absolute top-0 w-full h-1/2 bg-gradient-to-b from-fluent-accent/5 to-transparent"></div>
       
       {/* ================= CONTAINER KACA ================= */}
-      <div className="w-full max-w-[320px] bg-fluent-card/70 backdrop-blur-sm border border-white/5 rounded-[28px] p-5 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto scrollbar-hide">
+      <div className="w-full max-w-[320px] bg-fluent-card/70 backdrop-blur-sm border border-fluent-accent/10 rounded-[28px] p-5 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto scrollbar-hide">
         
         {/* Logo Area */}
         <div className="flex flex-col items-center mb-4 mt-2">
-          <div className="w-12 h-12 bg-fluent-bg/80 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner border border-white/5 mb-2">
+          <div className="w-12 h-12 bg-fluent-bg/80 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner border border-fluent-accent/10 mb-2">
             <Briefcase className="w-6 h-6 text-fluent-accent" />
           </div>
           <h1 className="text-lg font-bold text-text-main">Selamat Datang</h1>
@@ -101,7 +101,7 @@ const LoginPage = () => {
               <Mail className="absolute left-3 w-4 h-4 text-text-muted/60" />
               <input 
                 type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com"
-                className="w-full bg-fluent-bg border border-white/5 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
+                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
               />
             </div>
           </div>
@@ -113,7 +113,7 @@ const LoginPage = () => {
               <Lock className="absolute left-3 w-4 h-4 text-text-muted/60" />
               <input 
                 type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="********"
-                className="w-full bg-fluent-bg border border-white/5 rounded-xl py-2.5 pl-9 pr-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
+                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 pr-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 text-text-muted/60 hover:text-text-main">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -136,17 +136,17 @@ const LoginPage = () => {
 
         {/* Pemisah Sosial Media (Lebih mungil) */}
         <div className="flex items-center space-x-3 mt-5 mb-4">
-          <div className="h-px flex-1 bg-white/5"></div>
+          <div className="h-px flex-1 bg-fluent-accent/5"></div>
           <span className="text-[9px] text-text-muted uppercase tracking-wider">Atau</span>
-          <div className="h-px flex-1 bg-white/5"></div>
+          <div className="h-px flex-1 bg-fluent-accent/5"></div>
         </div>
 
         {/* Tombol Sosial Media (Lebih Compact) */}
         <div className="grid grid-cols-2 gap-3">
-          <button className="flex items-center justify-center py-2.5 rounded-xl bg-fluent-bg border border-white/5 hover:border-white/20 transition-all shadow-inner">
+          <button className="flex items-center justify-center py-2.5 rounded-xl bg-fluent-bg border border-fluent-accent/10 hover:border-white/20 transition-all shadow-inner">
              <span className="text-[10px] font-bold text-text-main">Facebook</span>
           </button>
-          <button className="flex items-center justify-center py-2.5 rounded-xl bg-fluent-bg border border-white/5 hover:border-white/20 transition-all shadow-inner">
+          <button className="flex items-center justify-center py-2.5 rounded-xl bg-fluent-bg border border-fluent-accent/10 hover:border-white/20 transition-all shadow-inner">
              <span className="text-[10px] font-bold text-text-main">Google</span>
           </button>
         </div>

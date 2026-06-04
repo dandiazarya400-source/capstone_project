@@ -111,7 +111,7 @@ const AdminManageItems = () => {
     <div className="w-full flex flex-col text-text-main pb-24">
       
       {/* 2. [BUAT AREA STICKY] Bungkus Header & Filter agar selalu menempel cantik di atas */}
-      <div className="sticky top-0 z-30 bg-fluent-bg/95 backdrop-blur-md px-5 pt-5 pb-3 border-b border-white/5">
+      <div className="sticky top-0 z-30 bg-fluent-bg/95 backdrop-blur-md px-5 pt-5 pb-3 border-b border-fluent-accent/10">
         
         {/* Header */}
         <header className="flex justify-between items-center mb-4">
@@ -139,7 +139,7 @@ const AdminManageItems = () => {
               className={`px-4 py-1.5 rounded-full text-[11px] font-bold capitalize transition-all ${
                 filter === tab 
                   ? 'bg-fluent-accent text-white shadow-lg' 
-                  : 'bg-white/5 text-text-muted hover:bg-white/10'
+                  : 'bg-fluent-accent/5 text-text-muted hover:bg-white/10'
               }`}
             >
               {tab}
@@ -159,12 +159,12 @@ const AdminManageItems = () => {
         ) : (
         <div className="space-y-4">
           {filteredItems.map((item) => (
-            <div key={item.id} className="bg-fluent-card border border-white/5 rounded-2xl p-3 shadow-lg flex flex-col gap-3 relative overflow-hidden transition-all">
+            <div key={item.id} className="bg-fluent-card border border-fluent-accent/10 rounded-2xl p-3 shadow-lg flex flex-col gap-3 relative overflow-hidden transition-all">
               
               <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${item.is_available ? 'bg-green-500' : 'bg-red-500/50'}`}></div>
 
               <div className="flex gap-3 ml-2">
-                <div className="w-16 h-16 rounded-xl bg-[#1A0B2E] border border-white/10 overflow-hidden shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-fluent-bg border border-white/10 overflow-hidden shrink-0">
                   <img 
                     src={item.image_urls?.[0] || 'https://via.placeholder.com/150'} 
                     alt={item.name} 
@@ -197,10 +197,10 @@ const AdminManageItems = () => {
                 </div>
               </div>
 
-              <div className="h-px w-full bg-white/5 ml-2"></div>
+              <div className="h-px w-full bg-fluent-accent/5 ml-2"></div>
 
               <div className="flex justify-between items-center ml-2">
-                <div className="text-[11px] text-text-muted font-medium bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+                <div className="text-[11px] text-text-muted font-medium bg-fluent-accent/5 px-2.5 py-1 rounded-lg border border-fluent-accent/10">
                   Sisa Stok: <span className="text-text-main font-bold">{item.stock} unit</span>
                 </div>
 
@@ -215,7 +215,7 @@ const AdminManageItems = () => {
 
                   <button 
                     onClick={() => router.push(`/admin/items/edit/${item.id}`)}
-                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-text-main transition-colors border border-white/5"
+                    className="p-2 rounded-xl bg-fluent-accent/5 hover:bg-white/10 text-text-main transition-colors border border-fluent-accent/10"
                     title="Edit Data Barang"
                   >
                     <Edit className="w-4 h-4" />
@@ -226,7 +226,7 @@ const AdminManageItems = () => {
                     className={`p-2 rounded-xl border transition-colors ${
                       item.is_available 
                         ? 'bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20' 
-                        : 'bg-white/5 text-text-muted border-white/10 hover:bg-white/10'
+                        : 'bg-fluent-accent/5 text-text-muted border-white/10 hover:bg-white/10'
                     }`}
                     title={item.is_available ? "Sembunyikan dari Homepage" : "Tampilkan ke Homepage"}
                   >
@@ -239,7 +239,7 @@ const AdminManageItems = () => {
           ))}
           
           {items.length === 0 && (
-              <div className="text-center py-16 bg-fluent-card rounded-2xl border border-white/5 border-dashed">
+              <div className="text-center py-16 bg-fluent-card rounded-2xl border border-fluent-accent/10 border-dashed">
                 <PackageSearch className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-50" />
                 <p className="text-sm font-bold text-text-main">Belum ada barang</p>
                 <p className="text-xs text-text-muted mt-1 mb-4">Silakan tambah alat baru ke katalog Anda.</p>

@@ -213,8 +213,8 @@ const AdminStoreSettings = () => {
       <main className="w-full px-5 pt-4 pb-24">
 
         {/* HEADER PENGATURAN TOKO (Model Card Dalam) */}
-        <div className="flex items-center gap-3 mb-6 bg-fluent-card p-3 rounded-2xl border border-white/5 shadow-lg">
-          <button type="button" onClick={() => router.back()} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+        <div className="flex items-center gap-3 mb-6 bg-fluent-card p-3 rounded-2xl border border-fluent-accent/10 shadow-lg">
+          <button type="button" onClick={() => router.back()} className="p-2 bg-fluent-accent/5 rounded-full hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
@@ -257,7 +257,7 @@ const AdminStoreSettings = () => {
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Nama Toko/Studio</label>
             <div className="relative">
               <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
-              <input type="text" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner font-bold text-text-main" value={formData.store_name} onChange={(e) => setFormData({...formData, store_name: e.target.value})} />
+              <input type="text" required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner font-bold text-text-main" value={formData.store_name} onChange={(e) => setFormData({...formData, store_name: e.target.value})} />
             </div>
           </div>
           
@@ -265,7 +265,7 @@ const AdminStoreSettings = () => {
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Telepon Admin</label>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
-              <input type="tel" required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
+              <input type="tel" required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
             </div>
           </div>
 
@@ -273,7 +273,7 @@ const AdminStoreSettings = () => {
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Alamat Lengkap Toko</label>
             <div className="relative">
               <MapPin className="absolute left-4 top-3.5 w-4.5 h-4.5 text-fluent-accent" />
-              <textarea rows={3} required className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner resize-none text-text-main" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
+              <textarea rows={3} required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner resize-none text-text-main" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
             </div>
           </div>
 
@@ -285,7 +285,7 @@ const AdminStoreSettings = () => {
             </div>
             
             {/* Card Besar Gabungan Anti-Aneh */}
-            <div className="bg-fluent-card border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5 shadow-md">
+            <div className="bg-fluent-card border border-fluent-accent/10 rounded-2xl overflow-hidden divide-y divide-white/5 shadow-md">
               {schedule.map((item, idx) => (
                 <div key={item.day} className="flex items-center justify-between p-3.5 transition-colors hover:bg-white/[0.01]">
                   
@@ -302,10 +302,10 @@ const AdminStoreSettings = () => {
                       value={item.open} 
                       onChange={(e) => updateSchedule(idx, 'open', e.target.value)}
                       disabled={item.isClosed}
-                      className={`bg-[#1A0B2E] border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
+                      className={`bg-fluent-bg border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
                     >
                       {timeOptions.map(time => (
-                        <option key={`open-${time}`} value={time} className="bg-[#1A0B2E]">{time}</option>
+                        <option key={`open-${time}`} value={time} className="bg-fluent-bg">{time}</option>
                       ))}
                     </select>
 
@@ -315,10 +315,10 @@ const AdminStoreSettings = () => {
                       value={item.close} 
                       onChange={(e) => updateSchedule(idx, 'close', e.target.value)}
                       disabled={item.isClosed}
-                      className={`bg-[#1A0B2E] border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
+                      className={`bg-fluent-bg border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
                     >
                       {timeOptions.map(time => (
-                        <option key={`close-${time}`} value={time} className="bg-[#1A0B2E]">{time}</option>
+                        <option key={`close-${time}`} value={time} className="bg-fluent-bg">{time}</option>
                       ))}
                     </select>
                   </div>
@@ -363,11 +363,11 @@ const AdminStoreSettings = () => {
           </div>
           
           {/* Wadah dengan tinggi absolut (h-72) agar tidak menghilang di Mobile Frame */}
-          <div className="relative w-full h-72 bg-neutral-900 rounded-2xl border border-white/5 overflow-hidden mb-4 shrink-0 shadow-inner">
+          <div className="relative w-full h-72 bg-neutral-900 rounded-2xl border border-fluent-accent/10 overflow-hidden mb-4 shrink-0 shadow-inner">
             <Cropper image={imageToCrop} crop={crop} zoom={zoom} aspect={1} cropShape="round" showGrid={true} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} classes={{ containerClassName: "bg-transparent", cropAreaClassName: "border-2 border-fluent-accent shadow-[0_0_20px_rgba(163,116,255,0.6)]" }} />
           </div>
           
-          <div className="bg-fluent-card p-5 rounded-2xl border border-white/5 space-y-4 shadow-xl">
+          <div className="bg-fluent-card p-5 rounded-2xl border border-fluent-accent/10 space-y-4 shadow-xl">
             <div className="space-y-1.5">
               <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest pl-1">Perbesar / Perkecil</label>
               <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="w-full h-1.5 bg-fluent-bg rounded-full appearance-none cursor-pointer accent-fluent-accent" />

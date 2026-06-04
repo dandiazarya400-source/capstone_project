@@ -20,7 +20,7 @@ interface ProductProps {
 
 const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, owner, image, isVerified }) => (
   <Link href={`/product/${id}`} className="block">
-    <div className="bg-fluent-card rounded-fluent-rounded p-3 shadow-lg border border-white/5 hover:scale-[1.02] transition-transform cursor-pointer">
+    <div className="bg-fluent-card rounded-fluent-rounded p-3 shadow-lg border border-fluent-accent/10 hover:scale-[1.02] transition-transform cursor-pointer">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={image} alt={title} className="w-full h-36 object-cover rounded-[18px] mb-3" />
       <h3 className="text-sm font-medium text-text-main line-clamp-2 min-h-[40px]">{title}</h3>
@@ -162,7 +162,7 @@ export default function ProfilePage() {
     <div className="h-full w-full overflow-y-auto overflow-x-hidden bg-fluent-bg text-text-main pb-32 scrollbar-hide animate-in fade-in duration-300">
       
       {/* ================= HEADER PROFIL ================= */}
-      <div className="bg-gradient-to-br from-[#2B164D] to-fluent-bg pt-12 pb-8 px-6 rounded-b-[40px] shadow-lg border-b border-white/5 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#2B164D] to-fluent-bg pt-12 pb-8 px-6 rounded-b-[40px] shadow-lg border-b border-fluent-accent/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-fluent-accent/20 rounded-full blur-3xl"></div>
         
         <div className="flex items-center justify-between relative z-10">
@@ -181,7 +181,7 @@ export default function ProfilePage() {
           </div>
           
           <div className="flex flex-col space-y-3">
-            <button onClick={() => router.push('/chat')} className="p-2 bg-white/5 hover:bg-white/10 rounded-full backdrop-blur-sm transition-colors border border-white/10">
+            <button onClick={() => router.push('/chat')} className="p-2 bg-fluent-accent/5 hover:bg-white/10 rounded-full backdrop-blur-sm transition-colors border border-white/10">
               <Headphones className="w-5 h-5 text-fluent-accent" />
             </button>
             <button onClick={() => setShowLogoutModal(true)} className="p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-full backdrop-blur-sm transition-colors border border-rose-500/20 cursor-pointer">
@@ -208,7 +208,7 @@ export default function ProfilePage() {
                       <p className="text-[11px] text-text-muted mt-0.5">Lengkapi KTP & Selfie untuk bisa menyewa alat</p>
                     </div>
                   </div>
-                  <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+                  <div className="w-8 h-8 bg-fluent-accent/5 rounded-full flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
                     <ChevronRight className="w-4 h-4 text-red-400" />
                   </div>
                 </div>
@@ -269,7 +269,7 @@ export default function ProfilePage() {
         )}
         
         {/* ================= TRANSAKSI & SALDO ================= */}
-        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-white/5 shadow-lg">
+        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-fluent-accent/10 shadow-lg">
           <h2 className="font-bold text-text-main mb-4">Transaksi</h2>
           <div className="flex justify-between items-center px-2">
             {[ { icon: Wallet, label: 'Bayar' }, { icon: Box, label: 'Diproses' }, { icon: Truck, label: 'Dikirim' }, { icon: CheckCircle2, label: 'Sudah Tiba', alert: true }, { icon: Star, label: 'Ulasan' } ].map((item, idx) => (
@@ -284,7 +284,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-white/5 shadow-lg relative overflow-hidden">
+        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-fluent-accent/10 shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
           <div className="relative z-10 flex flex-col gap-4">
             <div className="flex items-center space-x-3">
@@ -334,11 +334,11 @@ export default function ProfilePage() {
                 value={topupAmount ? new Intl.NumberFormat('id-ID').format(Number(topupAmount)) : ''}
                 onChange={(e) => setTopupAmount(e.target.value.replace(/\D/g, ''))}
                 placeholder="500.000"
-                className="w-full bg-[#1A0B2E] border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-text-main focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-white/20"
+                className="w-full bg-fluent-bg border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-text-main focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-white/20"
               />
             </div>
             <div className="flex w-full gap-3 relative z-10">
-              <button onClick={() => setShowTopupModal(false)} className="flex-1 py-3 rounded-2xl text-xs font-bold text-text-muted bg-white/5 hover:bg-white/10 transition-colors border border-white/5">Batal</button>
+              <button onClick={() => setShowTopupModal(false)} className="flex-1 py-3 rounded-2xl text-xs font-bold text-text-muted bg-fluent-accent/5 hover:bg-white/10 transition-colors border border-fluent-accent/10">Batal</button>
               <button disabled={isProcessingTopup || !topupAmount || Number(topupAmount) <= 0} onClick={submitTopup} className="flex-1 py-3 rounded-2xl text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-400 transition-colors shadow-[0_4px_20px_rgba(16,185,129,0.3)] disabled:opacity-50 flex justify-center items-center gap-2">
                 {isProcessingTopup ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Konfirmasi'}
               </button>
@@ -365,7 +365,7 @@ export default function ProfilePage() {
             <div className="flex w-full gap-2.5 relative z-10">
               <button 
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-white/5 border border-white/5 hover:bg-white/10 hover:text-text-main transition-colors"
+                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-fluent-accent/5 border border-fluent-accent/10 hover:bg-white/10 hover:text-text-main transition-colors"
               >
                 Batal
               </button>

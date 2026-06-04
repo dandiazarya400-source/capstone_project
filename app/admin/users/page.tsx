@@ -248,11 +248,11 @@ export default function AdminUsersPage() {
                 onChange={(e) => setActionModal({ ...actionModal, value: e.target.value })}
                 placeholder={actionModal.placeholder}
                 rows={4}
-                className="w-full bg-[#1A0B2E] border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-fluent-accent/50 resize-none shadow-inner mb-4"
+                className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-fluent-accent/50 resize-none shadow-inner mb-4"
               />
               
               <div className="flex gap-3">
-                <button onClick={() => setActionModal(null)} disabled={isSubmitting} className="flex-1 py-3 rounded-xl text-xs font-bold text-text-muted bg-white/5 hover:bg-white/10 transition-colors">
+                <button onClick={() => setActionModal(null)} disabled={isSubmitting} className="flex-1 py-3 rounded-xl text-xs font-bold text-text-muted bg-fluent-accent/5 hover:bg-white/10 transition-colors">
                   Batal
                 </button>
                 <button onClick={handleModalSubmit} disabled={isSubmitting} className={`flex-1 py-3 rounded-xl text-xs font-bold text-white transition-colors flex justify-center items-center gap-2 shadow-lg ${
@@ -272,8 +272,8 @@ export default function AdminUsersPage() {
         <main className="w-full px-5 pt-4 pb-24 space-y-6">
           
           {/* HEADER CARD DALAM (Aman dari tabrakan) */}
-          <div className="flex items-center gap-3 bg-fluent-card p-3 rounded-2xl border border-white/5 shadow-lg">
-            <button onClick={() => setSelectedUser(null)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-3 bg-fluent-card p-3 rounded-2xl border border-fluent-accent/10 shadow-lg">
+            <button onClick={() => setSelectedUser(null)} className="p-2 bg-fluent-accent/5 rounded-full hover:bg-white/10 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
@@ -283,7 +283,7 @@ export default function AdminUsersPage() {
           </div>
 
           {/* KARTU PROFIL UTAMA */}
-          <div className="bg-fluent-card p-5 rounded-2xl border border-white/5 shadow-lg flex items-center gap-4">
+          <div className="bg-fluent-card p-5 rounded-2xl border border-fluent-accent/10 shadow-lg flex items-center gap-4">
             <img src={selectedUser.avatar_url || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'} alt="Avatar" className="w-16 h-16 rounded-full object-cover ring-2 ring-fluent-accent" />
             <div className="flex-1">
               <h2 className="font-bold text-lg leading-tight mb-1">{selectedUser.full_name || 'Tanpa Nama'}</h2>
@@ -311,7 +311,7 @@ export default function AdminUsersPage() {
           </div>
 
           {/* KARTU VERIFIKASI IDENTITAS */}
-          <div className="bg-fluent-card p-5 rounded-2xl border border-white/5 shadow-lg space-y-4">
+          <div className="bg-fluent-card p-5 rounded-2xl border border-fluent-accent/10 shadow-lg space-y-4">
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-bold text-sm uppercase tracking-wider">Status Identitas</h3>
               {selectedUser.verification_status === 'verified' && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><ShieldCheck className="w-3 h-3"/> Terverifikasi</span>}
@@ -322,7 +322,7 @@ export default function AdminUsersPage() {
 
             <div className="space-y-2">
               <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Foto Verifikasi Wajah (Selfie)</p>
-              <div className="w-full bg-[#1A0B2E] rounded-xl border border-white/10 overflow-hidden flex items-center justify-center p-2">
+              <div className="w-full bg-fluent-bg rounded-xl border border-white/10 overflow-hidden flex items-center justify-center p-2">
                 {selectedUser.selfie_url ? (
                   <img src={selectedUser.selfie_url} className="w-full max-h-48 object-contain rounded-lg" alt="Selfie Penyewa" />
                 ) : (
@@ -342,7 +342,7 @@ export default function AdminUsersPage() {
           <div className="space-y-2">
             <h3 className="font-bold text-[10px] text-text-muted uppercase tracking-wider ml-1 mb-2">Tindakan Keamanan</h3>
             
-            <button onClick={() => openModal('note')} className="w-full flex items-center justify-between p-4 bg-fluent-card border border-white/5 rounded-2xl hover:bg-white/5 transition-colors text-left">
+            <button onClick={() => openModal('note')} className="w-full flex items-center justify-between p-4 bg-fluent-card border border-fluent-accent/10 rounded-2xl hover:bg-fluent-accent/5 transition-colors text-left">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 shrink-0 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400"><FileText className="w-4 h-4" /></div>
                 <div>
@@ -353,7 +353,7 @@ export default function AdminUsersPage() {
               <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
             </button>
 
-            <button onClick={() => openModal('blacklist')} className="w-full flex items-center justify-between p-4 bg-fluent-card border border-white/5 rounded-2xl hover:bg-white/5 transition-colors text-left">
+            <button onClick={() => openModal('blacklist')} className="w-full flex items-center justify-between p-4 bg-fluent-card border border-fluent-accent/10 rounded-2xl hover:bg-fluent-accent/5 transition-colors text-left">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 shrink-0 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400"><Ban className="w-4 h-4" /></div>
                 <div>
@@ -401,7 +401,7 @@ export default function AdminUsersPage() {
             placeholder="Cari nama atau nomor HP..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-fluent-card border border-white/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main placeholder:text-text-muted/50"
+            className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main placeholder:text-text-muted/50"
           />
         </div>
 
@@ -416,7 +416,7 @@ export default function AdminUsersPage() {
               <button 
                 key={user.id} 
                 onClick={() => handleSelectUser(user)}
-                className="w-full bg-fluent-card border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:bg-white/5 transition-all text-left shadow-sm group"
+                className="w-full bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl flex items-center justify-between hover:bg-fluent-accent/5 transition-all text-left shadow-sm group"
               >
                 <div className="flex items-center gap-4">
                   <div className="relative">

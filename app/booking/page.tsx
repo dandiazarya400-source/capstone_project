@@ -91,7 +91,7 @@ const BookingContent = () => {
     <div className="w-full flex flex-col text-text-main relative">
       
       {/* HEADER */}
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
+      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
         <button onClick={() => router.back()} className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
@@ -124,7 +124,7 @@ const BookingContent = () => {
         </div>
 
         {/* KALENDER INTERAKTIF */}
-        <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-white/5 mb-6">
+        <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10 mb-6">
           <div className="flex justify-between items-center mb-5">
             <h2 className="text-lg font-bold text-text-main flex items-center cursor-pointer hover:text-fluent-accent transition-colors">
               April 2025 <ChevronRight className="w-5 h-5 ml-1 text-fluent-accent" />
@@ -174,7 +174,7 @@ const BookingContent = () => {
         </div>
 
         {/* PENGATURAN */}
-        <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-white/5 space-y-5 mb-2">
+        <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10 space-y-5 mb-2">
           
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-text-muted">Total stok tersedia</span>
@@ -183,7 +183,7 @@ const BookingContent = () => {
           
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-text-muted">Total Sewa Barang</span>
-            <div className="flex items-center space-x-4 bg-[#1A0B2E] border border-white/5 rounded-full p-1 shadow-inner">
+            <div className="flex items-center space-x-4 bg-fluent-bg border border-fluent-accent/10 rounded-full p-1 shadow-inner">
               <button 
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="w-8 h-8 rounded-full bg-fluent-card flex items-center justify-center text-text-main hover:text-fluent-accent transition-colors shadow-inner"
@@ -200,20 +200,20 @@ const BookingContent = () => {
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-3 border-t border-white/5">
+          <div className="flex justify-between items-center pt-3 border-t border-fluent-accent/10">
             <span className="text-sm font-medium text-text-muted">Durasi Sewa</span>
             <span className="text-base font-bold text-fluent-accent">
               {duration > 0 ? `${duration} Hari` : 'Pilih Tanggal'}
             </span>
           </div>
 
-          <div className="flex justify-between items-center pt-2 border-t border-white/5">
+          <div className="flex justify-between items-center pt-2 border-t border-fluent-accent/10">
             <span className="text-sm font-medium text-text-muted">Pengiriman</span>
             <div className="flex gap-2">
               <button 
                 onClick={() => setDeliveryMethod('owner')}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
-                  deliveryMethod === 'owner' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-white/5 text-text-muted border-white/5'
+                  deliveryMethod === 'owner' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10'
                 }`}
               >
                 Diantar Pemilik
@@ -221,7 +221,7 @@ const BookingContent = () => {
               <button 
                 onClick={() => setDeliveryMethod('self')}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
-                  deliveryMethod === 'self' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-white/5 text-text-muted border-white/5'
+                  deliveryMethod === 'self' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10'
                 }`}
               >
                 Ambil Sendiri
@@ -233,7 +233,7 @@ const BookingContent = () => {
       </main>
 
       {/* NAVIGASI BAWAH */}
-      <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-white/5 z-50 shrink-0 relative">
+      <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-fluent-accent/10 z-50 shrink-0 relative">
         <div className="flex items-center space-x-3">
           <button onClick={() => router.push('/chat')} className="flex-1 bg-transparent border-2 border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-2xl flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors">
             <MessageCircle className="w-5 h-5" />
@@ -273,7 +273,7 @@ const BookingContent = () => {
             <div className="flex w-full gap-2.5">
               <button 
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-white/5 border border-white/5 hover:bg-white/10 hover:text-text-main transition-colors"
+                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-fluent-accent/5 border border-fluent-accent/10 hover:bg-white/10 hover:text-text-main transition-colors"
               >
                 Batal
               </button>

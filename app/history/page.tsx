@@ -109,7 +109,7 @@ const HistoryPage = () => {
             </button>
             <h1 className="text-2xl font-bold tracking-tight">History</h1>
           </div>
-          <button className="p-2 bg-fluent-card rounded-full border border-white/5">
+          <button className="p-2 bg-fluent-card rounded-full border border-fluent-accent/10">
             <Search className="w-5 h-5 text-text-muted" />
           </button>
         </div>
@@ -118,10 +118,10 @@ const HistoryPage = () => {
           <button className="px-4 py-1.5 bg-fluent-accent text-white rounded-full text-xs font-bold shadow-lg shadow-fluent-accent/20">
             Semua
           </button>
-          <button className="px-4 py-1.5 bg-fluent-card text-text-muted border border-white/5 rounded-full text-xs font-medium">
+          <button className="px-4 py-1.5 bg-fluent-card text-text-muted border border-fluent-accent/10 rounded-full text-xs font-medium">
             Berlangsung
           </button>
-          <button className="px-4 py-1.5 bg-fluent-card text-text-muted border border-white/5 rounded-full text-xs font-medium">
+          <button className="px-4 py-1.5 bg-fluent-card text-text-muted border border-fluent-accent/10 rounded-full text-xs font-medium">
             Selesai
           </button>
         </div>
@@ -143,10 +143,10 @@ const HistoryPage = () => {
               historyItems.map((item) => (
                 <div 
                   key={item.id}
-                  className="bg-fluent-card p-4 rounded-fluent-rounded border border-white/5 shadow-md flex items-center justify-between group active:scale-[0.98] transition-all"
+                  className="bg-fluent-card p-4 rounded-fluent-rounded border border-fluent-accent/10 shadow-md flex items-center justify-between group active:scale-[0.98] transition-all"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner shrink-0">
+                    <div className="w-12 h-12 rounded-2xl bg-fluent-accent/5 border border-white/10 flex items-center justify-center shadow-inner shrink-0">
                       {item.type === 'topup' ? <Plus className="w-5 h-5 text-emerald-400" /> : 
                        item.type === 'withdraw' ? <MinusCircle className="w-5 h-5 text-rose-400" /> : 
                        <ReceiptText className="w-5 h-5 text-fluent-accent" />}
