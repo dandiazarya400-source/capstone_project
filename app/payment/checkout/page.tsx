@@ -12,16 +12,56 @@ const CheckoutInstructionContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // 1. TANGKAP SEMUA DATA DARI URL
-  const totalParam = searchParams.get('total');
-  const totalPayment = totalParam ? parseInt(totalParam) : 291000; 
-  
+  // 1. TANGKAP SEMUA DATA DARI URL (Tanpa mengambil 'total'!)
   const itemId = searchParams.get('id');
   const startDay = searchParams.get('start');
   const endDay = searchParams.get('end');
   const deliveryParam = searchParams.get('delivery');
+  const qtyParam = searchParams.get('qty'); // Tangkap jumlah barang dari URL
 
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // [FIX KEAMANAN CHECKOUT] State untuk menyimpan harga yang dihitung di server
+  const [totalPayment, setTotalPayment] = useState(0);
+  const [isLoadingPrice, setIsLoadingPrice] = useState(true);
+
+  // 2. FETCH HARGA ASLI DARI DATABASE & HITUNG TOTAL
+  useEffect(() => {
+    const fetchAndCalculatePrice = async () => {
+      if (!itemId || !startDay || !endDay) return;
+      
+      try {
+        setIsLoadingPrice(true);
+        // Tarik harga asli per hari dari database
+        const { data, error } = await supabase
+          .from('items')
+          .select('price_per_day')
+          .eq('id', itemId)
+          .single();
+
+        if (error) throw error;
+
+        if (data && data.price_per_day) {
+          const qty = qtyParam ? parseInt(qtyParam) : 1;
+          const start = parseInt(startDay);
+          const end = parseInt(endDay);
+          
+          // Hitung durasi (jika hari yang sama = 1 hari)
+          const duration = (end >= start) ? (end - start + 1) : 1;
+          
+          // Hitung Total = Harga Asli * Durasi * Jumlah Barang
+          const calculatedTotal = data.price_per_day * duration * qty;
+          setTotalPayment(calculatedTotal);
+        }
+      } catch (error) {
+        console.error("Gagal menarik harga asli:", error);
+      } finally {
+        setIsLoadingPrice(false);
+      }
+    };
+
+    fetchAndCalculatePrice();
+  }, [itemId, startDay, endDay, qtyParam]);
 
   // Fungsi Format Rupiah
   const formatRupiah = (angka: number) => {
@@ -55,6 +95,12 @@ const CheckoutInstructionContent = () => {
       return;
     }
 
+    // [FIX KEAMANAN] Pastikan total pembayaran sudah ditarik dan valid
+    if (totalPayment <= 0) {
+      alert("Harga sedang dimuat atau tidak valid. Tunggu sebentar.");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -77,6 +123,7 @@ const CheckoutInstructionContent = () => {
         end_date: formattedEnd,
         total_price: totalPayment,
         delivery_method: methodStr,
+        quantity: parseInt(qtyParam || '1'),
         status: 'menunggu' // Status awal pesanan masuk
       }]);
 
@@ -155,8 +202,8 @@ const CheckoutInstructionContent = () => {
         <div className="bg-[#1A0B2E] rounded-2xl p-4 border border-white/5">
           <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Total Pembayaran</p>
           <div className="flex justify-between items-center">
-            <span className="text-xl font-black text-text-main">
-              {formatRupiah(totalPayment)}
+            <span className="text-xl font-black text-text-main flex items-center gap-2">
+              {isLoadingPrice ? <Loader2 className="w-5 h-5 animate-spin text-fluent-accent" /> : formatRupiah(totalPayment)}
             </span>
             <button 
               onClick={() => handleCopy(totalPayment.toString())}

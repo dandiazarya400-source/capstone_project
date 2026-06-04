@@ -16,42 +16,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   
   // State untuk mengontrol Sidebar buka/tutup
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData.user) {
-        router.replace('/login');
-        return;
-      }
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData.user) {
+          router.replace('/login');
+          return;
+        }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', authData.user.id)
-        .single();
+        // 🌟 PERBAIKAN: Tarik kolom 'role', BUKAN 'is_admin'
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role') 
+          .eq('id', authData.user.id)
+          .single();
 
-      if (profile?.is_admin === true) {
-        setIsAdmin(true);
-      } else {
+        if (error) {
+          console.error("CCTV Admin Layout - Gagal cek role:", error.message);
+          router.replace('/');
+          return;
+        }
+
+        // 🌟 PERBAIKAN: Izinkan masuk jika role-nya admin ATAU superadmin
+        if (profile?.role === 'admin' || profile?.role === 'superadmin') {
+          setIsAdmin(true);
+        } else {
+          console.warn("Akses Ditolak: Bukan Admin/Superadmin");
+          router.replace('/');
+        }
+      } catch (err) {
+        console.error("Error Sistem di Admin Layout:", err);
         router.replace('/');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAdmin();
   }, [router]);
 
-  const handleLogout = async () => {
-    const confirmLogout = window.confirm("Yakin ingin keluar dari Admin Panel?");
-    if (confirmLogout) {
-      await supabase.auth.signOut();
-      router.replace('/login');
-    }
-  };
 
   if (loading) return <div className="h-[100dvh] w-full flex items-center justify-center bg-fluent-bg text-fluent-accent">Memverifikasi Akses...</div>;
   if (!isAdmin) return null; 
@@ -129,7 +138,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <div className="p-4 border-t border-white/5">
-          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-500/10 transition-colors font-medium cursor-pointer">
+          <button onClick={() => {
+        setIsSidebarOpen(false); // Tutup sidebar dulu biar rapi
+        setShowLogoutModal(true); // Tampilkan modal custom
+      }} className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-500/10 transition-colors font-medium cursor-pointer">
             <LogOut className="w-5 h-5" />
             <span className="text-sm">Keluar</span>
           </button>
@@ -155,6 +167,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         
       </main>
+      {/* ======================================================= */}
+      {/* MODAL KONFIRMASI KELUAR CUSTOM */}
+      {/* ======================================================= */}
+      {showLogoutModal && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm">
+          <div className="bg-fluent-card border border-white/10 w-full max-w-[280px] rounded-[28px] p-5 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            
+            <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mb-3 shadow-inner border border-red-500/20">
+              <LogOut className="w-6 h-6 ml-1" />
+            </div>
+            
+            <h3 className="text-base font-bold text-text-main mb-1.5">Keluar Admin?</h3>
+            
+            <p className="text-xs text-text-muted mb-6 leading-relaxed">
+              Sesi kamu akan diakhiri dan harus masuk kembali untuk mengakses panel.
+            </p>
+            
+            <div className="flex w-full gap-2.5">
+              <button 
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-white/5 border border-white/5 hover:bg-white/10 hover:text-text-main transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={async () => {
+                  setShowLogoutModal(false);
+                  
+                  // Logika Sign Out Supabase dipindah ke sini
+                  await supabase.auth.signOut();
+                  router.replace('/login');
+                }}
+                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-white bg-red-500 shadow-[0_4px_20px_rgba(239,68,68,0.4)] hover:bg-red-600 transition-colors"
+              >
+                Ya, Keluar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
       
     </div>
   );

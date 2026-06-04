@@ -4,10 +4,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, User, Save, CheckCircle2, Camera, Loader2, Crop, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-// IMPORT PUSTAKA CROP
 import Cropper from 'react-easy-crop';
 
-// FUNGSI UTILITY: Mengubah Canvas menjadi File (Wajib ada di luar komponen)
+// FUNGSI UTILITY: Mengubah Canvas menjadi File
 const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
   const image = new Image();
   image.src = imageSrc;
@@ -15,7 +14,6 @@ const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
     image.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-
       if (!ctx) return reject();
 
       canvas.width = pixelCrop.width;
@@ -23,14 +21,8 @@ const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
 
       ctx.drawImage(
         image,
-        pixelCrop.x,
-        pixelCrop.y,
-        pixelCrop.width,
-        pixelCrop.height,
-        0,
-        0,
-        pixelCrop.width,
-        pixelCrop.height
+        pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+        0, 0, pixelCrop.width, pixelCrop.height
       );
 
       canvas.toBlob((blob) => {
@@ -46,11 +38,28 @@ const EditProfilePage = () => {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // State Form & User
-  const [formData, setFormData] = useState({ full_name: '', phone_number: '', address: '', avatar_url: '' });
+  // 1. GHOST CACHE: State Form langsung diisi dari memori (0 milidetik)
+  const [formData, setFormData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('edit_profile_cache');
+      if (cached) return JSON.parse(cached);
+      
+      // Jika belum ada cache edit, coba tarik dari cache profil utama
+      const mainProfile = localStorage.getItem('user_profile_cache');
+      if (mainProfile) {
+        const parsed = JSON.parse(mainProfile);
+        return { full_name: parsed.full_name || '', phone_number: '', address: '', avatar_url: parsed.avatar_url || '' };
+      }
+    }
+    return { full_name: '', phone_number: '', address: '', avatar_url: '' };
+  });
+
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // State untuk anti-hydration mismatch Next.js
+  const [isMounted, setIsMounted] = useState(false);
 
   // ================= STATE UNTUK FITUR CROP =================
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -61,34 +70,42 @@ const EditProfilePage = () => {
 
   // ================= BACA DATA PROFIL =================
   useEffect(() => {
+    setIsMounted(true); // Aman untuk dirender
+
     const fetchUserData = async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData.user) { router.push('/login'); return; }
+      // INSTAN: Gunakan getSession
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push('/login'); return; }
       
-      const currentUserId = authData.user.id;
+      const currentUserId = session.user.id;
       setUserId(currentUserId);
       
-      const { data } = await supabase.from('profiles').select('*').eq('id', currentUserId).maybeSingle();
+      // Tarik data terbaru dari DB di belakang layar
+      const { data, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name, phone_number, address, avatar_url') 
+          .eq('id', currentUserId)
+          .maybeSingle();
       if (data) { 
-        setFormData({ 
+        const freshData = { 
           full_name: data.full_name || '', 
           phone_number: data.phone_number || '', 
           address: data.address || '', 
           avatar_url: data.avatar_url || '' 
-        }); 
+        };
+        setFormData(freshData); 
+        localStorage.setItem('edit_profile_cache', JSON.stringify(freshData)); // Simpan ke cache edit
       }
     };
     fetchUserData();
   }, [router]);
 
-  // ================= 1. SAAT GAMBAR DIPILIH DARI HP/PC =================
+  // ================= 1. SAAT GAMBAR DIPILIH =================
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       const reader = new FileReader();
-      reader.onload = () => {
-        setImageToCrop(reader.result as string); // Buka modal pemotong
-      };
+      reader.onload = () => { setImageToCrop(reader.result as string); };
       reader.readAsDataURL(file);
     }
   };
@@ -103,21 +120,16 @@ const EditProfilePage = () => {
 
     try {
       setUploadingImage(true);
-      setImageToCrop(null); // Tutup modal crop
+      setImageToCrop(null); 
 
-      // Potong gambar
       const croppedBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
       const fileName = `${userId}-${Math.random()}.jpg`;
       const croppedFile = new File([croppedBlob], fileName, { type: 'image/jpeg' });
 
-      // Upload ke Supabase
       const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, croppedFile);
       if (uploadError) throw uploadError;
 
-      // Ambil URL Publik
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-
-      // Ubah UI
       setFormData({ ...formData, avatar_url: data.publicUrl });
 
     } catch (error: any) {
@@ -143,6 +155,19 @@ const EditProfilePage = () => {
       }).eq('id', userId);
       if (error) throw error;
       
+      // SINKRONISASI CACHE SUPER CEPAT:
+      // 1. Simpan ke cache Edit Profil
+      localStorage.setItem('edit_profile_cache', JSON.stringify(formData));
+      
+      // 2. Simpan juga ke cache Halaman Profil Utama, agar saat "router.push" nanti, foto/nama langsung berubah!
+      const mainProfileStr = localStorage.getItem('user_profile_cache');
+      if (mainProfileStr) {
+        const mainProfile = JSON.parse(mainProfileStr);
+        mainProfile.full_name = formData.full_name;
+        mainProfile.avatar_url = formData.avatar_url;
+        localStorage.setItem('user_profile_cache', JSON.stringify(mainProfile));
+      }
+
       setSuccess(true);
       setTimeout(() => { setSuccess(false); router.push('/profile'); }, 1500);
     } catch (error) { 
@@ -153,8 +178,11 @@ const EditProfilePage = () => {
     }
   };
 
+  // Sembunyikan UI dalam hitungan milidetik untuk mencegah Hydration Mismatch
+  if (!isMounted) return null;
+
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative animate-in fade-in duration-300">
       <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-white/5 shrink-0">
         <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-6 h-6" />
@@ -189,7 +217,6 @@ const EditProfilePage = () => {
             <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10">
               <Camera className="w-6 h-6 text-white mb-1" />
               <span className="text-[9px] font-bold text-white uppercase tracking-wider">Ubah</span>
-              {/* Input file yang memicu modal crop */}
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} disabled={uploadingImage} />
             </label>
           </div>
@@ -223,11 +250,10 @@ const EditProfilePage = () => {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {loading ? 'Menyimpan...' : 'Simpan Profil'}
           </button>
-          
         </form>
       </main>
 
-      {/* ================= MODAL FULLSCREEN UNTUK CROP (MUNCUL SAAT GAMBAR DIPILIH) ================= */}
+      {/* ================= MODAL FULLSCREEN UNTUK CROP ================= */}
       {imageToCrop && (
         <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm p-6 flex flex-col animate-in fade-in duration-300">
           

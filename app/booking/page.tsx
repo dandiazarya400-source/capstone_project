@@ -281,11 +281,9 @@ const BookingContent = () => {
                 onClick={() => {
                   setShowConfirmModal(false);
                   
-                  // 1. Hitung total harga (Harga per hari dikali Durasi)
-                  const calculatedTotal = price * duration;
-                  
-                  // 2. Lempar SEMUA data langsung ke halaman checkout
-                  router.push(`/payment/checkout?total=${calculatedTotal}&id=${itemId}&start=${startDate}&end=${endDate || startDate}&delivery=${deliveryMethod}`);
+                  // [FIX KEAMANAN CHECKOUT] Kita TIDAK LAGI melempar total harga lewat URL. 
+                  // Kita lempar 'quantity' (jumlah barang) dan biarkan halaman Checkout yang mengalikan dengan harga asli dari DB!
+                  router.push(`/payment/checkout?id=${itemId}&qty=${quantity}&start=${startDate}&end=${endDate || startDate}&delivery=${deliveryMethod}`);
                 }}
                 className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-white bg-fluent-accent shadow-[0_4px_20px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition-colors"
               >

@@ -14,6 +14,7 @@ const AdminBookingsPage = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Semua');
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [toast, setToast] = useState({ show: false, type: 'success', message: '' });
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -66,13 +67,18 @@ const AdminBookingsPage = () => {
 
   // Fungsi untuk mengubah status pesanan (Berlaku juga untuk Undo/Cancel)
   const handleUpdateStatus = async (id: string, newStatus: string) => {
+    // [FIX KONKURENSI] Cegah eksekusi jika masih ada proses yang berjalan
+    if (processingId === id) return;
+
     // Jika tombolnya "Batal/Hapus", beri peringatan dulu
-    if (newStatus === 'dibatalkan') {
+    if (newStatus === 'Dibatalkan') {
       const confirm = window.confirm("Yakin ingin membatalkan dan menolak pesanan ini?");
       if (!confirm) return;
     }
 
     try {
+      setProcessingId(id); // Kunci tombol untuk ID ini
+      
       // 1. Update di Database
       const { error } = await supabase
         .from('transactions')
@@ -87,6 +93,8 @@ const AdminBookingsPage = () => {
     } catch (err: any) {
       console.error("Gagal update:", err);
       showToast('error', `Gagal merubah status pesanan.`);
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -222,6 +230,7 @@ const AdminBookingsPage = () => {
                       </button>
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Diserahkan')}
+                        disabled={processingId === booking.id}
                         className="flex-[2] py-2.5 bg-fluent-accent text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-[#b58eff] transition-colors shadow-lg"
                       >
                         <PackageCheck className="w-4 h-4" /> Serahkan Barang

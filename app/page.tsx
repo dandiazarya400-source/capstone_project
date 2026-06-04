@@ -80,14 +80,18 @@ const HomePage = () => {
 
         if (error) throw error;
         
-        if (data) {
-          // Ambil semua data transaksi untuk menghitung "Terpinjam"
+        if (data && data.length > 0) { // Pastikan ada barang dulu
+          
+          // 1. Kumpulkan semua ID barang yang ada di layar
+          const itemIds = data.map(item => item.id);
+
+          // 2. Tarik transaksi HANYA untuk barang-barang tersebut (.in)
           const { data: txData } = await supabase
             .from('transactions')
-            .select('item_id');
+            .select('item_id')
+            .in('item_id', itemIds);
 
-          const mappedData = data.map((item: any) => {
-            // Hitung berapa kali item ini muncul di tabel transactions
+            const mappedData = data.map((item: any) => {
             const borrowedCount = txData ? txData.filter(tx => tx.item_id === item.id).length : 0;
 
             return {
@@ -95,9 +99,11 @@ const HomePage = () => {
               title: item.name || "Tanpa Nama", 
               price: `Rp ${item.price_per_day?.toLocaleString('id-ID') || 0}`,
               rawPrice: item.price_per_day || 0,
-              rating: "5.0", // Rating masih kita "hardcode" sementara karena butuh logic terpisah dari tabel reviews
-              sold: String(borrowedCount), // Sekarang ini adalah angka riil peminjaman!
-              owner: item.profiles?.full_name || "Asoka Maju", // Ambil nama asli si pemilik!
+              rating: "5.0", 
+              sold: String(borrowedCount), 
+              // Supabase mengembalikan data relasi dalam bentuk array jika tidak unik, 
+              // atau object jika FK-nya tunggal. Kita jaga-jaga dengan fallback yang aman.
+              owner: item.profiles?.full_name || "Pengguna", 
               image: item.image_urls && item.image_urls.length > 0 ? item.image_urls[0] : "https://via.placeholder.com/150",
               is_verified: true,
               category_id: item.category_id,
@@ -105,6 +111,8 @@ const HomePage = () => {
             };
           });
           setProducts(mappedData);
+        } else {
+          setProducts([]); // Jika tidak ada barang sama sekali
         }
       } catch (err) {
         console.error('Gagal memuat barang:', err);

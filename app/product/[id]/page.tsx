@@ -17,6 +17,19 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // === [BARU] STATE UNTUK SISTEM ULASAN ===
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [averageRating, setAverageRating] = useState("0.0");
+  
+  // State untuk Validasi Reviewer
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [eligibleTxId, setEligibleTxId] = useState<string | null>(null); // ID Transaksi jika dia berhak mereview
+  
+  // State untuk Form Input Review
+  const [userRating, setUserRating] = useState(5);
+  const [userComment, setUserComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
   // === STATE UNTUK SENSOR MOUSE SWIPE ===
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -37,6 +50,7 @@ const ProductDetailPage = () => {
 
         if (error) throw error;
 
+        // 1. SET DATA PRODUK UTAMA
         setProduct({
           title: data.name,
           rawPrice: data.price_per_day,
@@ -44,13 +58,57 @@ const ProductDetailPage = () => {
           description: data.description || "Tidak ada deskripsi tersedia.",
           condition: data.condition || "Baik", 
           stock: data.stock || 0, 
-          rating: "5.0", 
-          reviews_count: 125, 
-          owner: "Asoka Maju", 
+          owner: "Asoka Maju", // (Nanti bisa ditarik dari tabel profiles owner_id)
           is_verified: true,
           process_time: "3 jam", 
           images: data.image_urls && data.image_urls.length > 0 ? data.image_urls : ["https://via.placeholder.com/150"]
         });
+
+        // 2. [BARU] TARIK DATA ULASAN
+        const { data: reviewData } = await supabase
+          .from('reviews')
+          .select('*, profiles(full_name, avatar_url)')
+          .eq('item_id', id)
+          .order('created_at', { ascending: false });
+
+        if (reviewData) {
+          setReviews(reviewData);
+          if (reviewData.length > 0) {
+            const total = reviewData.reduce((sum, r) => sum + r.rating, 0);
+            setAverageRating((total / reviewData.length).toFixed(1));
+          }
+        }
+
+        // 3. [BARU] VALIDASI APAKAH USER BISA MEMBERI ULASAN
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user) {
+          setCurrentUserId(authData.user.id);
+          const userId = authData.user.id;
+
+          // Cari transaksi user untuk barang ini yang sudah Selesai
+          const { data: txData } = await supabase.from('transactions')
+            .select('id')
+            .eq('item_id', id)
+            .eq('tenant_id', userId)
+            .eq('status', 'Selesai');
+
+          if (txData && txData.length > 0) {
+            // Cek apakah transaksi tersebut sudah direview
+            const { data: myReviews } = await supabase.from('reviews')
+              .select('transaction_id')
+              .eq('item_id', id)
+              .eq('reviewer_id', userId);
+            
+            const reviewedTxIds = myReviews?.map(r => r.transaction_id) || [];
+            
+            // Cari 1 saja transaksi yang belum direview
+            const eligibleTx = txData.find(tx => !reviewedTxIds.includes(tx.id));
+            if (eligibleTx) {
+              setEligibleTxId(eligibleTx.id); // Buka gembok form ulasan!
+            }
+          }
+        }
+
       } catch (err) {
         console.error("Gagal memuat produk:", err);
       } finally {
@@ -92,6 +150,32 @@ const ProductDetailPage = () => {
     const x = e.pageX - carouselRef.current.offsetLeft;
     const walk = (x - startX) * 1.5; // Kecepatan tarikan
     carouselRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  // === FUNGSI KIRIM ULASAN ===
+  const handleSubmitReview = async () => {
+    if (!currentUserId || !eligibleTxId || !id) return;
+    setIsSubmittingReview(true);
+    
+    try {
+      const { error } = await supabase.from('reviews').insert({
+        item_id: id,
+        reviewer_id: currentUserId,
+        transaction_id: eligibleTxId,
+        rating: userRating,
+        comment: userComment
+      });
+
+      if (error) throw error;
+      
+      alert("Terima kasih! Ulasanmu berhasil dikirim.");
+      window.location.reload(); // Refresh instan untuk memunculkan ulasan baru
+    } catch (error) {
+      console.error("Gagal mengirim ulasan:", error);
+      alert("Gagal mengirim ulasan.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   if (loading) return <div className="h-full w-full flex items-center justify-center bg-fluent-bg text-fluent-accent">Memuat...</div>;
@@ -192,6 +276,10 @@ const ProductDetailPage = () => {
             </div>
           </div>
 
+          {/* UBAH RATING JADI DINAMIS (Ubah ini di bagian atas juga kalau ada) */}
+          {/* Di atas tadi ada blok: <span className="font-bold text-text-main">{product.rating}</span> */}
+          {/* Ubah menjadi: <span className="font-bold text-text-main">{averageRating} ({reviews.length})</span> */}
+
           <div className="mb-8">
             <h3 className="text-lg font-bold text-text-main mb-3 flex items-center">
               <AlignLeft className="w-5 h-5 mr-2 text-fluent-accent" />
@@ -201,8 +289,84 @@ const ProductDetailPage = () => {
               {product.description}
             </p>
           </div>
+
+          {/* ========================================================= */}
+          {/* [BARU] SEGMEN ULASAN PENYEWA */}
+          {/* ========================================================= */}
+          <div className="mb-8 border-t border-white/10 pt-6">
+            <h3 className="text-lg font-bold text-text-main mb-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <MessageCircle className="w-5 h-5 mr-2 text-fluent-accent" />
+                Ulasan Penyewa
+              </div>
+              <span className="text-sm font-medium text-text-muted bg-white/5 px-3 py-1 rounded-full">
+                <Star className="w-3.5 h-3.5 inline text-yellow-400 mr-1 mb-0.5" />
+                {averageRating} ({reviews.length} Ulasan)
+              </span>
+            </h3>
+
+            {/* FORM INPUT ULASAN (HANYA MUNCUL JIKA USER ELIGIBLE) */}
+            {eligibleTxId && (
+              <div className="bg-fluent-accent/10 border border-fluent-accent/30 rounded-2xl p-4 mb-6 animate-in fade-in zoom-in duration-300">
+                <p className="text-xs font-bold text-fluent-accent mb-2">Kamu sudah menyewa alat ini. Yuk, beri ulasan!</p>
+                
+                <div className="flex space-x-2 mb-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button key={star} onClick={() => setUserRating(star)} className="focus:outline-none">
+                      <Star className={`w-7 h-7 transition-colors ${star <= userRating ? 'fill-yellow-400 text-yellow-400' : 'text-white/20'}`} />
+                    </button>
+                  ))}
+                </div>
+                
+                <textarea 
+                  value={userComment}
+                  onChange={(e) => setUserComment(e.target.value)}
+                  placeholder="Bagaimana kondisi alat ini saat kamu gunakan?"
+                  className="w-full bg-[#1A0B2E] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-fluent-accent resize-none mb-3 shadow-inner"
+                  rows={3}
+                ></textarea>
+                
+                <button 
+                  onClick={handleSubmitReview}
+                  disabled={isSubmittingReview || !userComment.trim()}
+                  className="w-full bg-fluent-accent text-white text-xs font-bold py-3 rounded-xl hover:bg-[#b58eff] transition-colors disabled:opacity-50"
+                >
+                  {isSubmittingReview ? "Mengirim..." : "Kirim Ulasan"}
+                </button>
+              </div>
+            )}
+
+            {/* DAFTAR ULASAN */}
+            <div className="space-y-4">
+              {reviews.length === 0 ? (
+                <p className="text-xs text-text-muted text-center py-6 bg-white/5 rounded-2xl border border-white/5 border-dashed">Belum ada ulasan untuk barang ini.</p>
+              ) : (
+                reviews.map((review) => (
+                  <div key={review.id} className="bg-fluent-card p-4 rounded-2xl border border-white/5 shadow-md">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <img src={review.profiles?.avatar_url || 'https://via.placeholder.com/40'} alt="User" className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10" />
+                        <div>
+                          <p className="text-xs font-bold text-text-main leading-none">{review.profiles?.full_name || 'Pengguna'}</p>
+                          <p className="text-[9px] text-text-muted mt-1">{new Date(review.created_at).toLocaleDateString('id-ID')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center bg-yellow-400/10 px-2 py-0.5 rounded flex-shrink-0">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
+                        <span className="text-[10px] font-bold text-yellow-400">{review.rating}.0</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-muted mt-2 leading-relaxed">"{review.comment}"</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </main>
       </div>
+
+    
 
       <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-white/5 z-50 shrink-0">
         <div className="flex items-center space-x-3">

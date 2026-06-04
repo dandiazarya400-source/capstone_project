@@ -2,8 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MoreVertical, Send, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase'; // PASTIKAN IMPORT SUPABASE
+import { ArrowLeft, MoreVertical, Send, Image as ImageIcon, Loader2, Store, BadgeCheck } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const ChatPage = () => {
   const router = useRouter();
@@ -14,9 +14,11 @@ const ChatPage = () => {
   const [loading, setLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
-  // Menyimpan ID pengguna
   const [myId, setMyId] = useState<string | null>(null);
   const [adminId, setAdminId] = useState<string | null>(null);
+  
+  // 🌟 STATE BARU: Menyimpan status Online/Offline Admin
+  const [isAdminOnline, setIsAdminOnline] = useState(false);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -24,36 +26,44 @@ const ChatPage = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, loading]);
 
   useEffect(() => {
-    let channel: any;
+    let messageChannel: any;
+    let presenceChannel: any;
 
     const initChat = async () => {
       try {
-        // 1. Ambil ID kita sendiri
         const { data: authData } = await supabase.auth.getUser();
         if (!authData.user) return;
         const currentUserId = authData.user.id;
         setMyId(currentUserId);
 
-        // 2. Cari ID Admin (Anggap saja Asoka Maju adalah user dengan is_admin = true)
-        const { data: adminData } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('is_admin', true)
-          .limit(1)
-          .single();
+        let targetAdminId = null;
+
+        try {
+          const { data: adminData, error: adminError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('role', 'superadmin')
+            .limit(1)
+            .single();
+            
+          if (adminError) {
+             console.error("CCTV Chat - Gagal mencari ID Superadmin:", adminError.message);
+          } else if (adminData) {
+             targetAdminId = adminData.id;
+          }
+        } catch (searchError) {
+           console.error("CCTV Chat - Sistem gagal mencari admin:", searchError);
+        }
         
-        const targetAdminId = adminData?.id || null;
         setAdminId(targetAdminId);
 
-        // 3. Tarik riwayat pesan jika Admin ketemu
         if (targetAdminId) {
           const { data: oldMessages } = await supabase
             .from('messages')
             .select('*')
-            // Ambil chat di mana saya pengirim & admin penerima, ATAU sebaliknya
             .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${targetAdminId}),and(sender_id.eq.${targetAdminId},receiver_id.eq.${currentUserId})`)
             .order('created_at', { ascending: true });
 
@@ -69,19 +79,17 @@ const ChatPage = () => {
         }
         setLoading(false);
 
-        // 4. PASANG RADAR REAL-TIME SUPABASE! 📡
-        channel = supabase
-          .channel('realtime:messages')
+        const uniqueChannelName = `chat_user_${Date.now()}`;
+        
+        messageChannel = supabase
+          .channel(uniqueChannelName)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
             const newMsg = payload.new as any;
-            
-            // Pastikan pesan yang masuk benar-benar milik obrolan kita & admin ini
             if (
               (newMsg.sender_id === currentUserId && newMsg.receiver_id === targetAdminId) ||
               (newMsg.sender_id === targetAdminId && newMsg.receiver_id === currentUserId)
             ) {
               setMessages(prev => {
-                // Cegah duplikasi (karena pengirim juga menerima payload real-time)
                 if (prev.find(m => m.id === newMsg.id)) return prev;
                 return [...prev, {
                   id: newMsg.id,
@@ -94,6 +102,19 @@ const ChatPage = () => {
           })
           .subscribe();
 
+        if (targetAdminId) {
+          // HMR Fix: Hancurkan channel lama secara paksa sebelum membuat yang baru
+          const presenceChannelName = 'admin-status';
+          supabase.removeChannel(supabase.channel(presenceChannelName));
+          
+          presenceChannel = supabase.channel(presenceChannelName)
+            .on('presence', { event: 'sync' }, () => {
+              const state = presenceChannel.presenceState();
+              const isOnline = Object.values(state).flat().some((p: any) => p.user_id === targetAdminId);
+              setIsAdminOnline(isOnline);
+            })
+            .subscribe();
+        }
       } catch (error) {
         console.error("Gagal memuat chat:", error);
         setLoading(false);
@@ -102,19 +123,18 @@ const ChatPage = () => {
 
     initChat();
 
-    // Hapus radar jika user keluar dari halaman chat
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (messageChannel) supabase.removeChannel(messageChannel);
+      if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
   }, []);
 
-  // ================= FUNGSI KIRIM PESAN KE DATABASE =================
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !myId || !adminId || isSending) return;
 
     const textToSend = inputText;
-    setInputText(''); // Langsung kosongkan input agar terasa responsif
+    setInputText(''); 
     setIsSending(true);
 
     try {
@@ -123,18 +143,22 @@ const ChatPage = () => {
         receiver_id: adminId,
         content: textToSend
       }]);
-
       if (error) throw error;
-      // Catatan: Kita tidak perlu melakukan setMessages di sini.
-      // Radar Real-time (channel) di atas akan otomatis menangkap pesan yang baru masuk ke database
-      // dan menampilkannya di layar secara instan!
     } catch (error) {
-      console.error("Gagal mengirim:", error);
       alert("Pesan gagal dikirim.");
     } finally {
       setIsSending(false);
     }
   };
+
+  const greetingMessage = {
+    id: 'system-greeting',
+    text: 'Halo! 👋 Selamat datang di Pinjam Dong. Ada kendala penyewaan atau pertanyaan yang bisa kami bantu hari ini?',
+    sender: 'store',
+    time: 'Admin'
+  };
+
+  const displayMessages = [greetingMessage, ...messages];
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
@@ -142,33 +166,30 @@ const ChatPage = () => {
       {/* ================= HEADER ================= */}
       <header className="w-full bg-fluent-card/95 backdrop-blur-md z-40 px-4 py-4 md:pt-12 pt-6 flex items-center justify-between border-b border-white/5 shrink-0 shadow-sm">
         <div className="flex items-center space-x-3">
-          <button 
-            onClick={() => router.back()} 
-            className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors"
-          >
+          <button onClick={() => router.back()} className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-6 h-6" />
           </button>
           
           <div className="flex items-center space-x-3 cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-inner overflow-hidden">
-              <span className="text-fluent-accent font-black text-xl tracking-tighter">A<span className="text-black">M</span></span>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fluent-accent to-blue-500 flex items-center justify-center shadow-inner overflow-hidden border border-white/10">
+              <Store className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-bold leading-tight">ASOKA MAJU</h1>
-              <div className="flex items-center mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
-                <span className="text-[11px] text-text-muted">Admin Online</span>
+              <h1 className="text-base font-bold leading-tight flex items-center gap-1">
+                Pinjam Dong <BadgeCheck className="w-4 h-4 text-blue-400" />
+              </h1>
+              <div className="flex items-center mt-0.5 transition-all duration-300">
+                {/* 🌟 LAMPU INDIKATOR DINAMIS */}
+                <span className={`w-2 h-2 rounded-full mr-1.5 ${isAdminOnline ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-gray-500'}`}></span>
+                <span className="text-[11px] text-text-muted">{isAdminOnline ? 'Admin Online' : 'Sedang Offline'}</span>
               </div>
             </div>
           </div>
         </div>
-        <button className="p-2 text-text-muted hover:text-text-main transition-colors rounded-full hover:bg-white/5">
-          <MoreVertical className="w-5 h-5" />
-        </button>
       </header>
 
       {/* ================= AREA CHAT ================= */}
-      <main className="flex-1 overflow-y-auto p-5 scrollbar-hide space-y-4">
+      <main className="flex-1 overflow-y-auto p-5 scrollbar-hide space-y-4 pb-10">
         <div className="flex justify-center mb-6 mt-2">
           <span className="bg-white/5 text-text-muted text-[10px] font-bold px-3 py-1 rounded-full tracking-widest uppercase">
             Riwayat Pesan
@@ -180,23 +201,13 @@ const ChatPage = () => {
             <Loader2 className="w-6 h-6 text-fluent-accent animate-spin mb-2" />
             <p className="text-xs text-text-muted">Menghubungkan...</p>
           </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center text-xs text-text-muted pt-10 opacity-50">
-            Belum ada pesan. Mulai sapa admin!
-          </div>
         ) : (
-          messages.map((msg) => {
+          displayMessages.map((msg) => {
             const isMe = msg.sender === 'me';
             return (
               <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
                 <div className="max-w-[75%] flex flex-col">
-                  <div 
-                    className={`px-4 py-2.5 text-sm shadow-md relative ${
-                      isMe 
-                        ? 'bg-fluent-accent text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px]' 
-                        : 'bg-fluent-card border border-white/5 text-text-main rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]' 
-                    }`}
-                  >
+                  <div className={`px-4 py-2.5 text-sm shadow-md relative ${isMe ? 'bg-fluent-accent text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px]' : 'bg-fluent-card border border-white/5 text-text-main rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]'}`}>
                     {msg.text}
                   </div>
                   <span className={`text-[10px] text-text-muted mt-1.5 ${isMe ? 'text-right mr-1' : 'text-left ml-1'}`}>
@@ -207,7 +218,6 @@ const ChatPage = () => {
             );
           })
         )}
-        
         <div ref={chatEndRef} />
       </main>
 
@@ -223,7 +233,7 @@ const ChatPage = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             disabled={!adminId || isSending}
-            placeholder={adminId ? "Tulis pesan ..." : "Mencari admin..."} 
+            placeholder={adminId ? "Ketik pesan..." : "Mencari admin..."} 
             className="flex-1 bg-[#1A0B2E] border border-white/10 rounded-full px-5 py-3.5 text-sm text-text-main focus:outline-none focus:border-fluent-accent/50 transition-colors shadow-inner placeholder:text-text-muted/70 disabled:opacity-50"
           />
 

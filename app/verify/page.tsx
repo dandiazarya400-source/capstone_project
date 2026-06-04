@@ -7,6 +7,7 @@ import {
   ArrowLeft, ShieldCheck, IdCard, User, 
   MapPin, Camera, CheckCircle2, AlertCircle, Loader2, CreditCard
 } from 'lucide-react';
+import { useUserStore } from '@/store/useUserStore'; // 🌟 Import Zustand
 
 const VerifyPage = () => {
   const router = useRouter();
@@ -25,7 +26,10 @@ const VerifyPage = () => {
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
 
-  // Ambil data nama dan alamat dari profil jika sudah ada
+  // 🌟 Panggil Zustand untuk sinkronisasi instan nanti
+  const setProfile = useUserStore((state) => state.setProfile);
+
+  // Ambil data dan cek kelayakan
   useEffect(() => {
     const fetchUserData = async () => {
       const { data: authData } = await supabase.auth.getUser();
@@ -33,11 +37,19 @@ const VerifyPage = () => {
 
       const { data } = await supabase
         .from('profiles')
-        .select('full_name, address, verification_status')
+        // 🌟 PERBAIKAN 1: Tarik kolom 'role' untuk Penjaga Pintu
+        .select('full_name, address, verification_status, role') 
         .eq('id', authData.user.id)
         .single();
 
       if (data) {
+        // 🌟 PENJAGA PINTU: Tendang Admin/Superadmin jika nyasar ke sini!
+        if (data.role === 'admin' || data.role === 'superadmin') {
+          showToast('error', 'Admin tidak perlu melakukan verifikasi KTP!');
+          setTimeout(() => router.back(), 2000);
+          return;
+        }
+
         if (data.verification_status === 'verified' || data.verification_status === 'pending') {
           showToast('error', 'Kamu sudah melakukan verifikasi!');
           setTimeout(() => router.back(), 2000);
@@ -48,14 +60,13 @@ const VerifyPage = () => {
       }
     };
     fetchUserData();
-  }, []);
+  }, [router]);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ show: true, type, message });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  // Handler Kamera KTP (Kamera Belakang)
   const handleKtpCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -64,7 +75,6 @@ const VerifyPage = () => {
     }
   };
 
-  // Handler Kamera Selfie (Kamera Depan)
   const handleSelfieCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -93,15 +103,14 @@ const VerifyPage = () => {
       if (!authData.user) throw new Error("Sesi tidak valid.");
       const userId = authData.user.id;
 
-      // 1. Upload KTP ke Storage
-      const ktpExt = ktpFile.name.split('.').pop();
+      // 🌟 PERBAIKAN 2: Fallback ekstensi 'jpg' jika kamera HP tidak memberikan nama file yang benar
+      const ktpExt = ktpFile.name.includes('.') ? ktpFile.name.split('.').pop() : 'jpg';
       const ktpName = `${userId}-KTP-${Date.now()}.${ktpExt}`;
       const { error: errKtp } = await supabase.storage.from('verifications').upload(ktpName, ktpFile);
       if (errKtp) throw errKtp;
       const { data: ktpUrl } = supabase.storage.from('verifications').getPublicUrl(ktpName);
 
-      // 2. Upload Selfie ke Storage
-      const selfieExt = selfieFile.name.split('.').pop();
+      const selfieExt = selfieFile.name.includes('.') ? selfieFile.name.split('.').pop() : 'jpg';
       const selfieName = `${userId}-SELFIE-${Date.now()}.${selfieExt}`;
       const { error: errSelfie } = await supabase.storage.from('verifications').upload(selfieName, selfieFile);
       if (errSelfie) throw errSelfie;
@@ -116,16 +125,27 @@ const VerifyPage = () => {
           address: address,
           ktp_url: ktpUrl.publicUrl,
           selfie_url: selfieUrl.publicUrl,
-          verification_status: 'pending' // Berubah jadi pending, menunggu admin acc
+          verification_status: 'pending' // Berubah jadi pending
         })
         .eq('id', userId);
 
       if (updateError) throw updateError;
 
+      // 🌟 PERBAIKAN 3: SINKRONISASI GHOST CACHE & ZUSTAND 🌟
+      // Agar saat dilempar ke halaman profil, status 'Pending' (Kuning) langsung muncul 0 milidetik!
+      const cached = localStorage.getItem('user_profile_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        parsed.verification_status = 'pending';
+        parsed.full_name = fullName;
+        localStorage.setItem('user_profile_cache', JSON.stringify(parsed));
+        setProfile(parsed); // Update RAM
+      }
+
       showToast('success', 'Data terkirim! Menunggu verifikasi admin.');
       
       setTimeout(() => {
-        router.push('/profile'); // Kembali ke profil setelah sukses
+        router.push('/profile'); 
       }, 2000);
 
     } catch (error: any) {
@@ -176,18 +196,15 @@ const VerifyPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* ================= BLOK 1: FOTO KTP & SELFIE ================= */}
           <section className="space-y-4">
             <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider border-b border-white/10 pb-2">1. Unggah Foto</h2>
             
-            {/* Box Foto KTP (Rasio 16:9 / Landscape) */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-text-main flex justify-between">
                 <span>Foto KTP Asli</span>
                 {ktpPreview && <span className="text-emerald-400">✓ Tersimpan</span>}
               </label>
               <div className="relative w-full aspect-[16/9] bg-fluent-card border-2 border-dashed border-white/20 rounded-2xl overflow-hidden hover:border-fluent-accent transition-all group cursor-pointer flex flex-col items-center justify-center">
-                {/* Input Native: capture="environment" untuk buka kamera belakang */}
                 <input type="file" accept="image/*" capture="environment" onChange={handleKtpCapture} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 
                 {ktpPreview ? (
@@ -204,14 +221,12 @@ const VerifyPage = () => {
               </div>
             </div>
 
-            {/* Box Foto Selfie (Rasio 3:4 / Portrait) */}
             <div className="space-y-2 pt-2">
               <label className="text-xs font-bold text-text-main flex justify-between">
                 <span>Selfie dengan KTP</span>
                 {selfiePreview && <span className="text-emerald-400">✓ Tersimpan</span>}
               </label>
               <div className="relative w-[70%] mx-auto aspect-[3/4] bg-fluent-card border-2 border-dashed border-white/20 rounded-2xl overflow-hidden hover:border-fluent-accent transition-all group cursor-pointer flex flex-col items-center justify-center">
-                {/* Input Native: capture="user" untuk buka kamera depan */}
                 <input type="file" accept="image/*" capture="user" onChange={handleSelfieCapture} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 
                 {selfiePreview ? (
@@ -229,7 +244,6 @@ const VerifyPage = () => {
             </div>
           </section>
 
-          {/* ================= BLOK 2: DATA DIRI ================= */}
           <section className="space-y-4 pt-4">
             <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider border-b border-white/10 pb-2">2. Konfirmasi Data</h2>
             
@@ -258,7 +272,6 @@ const VerifyPage = () => {
             </div>
           </section>
 
-          {/* ================= TOMBOL SUBMIT ================= */}
           <div className="pt-6">
             <button type="submit" disabled={loading} className="w-full bg-emerald-500 text-white font-bold py-4 rounded-2xl flex justify-center items-center space-x-2 shadow-[0_4px_25px_rgba(16,185,129,0.4)] hover:bg-emerald-400 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 disabled:grayscale">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
