@@ -149,20 +149,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* 3. KONTEN UTAMA */}
-      <main className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-fluent-bg flex flex-col relative w-full min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      {/* 🌟 PERBAIKAN: Hentikan scroll bawaan layout JIKA sedang di halaman inbox */}
+      <main className={`flex-1 h-full flex flex-col relative w-full min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${pathname === '/admin/inbox' ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}>
         
-        {/* HEADER TOP-BAR */}
-        <header className="w-full px-5 pt-12 pb-4 border-b border-white/5 flex items-center bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-30 shrink-0">
-          <button 
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 -ml-2 bg-transparent text-text-main hover:bg-white/10 rounded-full transition-colors mr-3"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-bold">Admin Workspace</h1>
-        </header>
+        {/* 🌟 PERBAIKAN: Sembunyikan Header bawaan Admin jika di halaman Inbox */}
+        {pathname !== '/admin/inbox' && (
+          <header className="w-full px-5 pt-12 pb-4 border-b border-white/5 flex items-center bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-30 shrink-0">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 -ml-2 bg-transparent text-text-main hover:bg-white/10 rounded-full transition-colors mr-3"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-lg font-bold">Admin Workspace</h1>
+          </header>
+        )}
 
-        <div className="flex-1">
+        <div className={`flex-1 ${pathname === '/admin/inbox' ? 'h-full flex flex-col' : ''}`}>
           {children}
         </div>
         

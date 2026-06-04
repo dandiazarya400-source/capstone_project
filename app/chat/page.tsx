@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MoreVertical, Send, Image as ImageIcon, Loader2, Store, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Send, Image as ImageIcon, Loader2, Store, BadgeCheck, Check, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const ChatPage = () => {
@@ -21,7 +21,7 @@ const ChatPage = () => {
   const [isAdminOnline, setIsAdminOnline] = useState(false);
 
   const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    chatEndRef.current?.scrollIntoView({ behavior: "auto" });
   };
 
   useEffect(() => {
@@ -85,16 +85,16 @@ const ChatPage = () => {
           .channel(uniqueChannelName)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
             const newMsg = payload.new as any;
-            if (
-              (newMsg.sender_id === currentUserId && newMsg.receiver_id === targetAdminId) ||
-              (newMsg.sender_id === targetAdminId && newMsg.receiver_id === currentUserId)
-            ) {
+            
+            // 🌟 PERBAIKAN: Hanya tangkap pesan JIKA PENGIRIMNYA ADALAH ADMIN
+            // Kita tidak perlu menangkap pesan kita sendiri karena sudah diurus Optimistic UI
+            if (newMsg.sender_id === targetAdminId && newMsg.receiver_id === currentUserId) {
               setMessages(prev => {
                 if (prev.find(m => m.id === newMsg.id)) return prev;
                 return [...prev, {
                   id: newMsg.id,
                   text: newMsg.content,
-                  sender: newMsg.sender_id === currentUserId ? 'me' : 'store',
+                  sender: 'store', // Pasti dari toko/admin
                   time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
                 }];
               });
@@ -135,17 +135,50 @@ const ChatPage = () => {
 
     const textToSend = inputText;
     setInputText(''); 
+    
+    // 🌟 JURUS OPTIMISTIC UI: Buat pesan sementara (Fake Message)
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
+      text: textToSend,
+      sender: 'me',
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      isSending: true // <--- Status baru penanda "sedang terbang"
+    };
+
+    // 1. Tembakkan langsung ke layar TANPA NUNGGU SUPABASE! (Instan)
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Matikan sebentar agar tidak dobel klik
     setIsSending(true);
 
     try {
-      const { error } = await supabase.from('messages').insert([{
-        sender_id: myId,
-        receiver_id: adminId,
-        content: textToSend
-      }]);
+      // 2. Kirim ke Supabase, dan tambahkan .select().single() agar kita 
+      // mendapatkan ID asli yang dibuatkan oleh database
+      const { data: insertedMsg, error } = await supabase
+        .from('messages')
+        .insert([{
+          sender_id: myId,
+          receiver_id: adminId,
+          content: textToSend
+        }])
+        .select()
+        .single();
+
       if (error) throw error;
+
+      // 3. Sulap ID sementaranya jadi ID asli, dan hilangkan status isSending (Jadi Centang)
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempId 
+          ? { ...msg, id: insertedMsg.id, isSending: false } 
+          : msg
+      ));
+
     } catch (error) {
-      alert("Pesan gagal dikirim.");
+      console.error("Gagal mengirim:", error);
+      // Kalau beneran gagal karena internet putus, tarik balik pesannya dari layar
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      alert("Internet terputus, pesan gagal dikirim.");
     } finally {
       setIsSending(false);
     }
@@ -207,12 +240,33 @@ const ChatPage = () => {
             return (
               <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
                 <div className="max-w-[75%] flex flex-col">
-                  <div className={`px-4 py-2.5 text-sm shadow-md relative ${isMe ? 'bg-fluent-accent text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px]' : 'bg-fluent-card border border-white/5 text-text-main rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]'}`}>
+                  
+                  {/* 🌟 EFEK TRANSLUCENT: Kalau isSending true, pesannya sedikit memudar & mengecil */}
+                  <div className={`px-4 py-2.5 text-sm shadow-md relative transition-all duration-300 ${
+                    msg.isSending ? 'opacity-70 scale-95' : 'opacity-100 scale-100'
+                  } ${
+                    isMe 
+                      ? 'bg-fluent-accent text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px]' 
+                      : 'bg-fluent-card border border-white/5 text-text-main rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]'
+                  }`}>
                     {msg.text}
                   </div>
-                  <span className={`text-[10px] text-text-muted mt-1.5 ${isMe ? 'text-right mr-1' : 'text-left ml-1'}`}>
-                    {msg.time}
-                  </span>
+
+                  {/* 🌟 STATUS TERKIRIM: Menambahkan Jam atau Centang (Khusus pesan kita sendiri) */}
+                  <div className={`flex items-center gap-1 mt-1.5 ${isMe ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
+                    <span className="text-[10px] text-text-muted">
+                      {msg.time}
+                    </span>
+                    
+                    {isMe && (
+                      msg.isSending ? (
+                        <Clock className="w-3 h-3 text-text-muted opacity-70 animate-pulse" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5 text-fluent-accent drop-shadow-[0_0_2px_rgba(163,116,255,0.8)]" />
+                      )
+                    )}
+                  </div>
+
                 </div>
               </div>
             );

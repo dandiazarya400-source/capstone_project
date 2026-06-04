@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Search, Loader2, BadgeCheck, Clock } from 'lucide-react';
+import { ArrowLeft, Send, Search, Loader2, BadgeCheck, Clock, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ChatContact {
@@ -31,7 +31,7 @@ export default function AdminInboxPage() {
 
   useEffect(() => {
     if (view === 'chat') {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      chatEndRef.current?.scrollIntoView({ behavior: "auto" });
     }
   }, [messages, view]);
 
@@ -150,17 +150,18 @@ export default function AdminInboxPage() {
             const newMsg = payload.new as any;
             
             setActiveUser((currentActiveUser) => {
+              // 🌟 PERBAIKAN: Hanya tangkap pesan JIKA PENGIRIMNYA ADALAH USER (Pelanggan)
               if (
-                currentActiveUser &&
-                ((newMsg.sender_id === currentActiveUser.id && newMsg.receiver_id === currentAdminId) ||
-                 (newMsg.sender_id === currentAdminId && newMsg.receiver_id === currentActiveUser.id))
+                currentActiveUser && 
+                newMsg.sender_id === currentActiveUser.id && 
+                newMsg.receiver_id === currentAdminId
               ) {
                 setMessages(prev => {
                   if (prev.find(m => m.id === newMsg.id)) return prev;
                   return [...prev, {
                     id: newMsg.id,
                     text: newMsg.content,
-                    sender: newMsg.sender_id === currentAdminId ? 'me' : 'user',
+                    sender: 'user', // Pasti dari user
                     time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
                   }];
                 });
@@ -214,17 +215,45 @@ export default function AdminInboxPage() {
 
     const textToSend = inputText;
     setInputText(''); 
+    
+    // 🌟 JURUS OPTIMISTIC UI: Pesan palsu instan
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
+      text: textToSend,
+      sender: 'me',
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      isSending: true // <--- Penanda efek memudar & jam
+    };
+
+    // Tembak ke layar admin tanpa nunggu Supabase!
+    setMessages(prev => [...prev, optimisticMessage]);
     setIsSending(true);
 
     try {
-      const { error } = await supabase.from('messages').insert([{
-        sender_id: myId,
-        receiver_id: activeUser.id,
-        content: textToSend
-      }]);
+      const { data: insertedMsg, error } = await supabase
+        .from('messages')
+        .insert([{
+          sender_id: myId,
+          receiver_id: activeUser.id,
+          content: textToSend
+        }])
+        .select()
+        .single(); // Wajib ada ini untuk ngambil ID asli
+
       if (error) throw error;
+
+      // Sukses terkirim! Sulap jam menjadi centang
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempId 
+          ? { ...msg, id: insertedMsg.id, isSending: false } 
+          : msg
+      ));
     } catch (error) {
-      alert("Pesan gagal dikirim.");
+      console.error("Gagal mengirim balasan:", error);
+      // Tarik balik jika beneran gagal
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      alert("Koneksi terputus. Pesan gagal dikirim.");
     } finally {
       setIsSending(false);
     }
@@ -322,12 +351,33 @@ export default function AdminInboxPage() {
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
               <div className="max-w-[75%] flex flex-col">
-                <div className={`px-4 py-2.5 text-sm shadow-md relative ${isMe ? 'bg-fluent-accent text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px]' : 'bg-fluent-card border border-white/5 text-text-main rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]'}`}>
+                
+                {/* 🌟 EFEK TRANSLUCENT: Memudar dan mengecil saat isSending */}
+                <div className={`px-4 py-2.5 text-sm shadow-md relative transition-all duration-300 ${
+                  msg.isSending ? 'opacity-70 scale-95' : 'opacity-100 scale-100'
+                } ${
+                  isMe 
+                    ? 'bg-fluent-accent text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px]' 
+                    : 'bg-fluent-card border border-white/5 text-text-main rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]'
+                }`}>
                   {msg.text}
                 </div>
-                <span className={`text-[10px] text-text-muted mt-1.5 ${isMe ? 'text-right mr-1' : 'text-left ml-1'}`}>
-                  {msg.time}
-                </span>
+
+                {/* 🌟 STATUS TERKIRIM: Jam -> Centang */}
+                <div className={`flex items-center gap-1 mt-1.5 ${isMe ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
+                  <span className="text-[10px] text-text-muted">
+                    {msg.time}
+                  </span>
+                  
+                  {isMe && (
+                    msg.isSending ? (
+                      <Clock className="w-3 h-3 text-text-muted opacity-70 animate-pulse" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5 text-fluent-accent drop-shadow-[0_0_2px_rgba(163,116,255,0.8)]" />
+                    )
+                  )}
+                </div>
+
               </div>
             </div>
           );
