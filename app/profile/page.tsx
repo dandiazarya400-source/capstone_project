@@ -90,7 +90,7 @@ export default function ProfilePage() {
             role: data.role || 'user', 
             balance: data.balance || 0,
             verification_status: data.verification_status || 'unverified',
-            avatar_url: data.avatar_url || 'https://ui-avatars.com/api/?name=User&background=2B164D&color=A374FF&bold=true'
+            avatar_url: data.avatar_url || ''
           };
           
           setProfile(freshData);
@@ -151,7 +151,15 @@ export default function ProfilePage() {
     { id: "5", title: "Setelan Jas Formal", price: "Rp. 100.000", rating: "4.8", sold: "198", owner: "Asoka Maju", image: "https://via.placeholder.com/150", isVerified: true },
   ];
 
-  const defaultAvatar = 'https://ui-avatars.com/api/?name=User&background=2B164D&color=A374FF&bold=true';
+  // Fungsi pembuat inisial nama otomatis (Cuma 1 Huruf)
+  const getInitials = (name: string) => {
+    if (!name) return 'U'; // Default kalau namanya kosong
+    return name.trim().charAt(0).toUpperCase(); // Ambil huruf paling pertama aja
+  };
+
+  const userInitials = getInitials(profile?.full_name || '');
+
+  
 
   // Logika penentuan label di bawah nama
   let roleLabel = 'Pengguna Reguler';
@@ -162,30 +170,46 @@ export default function ProfilePage() {
     <div className="h-full w-full overflow-y-auto overflow-x-hidden bg-fluent-bg text-text-main pb-32 scrollbar-hide animate-in fade-in duration-300">
       
       {/* ================= HEADER PROFIL ================= */}
-      <div className="bg-gradient-to-br from-[#2B164D] to-fluent-bg pt-12 pb-8 px-6 rounded-b-[40px] shadow-lg border-b border-fluent-accent/10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-fluent-accent/20 rounded-full blur-3xl"></div>
+      <div className="bg-gradient-to-r from-fluent-accent to-blue-500 pt-12 pb-8 px-6 rounded-b-[40px] shadow-[0_10px_25px_rgba(59,130,246,0.3)] border-b border-white/20 relative overflow-hidden">
+        
+        {/* Efek Cahaya / Glow di Background */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-300/30 rounded-full blur-2xl"></div>
         
         <div className="flex items-center justify-between relative z-10">
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 rounded-full bg-white p-1 ring-2 ring-fluent-accent ring-offset-2 ring-offset-fluent-bg shadow-[0_0_15px_rgba(163,116,255,0.4)] shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={profile?.avatar_url || defaultAvatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+          
+          {/* 🌟 SELURUH AREA INI SEKARANG BISA DIKLIK */}
+          <Link href="/profile/edit" className="flex items-center space-x-4 group cursor-pointer">
+            {/* Avatar dengan efek animasi saat disentuh */}
+            <div className="w-20 h-20 rounded-full bg-white p-1 ring-4 ring-white/30 shadow-xl shrink-0 flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
+              {profile?.avatar_url && profile.avatar_url.startsWith('http') ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.avatar_url} alt="Profile" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#1A0B2E] to-fluent-accent flex items-center justify-center text-white text-2xl font-black shadow-inner tracking-widest">
+                  {userInitials}
+                </div>
+              )}
             </div>
+            
             <div>
-              <h1 className="text-2xl font-bold text-text-main line-clamp-1">{profile?.full_name || 'Menyiapkan...'}</h1>
-              <p className="text-text-muted text-sm font-medium mb-1">{roleLabel}</p>
-              <Link href="/profile/edit" className="inline-flex items-center gap-1.5 text-[10px] text-white/80 bg-white/10 px-2.5 py-1 rounded-full border border-white/10 hover:bg-white/20 transition-colors mt-1">
+              {/* Teks Nama & Role */}
+              <h1 className="text-2xl font-bold text-white line-clamp-1 drop-shadow-sm group-hover:text-white/90 transition-colors">{profile?.full_name || 'Menyiapkan...'}</h1>
+              <p className="text-white/90 text-sm font-medium mb-1 drop-shadow-sm">{roleLabel}</p>
+              
+              {/* 🌟 Teks hint dikembalikan ke gaya awal yang lebih lembut */}
+              <span className="flex items-center gap-1.5 text-[10px] font-medium text-white/80 group-hover:text-white transition-colors mt-1.5">
                 <Edit3 className="w-3 h-3" /> Ubah Profil
-              </Link>
+              </span>
             </div>
-          </div>
+          </Link>
           
           <div className="flex flex-col space-y-3">
-            <button onClick={() => router.push('/chat')} className="p-2 bg-fluent-accent/5 hover:bg-white/10 rounded-full backdrop-blur-sm transition-colors border border-white/10">
-              <Headphones className="w-5 h-5 text-fluent-accent" />
+            <button onClick={() => router.push('/chat')} className="p-2 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm">
+              <Headphones className="w-5 h-5 text-white" />
             </button>
-            <button onClick={() => setShowLogoutModal(true)} className="p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-full backdrop-blur-sm transition-colors border border-rose-500/20 cursor-pointer">
-              <LogOut className="w-5 h-5 text-rose-400" />
+            <button onClick={() => setShowLogoutModal(true)} className="p-2 bg-white/20 hover:bg-rose-500/80 hover:border-rose-500 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm cursor-pointer group">
+              <LogOut className="w-5 h-5 text-white group-hover:text-white" />
             </button> 
           </div>
         </div>
@@ -249,20 +273,23 @@ export default function ProfilePage() {
         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <section>
             <Link href="/admin">
-              <div className="relative overflow-hidden bg-gradient-to-r from-fluent-accent/20 to-transparent border border-fluent-accent/30 p-4 rounded-fluent-rounded flex items-center justify-between hover:bg-fluent-accent/30 transition-colors shadow-[0_0_20px_rgba(163,116,255,0.15)] group">
+              {/* 🌟 PERBAIKAN: Hover mengubah intensitas gradient, bukan menumpuk warna solid */}
+              <div className="relative overflow-hidden bg-gradient-to-r from-fluent-accent/10 to-transparent border border-fluent-accent/20 p-4 rounded-fluent-rounded flex items-center justify-between hover:from-fluent-accent/20 hover:to-fluent-accent/5 transition-all duration-300 shadow-sm group">
                 <div className="flex items-center space-x-4 relative z-10">
                   <div className="w-12 h-12 bg-fluent-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <LayoutDashboard className="w-6 h-6 text-fluent-accent drop-shadow-[0_0_8px_rgba(163,116,255,0.8)]" />
+                    {/* 🌟 PERBAIKAN: Efek Drop shadow menyala dihilangkan agar lebih solid di light mode */}
+                    <LayoutDashboard className="w-6 h-6 text-fluent-accent" />
                   </div>
                   <div>
                     <h2 className="font-bold text-text-main text-lg">Admin Workspace</h2>
                     <p className="text-xs text-text-muted mt-0.5">Kelola barang, pesanan, dan pengguna</p>
                   </div>
                 </div>
-                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center relative z-10 group-hover:bg-fluent-accent transition-colors">
-                  <ChevronRight className="w-5 h-5 text-white" />
+                {/* 🌟 PERBAIKAN: Bulatan panah diberi warna ungu muda, berubah full ungu saat dihover */}
+                <div className="w-8 h-8 bg-fluent-accent/10 rounded-full flex items-center justify-center relative z-10 group-hover:bg-fluent-accent transition-colors">
+                  <ChevronRight className="w-5 h-5 text-fluent-accent group-hover:text-white transition-colors" />
                 </div>
-                <div className="absolute -right-6 -top-6 w-24 h-24 bg-fluent-accent/20 rounded-full blur-2xl"></div>
+                <div className="absolute -right-6 -top-6 w-24 h-24 bg-fluent-accent/20 rounded-full blur-2xl group-hover:bg-fluent-accent/30 transition-colors"></div>
               </div>
             </Link>
           </section>
@@ -288,8 +315,9 @@ export default function ProfilePage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
           <div className="relative z-10 flex flex-col gap-4">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shadow-inner">
-                <Banknote className="w-6 h-6 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]" />
+              {/* 🌟 PERBAIKAN: Ikon dompet dibuat lebih clean tanpa shadow glow */}
+              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 shadow-inner">
+                <Banknote className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
                 <p className="text-xs font-medium text-text-muted mb-0.5">Saldo Aktif</p>
@@ -299,8 +327,13 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex space-x-3 mt-1">
-              <button onClick={handleTopup} className="flex-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-500/30 transition-colors shadow-sm">Isi Saldo</button>
-              <button className="flex-1 bg-rose-500/20 text-rose-400 border border-rose-500/50 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-500/30 transition-colors shadow-sm">Tarik Dana</button>
+              {/* 🌟 PERBAIKAN: Teks diubah ke shade 600, dan background ke 50/100 agar super kontras dan tajam */}
+              <button onClick={handleTopup} className="flex-1 bg-emerald-50 text-emerald-600 border border-emerald-200 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors shadow-sm">
+                Isi Saldo
+              </button>
+              <button className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-100 transition-colors shadow-sm">
+                Tarik Dana
+              </button>
             </div>
           </div>
         </section>

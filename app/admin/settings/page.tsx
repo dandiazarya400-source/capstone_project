@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  ArrowLeft, Store, Clock, Phone, MapPin, Save, 
+  ArrowLeft, Store, Clock, Phone, MapPin, Save, MessageCircle,
   BadgeCheck, Camera, Loader2, Crop, X, Calendar, Check 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -42,7 +42,8 @@ const AdminStoreSettings = () => {
     store_name: '',
     phone_number: '',
     address: '',
-    avatar_url: '' 
+    avatar_url: '', 
+    auto_greeting: ''
   });
 
   const defaultSchedule = [
@@ -90,14 +91,18 @@ const AdminStoreSettings = () => {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, phone_number, address, avatar_url, is_admin, operational_schedule')
+          .select('full_name, phone_number, address, avatar_url, auto_greeting, role, operational_schedule')
           .eq('id', currentUserId)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error("CCTV Database Error:", error.message);
+          throw error;
+        }
 
-        if (data && !data.is_admin) {
-          alert('Akun ini bukan admin!');
+        // 🌟 PERBAIKAN 2: Validasi menggunakan role
+        if (data && data.role !== 'admin' && data.role !== 'superadmin') {
+          alert('Akses Ditolak! Akun ini bukan admin.');
           router.push('/');
           return;
         }
@@ -108,7 +113,8 @@ const AdminStoreSettings = () => {
             store_name: storeData.full_name || '', 
             phone_number: storeData.phone_number || '',
             address: storeData.address || '',
-            avatar_url: storeData.avatar_url || ''
+            avatar_url: storeData.avatar_url || '',
+            auto_greeting: storeData.auto_greeting || 'Halo! 👋 Selamat datang. Ada yang bisa dibantu hari ini?'
           });
           
           // Sinkronisasi jadwal dari JSON database jika ada
@@ -181,7 +187,8 @@ const AdminStoreSettings = () => {
           phone_number: formData.phone_number,
           address: formData.address,
           avatar_url: formData.avatar_url,
-          operational_schedule: schedule // Simpan data array JSON jadwal terstruktur
+          operational_schedule: schedule,
+          auto_greeting: formData.auto_greeting
         })
         .eq('id', adminId);
 
@@ -210,9 +217,9 @@ const AdminStoreSettings = () => {
         )}
       </div>
 
-      <main className="w-full px-5 pt-4 pb-24">
+      <main className="w-full px-5 pt-2 pb-24">
 
-        {/* HEADER PENGATURAN TOKO (Model Card Dalam) */}
+        {/* HEADER PENGATURAN TOKO (Model Card Dalam)
         <div className="flex items-center gap-3 mb-6 bg-fluent-card p-3 rounded-2xl border border-fluent-accent/10 shadow-lg">
           <button type="button" onClick={() => router.back()} className="p-2 bg-fluent-accent/5 rounded-full hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-5 h-5" />
@@ -221,10 +228,10 @@ const AdminStoreSettings = () => {
             <h1 className="text-base font-bold text-text-main leading-tight">Pengaturan Toko</h1>
             <p className="text-[10px] text-text-muted">Kelola identitas dan jadwal operasional</p>
           </div>
-        </div>
+        </div> */}
 
         {/* Banner Info */}
-        <div className="bg-fluent-accent/10 border border-fluent-accent/20 rounded-2xl p-4 mb-6 flex items-center gap-3">
+        <div className="bg-fluent-accent/5 border border-fluent-accent/20 rounded-2xl p-4 mb-8 flex items-center gap-3 shadow-sm">
           <BadgeCheck className="w-8 h-8 text-fluent-accent shrink-0" />
           <p className="text-[10px] text-text-main font-medium leading-relaxed">
             Data ini akan ditampilkan publik sebagai identitas resmi dan lokasi pengambilan barang.
@@ -232,7 +239,7 @@ const AdminStoreSettings = () => {
         </div>
 
         {/* FOTO LOGO TOKO */}
-        <div className="flex flex-col items-center justify-center mb-8">
+        <div className="flex flex-col items-center justify-center mb-10">
           <div className="relative w-28 h-28 rounded-full ring-2 ring-fluent-accent ring-offset-4 ring-offset-fluent-bg bg-fluent-card shadow-lg shadow-fluent-accent/20 flex items-center justify-center overflow-hidden group cursor-pointer">
             {uploadingImage ? (
               <Loader2 className="w-10 h-10 animate-spin text-fluent-accent/50" />
@@ -252,60 +259,76 @@ const AdminStoreSettings = () => {
         </div>
 
         {/* FORM DATA TOKO */}
-        <form onSubmit={handleSave} className="space-y-5">
-          <div className="space-y-1.5">
+        <form onSubmit={handleSave} className="flex flex-col gap-6">
+          
+          <div className="space-y-2"> {/* 🌟 Jarak label ke input diperbesar */}
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Nama Toko/Studio</label>
             <div className="relative">
               <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
-              <input type="text" required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner font-bold text-text-main" value={formData.store_name} onChange={(e) => setFormData({...formData, store_name: e.target.value})} />
+              <input type="text" required className="w-full bg-fluent-card border border-fluent-accent/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent transition-all shadow-sm font-bold text-text-main" value={formData.store_name} onChange={(e) => setFormData({...formData, store_name: e.target.value})} />
             </div>
           </div>
           
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Telepon Admin</label>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
-              <input type="tel" required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
+              <input type="tel" required className="w-full bg-fluent-card border border-fluent-accent/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent transition-all shadow-sm text-text-main" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Alamat Lengkap Toko</label>
             <div className="relative">
               <MapPin className="absolute left-4 top-3.5 w-4.5 h-4.5 text-fluent-accent" />
-              <textarea rows={3} required className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner resize-none text-text-main" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
+              <textarea rows={3} required className="w-full bg-fluent-card border border-fluent-accent/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent transition-all shadow-sm resize-none text-text-main" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
             </div>
           </div>
 
+          {/* ================= PESAN SAMBUTAN CHAT ================= */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-text-muted uppercase ml-1 tracking-wider">Pesan Sambutan Chat</label>
+            <div className="relative">
+              <MessageCircle className="absolute left-4 top-3.5 w-4.5 h-4.5 text-fluent-accent" />
+              <textarea 
+                rows={3} 
+                className="w-full bg-fluent-card border border-fluent-accent/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent transition-all shadow-sm resize-none text-text-main" 
+                value={formData.auto_greeting} 
+                onChange={(e) => setFormData({...formData, auto_greeting: e.target.value})}
+                placeholder="Ketik sapaan otomatis untuk pelangganmu..."
+              ></textarea>
+            </div>
+            <p className="text-[9px] text-text-muted text-right pr-1 mt-1">Pesan otomatis saat user menekan tombol chat</p>
+          </div>
+
           {/* ================= UI JADWAL OPERASIONAL TERPADU ================= */}
-          <div className="space-y-2 pt-2">
-            <div className="flex justify-between items-end mb-2 px-1">
+          <div className="space-y-3 pt-2">
+            <div className="flex justify-between items-end px-1">
               <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Jadwal Operasional</label>
-              <span className="text-[9px] text-text-muted/70 font-bold uppercase tracking-wider">Tutup / Libur</span>
+              <span className="text-[9px] text-fluent-accent font-bold uppercase tracking-wider">Tutup / Libur</span>
             </div>
             
-            {/* Card Besar Gabungan Anti-Aneh */}
-            <div className="bg-fluent-card border border-fluent-accent/10 rounded-2xl overflow-hidden divide-y divide-white/5 shadow-md">
+            <div className="bg-fluent-card border border-fluent-accent/20 rounded-2xl overflow-hidden divide-y divide-fluent-accent/10 shadow-sm">
               {schedule.map((item, idx) => (
-                <div key={item.day} className="flex items-center justify-between p-3.5 transition-colors hover:bg-white/[0.01]">
+                <div key={item.day} className="flex items-center justify-between p-4 transition-colors hover:bg-fluent-accent/5">
                   
                   {/* Nama Hari */}
                   <div className="w-16 shrink-0">
-                    <span className={`text-xs font-bold transition-all ${item.isClosed ? 'text-text-muted line-through opacity-40' : 'text-text-main'}`}>
+                    <span className={`text-xs font-bold transition-all ${item.isClosed ? 'text-text-muted line-through opacity-50' : 'text-text-main'}`}>
                       {item.day}
                     </span>
                   </div>
                   
-                  {/* Jam Operasional (Ubah jadi Select Dropdown) */}
-                  <div className="flex items-center gap-1">
+                  {/* Jam Operasional */}
+                  <div className="flex items-center gap-1.5">
                     <select 
                       value={item.open} 
                       onChange={(e) => updateSchedule(idx, 'open', e.target.value)}
                       disabled={item.isClosed}
-                      className={`bg-fluent-bg border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
+                      className={`bg-fluent-bg border border-fluent-accent/20 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-30 cursor-not-allowed text-text-muted bg-gray-100' : 'text-text-main'}`}
                     >
                       {timeOptions.map(time => (
-                        <option key={`open-${time}`} value={time} className="bg-fluent-bg">{time}</option>
+                        <option key={`open-${time}`} value={time} className="bg-white text-black">{time}</option>
                       ))}
                     </select>
 
@@ -315,22 +338,22 @@ const AdminStoreSettings = () => {
                       value={item.close} 
                       onChange={(e) => updateSchedule(idx, 'close', e.target.value)}
                       disabled={item.isClosed}
-                      className={`bg-fluent-bg border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-20 cursor-not-allowed text-text-muted' : 'text-text-main'}`}
+                      className={`bg-fluent-bg border border-fluent-accent/20 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer text-center min-w-[70px] ${item.isClosed ? 'opacity-30 cursor-not-allowed text-text-muted bg-gray-100' : 'text-text-main'}`}
                     >
                       {timeOptions.map(time => (
-                        <option key={`close-${time}`} value={time} className="bg-fluent-bg">{time}</option>
+                        <option key={`close-${time}`} value={time} className="bg-white text-black">{time}</option>
                       ))}
                     </select>
                   </div>
 
-                  {/* Tombol Centang Box Minimalis (Menggantikan Slide Toggle) */}
+                  {/* 🌟 PERBAIKAN KOTAK CENTANG (Terlihat Jelas Sekarang!) */}
                   <button 
                     type="button"
                     onClick={() => updateSchedule(idx, 'isClosed', !item.isClosed)}
-                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                    className={`w-6 h-6 rounded-md border-2 flex shrink-0 items-center justify-center transition-all cursor-pointer ${
                       item.isClosed 
-                        ? 'bg-rose-500 border-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]' 
-                        : 'border-white/20 text-transparent hover:border-fluent-accent/50 bg-white/[0.02]'
+                        ? 'bg-rose-500 border-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.4)]' 
+                        : 'bg-fluent-bg border-fluent-accent/30 text-transparent hover:border-fluent-accent/70'
                     }`}
                   >
                     <Check className={`w-3.5 h-3.5 transition-transform duration-200 ${item.isClosed ? 'scale-100' : 'scale-0'}`} />
@@ -342,7 +365,8 @@ const AdminStoreSettings = () => {
           </div>
           {/* ========================================================================= */}
 
-          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-4 bg-fluent-accent text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-fluent-accent/30 hover:bg-[#b58eff] transition-all disabled:opacity-50 cursor-pointer">
+          {/* 🌟 Jarak tombol simpan diperlebar (mt-8) agar tidak dempet dengan hari Minggu */}
+          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-8 bg-fluent-accent text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-fluent-accent/30 hover:bg-[#b58eff] transition-all disabled:opacity-50 cursor-pointer">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {loading ? 'Menyimpan...' : 'Simpan Pengaturan Toko'}
           </button>

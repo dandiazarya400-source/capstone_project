@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
-  ArrowLeft, PackagePlus, Type, AlignLeft,
+  ArrowLeft, PackagePlus, Type, AlignLeft, ChevronDown,
   Box, Folder, Save, UploadCloud, Tag, CheckCircle2, AlertCircle, X, Plus,
   Truck
 } from 'lucide-react';
@@ -22,14 +22,26 @@ const AddProductPage = () => {
   
   // [FIX] State untuk Kategori dari Database
   const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const { data } = await supabase.from('categories').select('id, name');
+      setLoadingCategories(true);
+      
+      const { data, error } = await supabase.from('categories').select('id, name');
+      
+      if (error) {
+        console.error("CCTV Kategori Error:", error.message);
+      }
+      
       if (data && data.length > 0) {
         setCategories(data);
-        setCategoryId(String(data[0].id)); // Set default ke kategori pertama
+        setCategoryId(String(data[0].id));
+      } else {
+        console.warn("Data kategori kosong atau terhalang RLS!");
       }
+      
+      setLoadingCategories(false); // 🌟 Matikan loading apa pun hasilnya
     };
     fetchCategories();
   }, []);
@@ -242,39 +254,50 @@ const AddProductPage = () => {
             <div className="space-y-2">
               <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Kategori</label>
               <div className="relative flex items-center">
-                <Folder className="absolute left-3 w-4 h-4 text-text-muted" />
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id} className="bg-fluent-bg">{cat.name}</option>
-                  ))}
+                <Folder className="absolute left-3 w-4 h-4 text-text-muted z-10" />
+                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 pr-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer relative z-0">
+                  {loadingCategories ? (
+                    <option value="" disabled>Memuat...</option>
+                  ) : categories.length === 0 ? (
+                    <option value="" disabled>Kategori Kosong di DB!</option> /* 🌟 SEKARANG JUJUR */
+                  ) : (
+                    categories.map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-fluent-bg">{cat.name}</option>
+                    ))
+                  )}
                 </select>
+                {/* 🌟 PANAH DROPDOWN */}
+                <ChevronDown className="absolute right-3 w-4 h-4 text-text-muted pointer-events-none z-10" />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Kondisi</label>
               <div className="relative flex items-center">
-                <Tag className="absolute left-3 w-4 h-4 text-text-muted" />
-                <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                  
+                <Tag className="absolute left-3 w-4 h-4 text-text-muted z-10" />
+                <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 pr-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer relative z-0">
                   <option value="Sangat Baik" className="bg-fluent-bg">Sangat Baik</option>
                   <option value="Baik" className="bg-fluent-bg">Baik</option>
                   <option value="Cukup" className="bg-fluent-bg">Cukup</option>
                 </select>
+                {/* 🌟 PANAH DROPDOWN */}
+                <ChevronDown className="absolute right-3 w-4 h-4 text-text-muted pointer-events-none z-10" />
               </div>
             </div>
           </div>
 
-          {/* ================= [BARU] UI OPSI PENGIRIMAN ================= */}
+          {/* ================= UI OPSI PENGIRIMAN ================= */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Opsi Pengiriman</label>
             <div className="relative flex items-center">
-              <Truck className="absolute left-3 w-4 h-4 text-text-muted" />
-              <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
+              <Truck className="absolute left-3 w-4 h-4 text-text-muted z-10" />
+              <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 pr-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer relative z-0">
                 <option value="both" className="bg-fluent-bg">Bisa Diantar & Ambil Sendiri</option>
                 <option value="pickup_only" className="bg-fluent-bg">Hanya Ambil Sendiri (Ke Toko)</option>
                 <option value="delivery_only" className="bg-fluent-bg">Hanya Diantar (Oleh Pemilik)</option>
               </select>
+              {/* 🌟 PANAH DROPDOWN */}
+              <ChevronDown className="absolute right-3 w-4 h-4 text-text-muted pointer-events-none z-10" />
             </div>
           </div>
 

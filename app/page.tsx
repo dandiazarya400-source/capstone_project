@@ -267,10 +267,10 @@ const HomePage = () => {
               key={kat}
               type="button"
               onClick={() => setActiveCategory(kat)} 
-              className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-200 cursor-pointer border ${
+              className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-300 cursor-pointer border ${
                 activeCategory === kat
-                  ? 'bg-white/10 text-white shadow-lg border-white/20' 
-                  : 'bg-fluent-card text-text-muted border-fluent-accent/10 hover:bg-white/10' 
+                  ? 'bg-fluent-accent text-white shadow-[0_4px_15px_rgba(163,116,255,0.4)] border-fluent-accent' 
+                  : 'bg-fluent-card text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10 hover:text-fluent-accent' 
               }`}
             >
               {kat}

@@ -124,11 +124,11 @@ const AdminBookingsPage = () => {
       )}
 
       {/* BLOK ATAS */}
-      <div className="w-full relative z-40 bg-fluent-bg/95 backdrop-blur-md shrink-0 border-b border-fluent-accent/10">
+      <div className="w-full relative z-10 bg-fluent-bg/95 backdrop-blur-md shrink-0 border-b border-fluent-accent/10">
         <header className="w-full px-5 py-4 flex items-center space-x-3">
-          <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors cursor-pointer p-1 -ml-1">
+          {/* <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors cursor-pointer p-1 -ml-1">
             <ArrowLeft className="w-6 h-6" />
-          </button>
+          </button> */}
           <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
             <Package className="w-5 h-5 text-fluent-accent" />
             Daftar Pesanan

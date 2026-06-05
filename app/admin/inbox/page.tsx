@@ -121,6 +121,31 @@ export default function AdminInboxPage() {
 
           const contactIds = Array.from(contactMap.keys());
 
+          // 🌟 PRO-TIP: Cek dulu apakah ada ID kontaknya, kalau kosong jangan nembak ke Supabase
+          if (contactIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url')
+              .in('id', contactIds);
+
+            if (profiles) {
+              const finalChatList: ChatContact[] = profiles.map(profile => ({
+                id: profile.id,
+                full_name: profile.full_name || 'Pengguna Tanpa Nama',
+                avatar_url: profile.avatar_url || 'https://ui-avatars.com/api/?name=User&background=2B164D&color=A374FF&bold=true',
+                last_message: contactMap.get(profile.id).last_message,
+                last_time: contactMap.get(profile.id).time,
+                timestamp: contactMap.get(profile.id).timestamp
+              }));
+
+              finalChatList.sort((a, b) => b.timestamp - a.timestamp);
+              setChatList(finalChatList);
+            }
+          } else {
+             // Kalau kosong, ya langsung set list kosong
+             setChatList([]);
+          }
+
           const { data: profiles } = await supabase
             .from('profiles')
             .select('id, full_name, avatar_url')

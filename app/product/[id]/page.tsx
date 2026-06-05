@@ -44,7 +44,7 @@ const ProductDetailPage = () => {
         setLoading(true);
         const { data, error } = await supabase
           .from('items')
-          .select('*')
+          .select('*, profiles(full_name, avatar_url)')
           .eq('id', id)
           .single();
 
@@ -58,7 +58,9 @@ const ProductDetailPage = () => {
           description: data.description || "Tidak ada deskripsi tersedia.",
           condition: data.condition || "Baik", 
           stock: data.stock || 0, 
-          owner: "Asoka Maju", // (Nanti bisa ditarik dari tabel profiles owner_id)
+          owner: data.profiles?.full_name || "Pengguna Anonim",
+          owner_avatar: data.profiles?.avatar_url || "",
+          owner_id: data.owner_id,
           is_verified: true,
           process_time: "3 jam", 
           images: data.image_urls && data.image_urls.length > 0 ? data.image_urls : ["https://via.placeholder.com/150"]
@@ -253,8 +255,14 @@ const ProductDetailPage = () => {
           <div className="bg-fluent-card rounded-[24px] p-4 border border-fluent-accent/10 shadow-lg mb-6">
             <div className="flex justify-between items-center border-b border-fluent-accent/10 pb-4 mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-fluent-bg border border-fluent-accent/30 rounded-full flex items-center justify-center shadow-inner overflow-hidden">
-                  <span className="text-text-main font-black text-xl tracking-tighter">A<span className="text-fluent-accent">M</span></span>
+                {/* 🌟 TAMPILKAN FOTO ASLI ATAU INISIAL NAMA */}
+                <div className="w-12 h-12 bg-gradient-to-br from-[#1A0B2E] to-fluent-accent rounded-full flex items-center justify-center shadow-inner overflow-hidden border border-fluent-accent/30 text-white font-black text-xl">
+                  {product.owner_avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={product.owner_avatar} alt={product.owner} className="w-full h-full object-cover" />
+                  ) : (
+                    product.owner.substring(0, 1).toUpperCase() // Ambil huruf pertama jika tidak ada foto
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center">
@@ -370,10 +378,20 @@ const ProductDetailPage = () => {
 
       <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-fluent-accent/10 z-50 shrink-0">
         <div className="flex items-center space-x-3">
-          <button onClick={() => router.push('/chat')} className="flex-1 bg-transparent border-2 border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors">
+          <button 
+            disabled={!product}
+            onClick={() => {
+              if (product?.owner_id) {
+              router.push(`/chat?targetId=${product.owner_id}&targetName=${encodeURIComponent(product.owner)}&targetAvatar=${encodeURIComponent(product.owner_avatar || '')}`);              } else {
+                router.push('/chat'); // Fallback ke CS Pusat
+              }
+            }} 
+            className="flex-1 bg-transparent border-2 border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors disabled:opacity-50"
+          >
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm">Chat</span>
+            <span className="text-sm">Chat Pemilik</span>
           </button>
+          
           <button onClick={() => router.push(`/booking?stock=${product.stock}&id=${id}&price=${product.rawPrice}`)} className="flex-1 bg-fluent-accent text-white font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 shadow-[0_4px_20px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition-colors">
             <CalendarCheck className="w-5 h-5" />
             <span className="text-sm">Sewa Sekarang</span>

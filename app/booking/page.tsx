@@ -24,6 +24,7 @@ const BookingContent = () => {
 
   const [loadingPrice, setLoadingPrice] = useState(true);
   const [price, setPrice] = useState(0);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
 
   // Ambil harga asli dari database (Anti-hack URL)
   useEffect(() => {
@@ -33,12 +34,18 @@ const BookingContent = () => {
       try {
         const { data, error } = await supabase
           .from('items') // Nama tabel barang aslimu
-          .select('price_per_day')
+          .select('price_per_day, owner_id')
           .eq('id', itemId)
           .single();
+
+          if (error) {
+          // 🌟 PASANG CCTV DI SINI!
+          console.error("CCTV Database Error:", error.message, " | Hint:", error.hint);
+        }
           
-        if (data && data.price_per_day) {
-          setPrice(data.price_per_day);
+        if (data) {
+          if (data.price_per_day) setPrice(data.price_per_day);
+          if (data.owner_id) setOwnerId(data.owner_id)
         }
       } catch (error) {
         console.error("Gagal mengambil harga:", error);
@@ -87,10 +94,10 @@ const BookingContent = () => {
   const duration = startDate && endDate ? (endDate - startDate) + 1 : (startDate ? 1 : 0);
 
   return (
-    // [FIX SCROLL] Bebaskan ketinggian dan hapus overflow-hidden
-    <div className="w-full flex flex-col text-text-main relative">
+    // 🌟 PERBAIKAN 1: Kunci tinggi penuh layar (h-[100dvh]) dan sembunyikan overflow luar
+    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main relative overflow-hidden">
       
-      {/* HEADER */}
+      {/* HEADER (Diam di atas) */}
       <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
         <button onClick={() => router.back()} className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-6 h-6" />
@@ -101,22 +108,22 @@ const BookingContent = () => {
         </h1>
       </header>
 
-      {/* AREA SCROLL */}
-      <main className="w-full px-5 pb-24 pt-4">
+      {/* 🌟 PERBAIKAN 2: AREA SCROLL (Bisa digulir secara mandiri) */}
+      <main className="flex-1 w-full px-5 py-6 overflow-y-auto scrollbar-hide">
         
         {/* LEGENDA */}
         <div className="mb-6">
           <p className="text-sm font-bold text-text-muted mb-3 uppercase tracking-wider">Status</p>
           <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-            <div className="flex-shrink-0 flex items-center bg-fluent-card border border-white/10 px-2 py-1 rounded-full shadow-sm">
+            <div className="flex-shrink-0 flex items-center bg-fluent-card border border-fluent-accent/10 px-2 py-1 rounded-full shadow-sm">
               <div className="w-2 h-2 rounded-full bg-red-500 mr-1.5 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
               <span className="text-[11px] font-medium text-text-main whitespace-nowrap">Sudah dibooking</span>
             </div>
-            <div className="flex-shrink-0 flex items-center bg-fluent-card border border-white/10 px-2 py-1 rounded-full shadow-sm">
+            <div className="flex-shrink-0 flex items-center bg-fluent-card border border-fluent-accent/10 px-2 py-1 rounded-full shadow-sm">
               <div className="w-2 h-2 rounded-full bg-fluent-accent mr-1.5 shadow-[0_0_8px_rgba(163,116,255,0.5)]"></div>
               <span className="text-[11px] font-medium text-text-main whitespace-nowrap">Pilihanmu</span>
             </div>
-            <div className="flex-shrink-0 flex items-center bg-fluent-card border border-white/10 px-2 py-1 rounded-full shadow-sm">
+            <div className="flex-shrink-0 flex items-center bg-fluent-card border border-fluent-accent/10 px-2 py-1 rounded-full shadow-sm">
               <div className="w-2 h-2 rounded-full bg-white/30 mr-1.5"></div>
               <span className="text-[11px] font-medium text-text-main whitespace-nowrap">Tersedia</span>
             </div>
@@ -150,18 +157,18 @@ const BookingContent = () => {
               
               return (
                 <div key={day} className="flex justify-center items-center h-10 relative group">
-                  {status === 'in-range' && <div className="absolute w-full h-9 bg-fluent-accent/20"></div>}
+                  {status === 'in-range' && <div className="absolute w-full h-9 bg-fluent-accent/10"></div>}
                   {status === 'endpoint' && endDate && startDate !== endDate && (
-                     <div className={`absolute w-1/2 h-9 bg-fluent-accent/20 ${day === startDate ? 'right-0' : 'left-0'}`}></div>
+                     <div className={`absolute w-1/2 h-9 bg-fluent-accent/10 ${day === startDate ? 'right-0' : 'left-0'}`}></div>
                   )}
 
                   <button 
                     onClick={() => handleDateClick(day)}
                     className={`w-9 h-9 flex justify-center items-center rounded-xl text-sm font-semibold transition-all duration-150 z-10
-                      ${status === 'endpoint' ? 'bg-fluent-accent text-white' : ''}
+                      ${status === 'endpoint' ? 'bg-fluent-accent text-white shadow-[0_2px_10px_rgba(163,116,255,0.4)]' : ''}
                       ${status === 'in-range' ? 'text-fluent-accent font-bold' : ''}
                       ${status === 'booked' ? 'text-red-400 opacity-25 cursor-not-allowed' : 'text-text-main'}
-                      ${status === 'available' ? 'hover:bg-white/10' : ''}
+                      ${status === 'available' ? 'hover:bg-fluent-accent/10 hover:text-fluent-accent' : ''}
                     `}
                     disabled={status === 'booked'}
                   >
@@ -174,7 +181,7 @@ const BookingContent = () => {
         </div>
 
         {/* PENGATURAN */}
-        <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10 space-y-5 mb-2">
+        <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10 space-y-5">
           
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-text-muted">Total stok tersedia</span>
@@ -207,21 +214,21 @@ const BookingContent = () => {
             </span>
           </div>
 
-          <div className="flex justify-between items-center pt-2 border-t border-fluent-accent/10">
-            <span className="text-sm font-medium text-text-muted">Pengiriman</span>
-            <div className="flex gap-2">
+          <div className="flex flex-col pt-4 border-t border-fluent-accent/10 gap-3">
+            <span className="text-sm font-medium text-text-muted">Metode Pengiriman</span>
+            <div className="flex w-full gap-2">
               <button 
                 onClick={() => setDeliveryMethod('owner')}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
-                  deliveryMethod === 'owner' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10'
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
+                  deliveryMethod === 'owner' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10'
                 }`}
               >
                 Diantar Pemilik
               </button>
               <button 
                 onClick={() => setDeliveryMethod('self')}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
-                  deliveryMethod === 'self' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10'
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
+                  deliveryMethod === 'self' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10'
                 }`}
               >
                 Ambil Sendiri
@@ -229,15 +236,24 @@ const BookingContent = () => {
             </div>
           </div>
         </div>
-
       </main>
 
-      {/* NAVIGASI BAWAH */}
-      <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-fluent-accent/10 z-50 shrink-0 relative">
+      {/* 🌟 PERBAIKAN 3: NAVIGASI BAWAH (Diam di bawah) */}
+      <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-6 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.1)] border-t border-fluent-accent/10 z-50 shrink-0 relative">
         <div className="flex items-center space-x-3">
-          <button onClick={() => router.push('/chat')} className="flex-1 bg-transparent border-2 border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-2xl flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors">
+          <button 
+          disabled={loadingPrice}
+            onClick={() => {
+              if (ownerId) {
+                router.push(`/chat?targetId=${ownerId}`); // 🌟 GUNAKAN STATE YANG SUDAH DIAMBIL
+              } else {
+                alert("Sedang memuat data pemilik barang, mohon tunggu...");
+              }
+            }} 
+            className="flex-1 bg-transparent border border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-2xl flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors shadow-inner"
+          >
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm whitespace-nowrap">Chat Penyewa</span>
+            <span className="text-sm whitespace-nowrap">Chat Pemilik</span>
           </button>
           
           <button 

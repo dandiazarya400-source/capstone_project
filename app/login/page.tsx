@@ -27,26 +27,44 @@ const LoginPage = () => {
     }
   }, [message]);
 
-  // === FUNGSI LOGIN SUPABASE ===
+  // === FUNGSI LOGIN SUPABASE (AUTO-REDIRECT VIP) ===
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ text: '', type: '' });
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // 1. Proses login standar Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      setMessage({ text: 'Login berhasil! Mengalihkan...', type: 'success' });
-      
-      // Jika sukses, arahkan ke halaman Home / Booking
-      setTimeout(() => { 
-        router.push('/'); // Ubah '/' ke rute beranda utamamu jika beda
-      }, 1500);
+      if (authData.user) {
+        // 2. CEK JABATAN: Tarik data role dari tabel profiles
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Gagal menarik data role:', profileError.message);
+        }
+
+        setMessage({ text: 'Login berhasil! Mengalihkan...', type: 'success' });
+        
+        // 3. JALUR PINTAR: Arahkan sesuai jabatan (Role)
+        setTimeout(() => { 
+          if (profile?.role === 'admin' || profile?.role === 'superadmin') {
+            router.push('/admin'); // Karpet merah untuk Admin
+          } else {
+            router.push('/'); // Jalur reguler untuk User biasa
+          }
+        }, 1500);
+      }
 
     } catch (error: any) {
       console.error('Error saat login:', error);

@@ -7,6 +7,7 @@ import {
   ArrowLeft, Loader2, Clock, X, CheckCircle, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   id: string;
@@ -21,6 +22,7 @@ interface UserProfile {
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter();
   const [adminId, setAdminId] = useState<string | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -387,11 +389,7 @@ export default function AdminUsersPage() {
     <div className="w-full flex flex-col text-text-main relative">
       <main className="w-full px-5 pt-4 pb-24">
         
-        {/* HEADER DAFTAR USER */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-black text-white tracking-tight">Data User</h1>
-          <p className="text-xs text-text-muted mt-1">Pantau identitas dan rekam jejak penyewa</p>
-        </div>
+        
         
         {/* PENCARIAN */}
         <div className="relative w-full mb-6">
