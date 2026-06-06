@@ -51,7 +51,11 @@ export async function POST(request: Request) {
         // C. Ubah status transaksi jadi 'success' agar tidak di-topup 2 kali
         await supabaseAdmin
           .from('wallet_transactions')
-          .update({ status: 'success' })
+          .update({ 
+            status: 'success',
+            // Ambil payment_channel (BCA, QRIS, dll) dari payload Xendit
+            payment_channel: payload.payment_channel || payload.payment_method || 'Sistem Pembayaran'
+          })
           .eq('id', transactionId);
 
         console.log(`✅ BERHASIL! Top up Rp${trxData.amount} masuk ke akun ${trxData.user_id}`);

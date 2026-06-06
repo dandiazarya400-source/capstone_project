@@ -33,7 +33,8 @@ export async function POST(request: Request) {
         amount: amount,
         description: `Top Up Saldo Pinjam Dong`,
         invoice_duration: 86400,
-        success_redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/wallet/success`,
+        // Tambahkan ?id=${topupId} di akhir URL
+        success_redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/wallet/success?id=${topupId}`,
         failure_redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/wallet/failed`,
       })
     });
