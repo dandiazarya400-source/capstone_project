@@ -51,16 +51,15 @@ const ChatContent = () => {
         const currentUserId = authData.user.id;
         setMyId(currentUserId);
 
-        // 🌟 PERBAIKAN 2: LOGIKA CERDAS PEMILIHAN TARGET CHAT
-        let finalTargetId = targetIdFromUrl; // Prioritaskan ID dari URL (Skenario Marketplace)
+        let finalTargetId = targetIdFromUrl; 
 
-        // Jika tidak ada di URL (Berarti Skenario Chat CS Pusat)
         if (!finalTargetId) {
           try {
             const { data: adminData } = await supabase
               .from('profiles')
               .select('id')
-              .in('role', ['admin', 'superadmin'])
+              .eq('role', 'superadmin')
+              .order('created_at', { ascending: true }) // 🌟 FIX 1: Kunci ke Admin Utama
               .limit(1)
               .single();
               
@@ -82,19 +81,14 @@ const ChatContent = () => {
             .single();
             
           if (targetProfile) {
-            // Kalau di URL tadi kosong, baru pakai dari DB
             if (!targetNameFromUrl) setTargetName(targetProfile.full_name || 'Pengguna');
             if (!targetAvatarFromUrl) setTargetAvatar(targetProfile.avatar_url || '');
-            
-            // 🌟 SET PESAN SAPAANNYA
             if (targetProfile.auto_greeting) {
               setAutoGreeting(targetProfile.auto_greeting);
             }
           }
         }
 
-
-        // Lanjut proses load pesan menggunakan finalTargetId
         if (finalTargetId) {
           const { data: oldMessages } = await supabase
             .from('messages')
@@ -114,14 +108,14 @@ const ChatContent = () => {
         }
         setLoading(false);
 
-        const uniqueChannelName = `chat_user_${Date.now()}`;
+        // 🌟 FIX 2: Mencegah Memory Leak di server Realtime Supabase
+        const uniqueChannelName = `chat_channel_${currentUserId}_to_${finalTargetId}`;
         
         messageChannel = supabase
           .channel(uniqueChannelName)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
             const newMsg = payload.new as any;
             
-            // 🌟 Gunakan finalTargetId di sini juga!
             if (newMsg.sender_id === finalTargetId && newMsg.receiver_id === currentUserId) {
               setMessages(prev => {
                 if (prev.find(m => m.id === newMsg.id)) return prev;

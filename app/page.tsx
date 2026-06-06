@@ -1,13 +1,15 @@
 "use client";
-// @ts-nocheck
-/* eslint-disable */
 
-import React, { useEffect, useState, useRef, Suspense } from 'react';
-import { Search, Home, User, History, BadgeCheck, SlidersHorizontal, X, Check } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  Search, Bell, MapPin, BadgeCheck, 
+  MonitorPlay, Music, Shirt, Grid, 
+  ChevronRight, Sparkles, SlidersHorizontal, X, Check,
+  Camera, Truck 
+} from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/BottomNav';
-
 
 interface ProductProps {
   id: string;
@@ -25,21 +27,48 @@ interface ProductProps {
 
 const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, owner, image, is_verified }) => (
   <Link href={`/product/${id}`} className="block h-full">
-    <div className="bg-fluent-card rounded-fluent-rounded p-3 shadow-lg border border-fluent-accent/10 hover:scale-[1.02] transition-transform cursor-pointer h-full flex flex-col">
-      {/* Gambar Persegi (Aspect Ratio 1:1) anti penyok */}
-      <div className="w-full aspect-square overflow-hidden rounded-[14px] mb-3 relative bg-fluent-bg/50">
-        <img src={image} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+    <div className="bg-white rounded-[20px] shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col overflow-hidden group">
+      
+      {/* 🌟 Gambar Bersih Total Tanpa Stiker Menggantung */}
+      <div className="w-full aspect-square relative bg-slate-50 overflow-hidden shrink-0">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt={title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
       </div>
-      <h3 className="text-sm font-medium text-text-main line-clamp-2 min-h-[40px] flex-1">{title}</h3>
-      <p className="text-base font-bold text-text-main mt-1">{price}</p>
-      <div className="flex items-center text-xs mt-1 space-x-1.5">
-        <span className="text-fluent-accent font-semibold flex items-center">★ {rating}</span>
-        <span className="text-text-muted">• {sold} Terpinjam</span>
+      
+      {/* 🌟 Konten Bawah Terstruktur Rapi */}
+      <div className="p-3.5 flex flex-col flex-1">
+        <h3 className="text-[13px] font-semibold text-slate-800 line-clamp-2 min-h-[36px] leading-snug mb-1.5">{title}</h3>
+        
+        <div className="mt-auto flex flex-col gap-1.5">
+          <div className="flex items-baseline gap-1">
+            <p className="text-[14px] font-bold text-teal-600">{price}</p>
+            <span className="text-[9px] font-medium text-slate-400">/hari</span>
+          </div>
+          
+          {/* 🌟 Rating & Disewa Digabung Menjadi Teks Kecil yang Manis */}
+          <div className="flex items-center text-[10px] font-medium text-slate-500 gap-1.5">
+            <div className="flex items-center gap-0.5">
+              <span className="text-yellow-400 text-[11px] mb-[1px]">★</span>
+              <span className="text-slate-600">{rating}</span>
+            </div>
+            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+            <span>{sold} disewa</span>
+          </div>
+          
+          {/* Garis Pembatas Halus */}
+          <div className="w-full h-px bg-slate-50 my-1"></div>
+          
+          <div className="flex items-center text-[10px] text-slate-500 space-x-1.5">
+            {is_verified ? (
+              <BadgeCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            ) : (
+              <div className="w-3.5 h-3.5 rounded-full bg-slate-200 shrink-0"></div>
+            )}
+            <span className={`line-clamp-1 ${is_verified ? 'text-slate-700 font-semibold' : 'font-medium'}`}>{owner}</span>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center text-xs text-text-muted mt-2 space-x-1.5">
-        {is_verified && <BadgeCheck className="w-4 h-4 text-fluent-accent shrink-0" />}
-        <span className={`line-clamp-1 ${is_verified ? 'text-fluent-accent font-medium' : 'font-medium'}`}>{owner}</span>
-      </div>
+      
     </div>
   </Link>
 );
@@ -50,14 +79,40 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   
   const [activeCategory, setActiveCategory] = useState('Semua');
-  const [isSearchFocused, setIsSearchFocused] = useState(false); 
   const [isFilterOpen, setIsFilterOpen] = useState(false); 
   
   const [sortBy, setSortBy] = useState('terbaru');
   const [filterCondition, setFilterCondition] = useState('Semua');
   const [priceMax, setPriceMax] = useState('');
+  const [priceMin, setPriceMin] = useState('');
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const promoRef = useRef<HTMLDivElement>(null);
+  const [activePromo, setActivePromo] = useState(0);
+  const mainScrollRef = useRef<HTMLElement>(null);
+
+  // 🌟 INDIKATOR APAKAH USER SEDANG MENGETIK
+  const isSearching = searchQuery.trim().length > 0;
+  const isFilterActive = sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMin !== '' || priceMax !== '';
+
+  // 🌟 TAMBAHAN: Fungsi Format Titik (Rupiah) Otomatis dengan Limit
+  const formatRupiah = (value: string) => {
+    let numberString = value.replace(/[^,\d]/g, '').toString();
+    
+    // 🌟 LOGIKA BARU: Jika angka lebih dari 100 Juta, paksa mentok di 100 Juta
+    if (numberString && parseInt(numberString, 10) > 100000000) {
+      numberString = '100000000';
+    }
+
+    const split = numberString.split(',');
+    const sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    const ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+    if (ribuan) {
+      const separator = sisa ? '.' : '';
+      rupiah += separator + ribuan.join('.');
+    }
+    return rupiah ? rupiah : '';
+  };
 
   const categoryMap: { [key: string]: string } = {
     'Elektronik': '1',
@@ -65,45 +120,67 @@ const HomePage = () => {
     'Fashion': '3'
   };
 
+  const categories = [
+    { name: 'Semua', icon: Grid, color: 'text-teal-500', bg: 'bg-teal-50' },
+    { name: 'Elektronik', icon: MonitorPlay, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { name: 'Musik', icon: Music, color: 'text-purple-500', bg: 'bg-purple-50' },
+    { name: 'Fashion', icon: Shirt, color: 'text-pink-500', bg: 'bg-pink-50' },
+  ];
+
+  const promos = [
+    { id: 1, tag: 'PROMO SPESIAL', title: 'Diskon 20% Untuk Sewa Pertamamu!', btn: 'Pesan Sekarang', bg: 'from-[#20D2EB] to-[#04E09E]', icon: Sparkles },
+    { id: 2, tag: 'CASHBACK', title: 'Cashback 50rb Sewa Kamera & Lensa', btn: 'Klaim Promo', bg: 'from-blue-400 to-indigo-500', icon: Camera },
+    { id: 3, tag: 'GRATIS ONGKIR', title: 'Bebas Biaya Antar Jemput Alat', btn: 'Cek Syarat', bg: 'from-purple-400 to-pink-500', icon: Truck },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (promoRef.current) {
+        const container = promoRef.current;
+        const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10;
+        if (isAtEnd) container.scrollTo({ left: 0, behavior: 'smooth' });
+        else container.scrollBy({ left: container.clientWidth, behavior: 'smooth' });
+      }
+    }, 10000); 
+    return () => clearInterval(timer); 
+  }, [activePromo]);
+
+  const handlePromoScroll = () => {
+    if (promoRef.current) {
+      const scrollLeft = promoRef.current.scrollLeft;
+      const width = promoRef.current.offsetWidth;
+      setActivePromo(Math.round(scrollLeft / width));
+    }
+  };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // "Sihir" Join: Ambil item, sekaligus ambil nama profil pemiliknya
         const { data, error } = await supabase
           .from('items')
-          .select(`
-            *,
-            profiles!owner_id (full_name)
-          `)
+          .select(`*, profiles!owner_id (full_name)`)
           .eq('is_available', true);
 
         if (error) throw error;
         
-        if (data && data.length > 0) { // Pastikan ada barang dulu
-          
-          // 1. Kumpulkan semua ID barang yang ada di layar
+        if (data && data.length > 0) {
           const itemIds = data.map(item => item.id);
-
-          // 2. Tarik transaksi HANYA untuk barang-barang tersebut (.in)
           const { data: txData } = await supabase
             .from('transactions')
             .select('item_id')
             .in('item_id', itemIds);
 
-            const mappedData = data.map((item: any) => {
+          const mappedData = data.map((item: any) => {
             const borrowedCount = txData ? txData.filter(tx => tx.item_id === item.id).length : 0;
-
             return {
               id: item.id,
-              title: item.name || "Tanpa Nama", 
+              title: item.name || "Alat Sewa", 
               price: `Rp ${item.price_per_day?.toLocaleString('id-ID') || 0}`,
               rawPrice: item.price_per_day || 0,
               rating: "5.0", 
               sold: String(borrowedCount), 
-              // Supabase mengembalikan data relasi dalam bentuk array jika tidak unik, 
-              // atau object jika FK-nya tunggal. Kita jaga-jaga dengan fallback yang aman.
-              owner: item.profiles?.full_name || "Pengguna", 
+              owner: item.profiles?.full_name || "Mitra Penyewa", 
               image: item.image_urls && item.image_urls.length > 0 ? item.image_urls[0] : "https://via.placeholder.com/150",
               is_verified: true,
               category_id: item.category_id,
@@ -112,7 +189,7 @@ const HomePage = () => {
           });
           setProducts(mappedData);
         } else {
-          setProducts([]); // Jika tidak ada barang sama sekali
+          setProducts([]);
         }
       } catch (err) {
         console.error('Gagal memuat barang:', err);
@@ -123,12 +200,32 @@ const HomePage = () => {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    if (!loading && products.length > 0) {
+      const savedScroll = sessionStorage.getItem('homeScrollPosition');
+      if (savedScroll && mainScrollRef.current) {
+        setTimeout(() => {
+          mainScrollRef.current?.scrollTo(0, parseInt(savedScroll, 10));
+        }, 50);
+      }
+    }
+  }, [loading, products]);
+
+  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+    sessionStorage.setItem('homeScrollPosition', e.currentTarget.scrollTop.toString());
+  };
+
   let filteredProducts = products.filter(product => {
     const matchSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
     const productCategoryIdStr = String(product.category_id);
     const matchCategory = activeCategory === 'Semua' || productCategoryIdStr === categoryMap[activeCategory];
     const matchCondition = filterCondition === 'Semua' || product.condition === filterCondition;
-    const matchPrice = priceMax === '' || product.rawPrice <= parseInt(priceMax.replace(/\D/g, ''), 10);
+    
+    // Hapus titik sebelum konversi ke angka
+    const minVal = priceMin === '' ? 0 : parseInt(priceMin.replace(/\D/g, ''), 10);
+    const maxVal = priceMax === '' ? Infinity : parseInt(priceMax.replace(/\D/g, ''), 10);
+    const matchPrice = product.rawPrice >= minVal && product.rawPrice <= maxVal;
+    
     return matchSearch && matchCategory && matchCondition && matchPrice; 
   });
 
@@ -141,174 +238,313 @@ const HomePage = () => {
   const handleResetFilter = () => {
     setSortBy('terbaru');
     setFilterCondition('Semua');
-    setPriceMax('');
+    setPriceMin(''); // 🌟 Reset Min
+    setPriceMax(''); // 🌟 Reset Max
+    setActiveCategory('Semua');
     setIsFilterOpen(false);
   };
 
-  const handleWheelScroll = (e: React.WheelEvent) => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft += e.deltaY;
-    }
-  };
-
   return (
-    <div className="h-full w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+    <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative">
       
-      {/* ================= MODAL FILTER (MURNI MOBILE BOTTOM SHEET) ================= */}
+      {/* MODAL FILTER (Tetap sama) */}
       {isFilterOpen && (
         <div className="absolute inset-0 z-[100] flex items-end justify-center overflow-hidden p-0">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsFilterOpen(false)}></div>
-          
-          <div className="relative w-full bg-fluent-card rounded-t-3xl pt-3 pb-8 px-5 shadow-2xl border-t border-white/10 animate-in slide-in-from-bottom-full duration-300 max-h-[85vh] overflow-y-auto scrollbar-hide">
-            
-            {/* Garis Pegangan (Handle Bar) */}
-            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-5"></div>
-            
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsFilterOpen(false)}></div>
+          <div className="relative w-full bg-white rounded-t-3xl pt-3 pb-8 px-5 shadow-2xl border-t border-slate-100 animate-in slide-in-from-bottom-full duration-300 max-h-[85vh] overflow-y-auto scrollbar-hide">
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5"></div>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <SlidersHorizontal className="w-5 h-5 text-fluent-accent" />
-                Filter Pencarian
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <SlidersHorizontal className="w-5 h-5 text-teal-600" /> Filter Pencarian
               </h2>
-              <button onClick={() => setIsFilterOpen(false)} className="p-2 bg-fluent-accent/5 rounded-full text-text-muted hover:text-white transition">
+              <button onClick={() => setIsFilterOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-slate-800 transition">
                 <X className="w-4 h-4" />
               </button>
             </div>
+            
+            {/* 🌟 BARU: Filter Kategori di Dalam Modal */}
+            <div className="mb-6">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Kategori</label>
+              <div className="flex flex-wrap gap-2">
+                {['Semua', 'Elektronik', 'Musik', 'Fashion'].map((kat) => (
+                  <button 
+                    key={kat} 
+                    onClick={() => setActiveCategory(kat)} 
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeCategory === kat ? 'bg-teal-50 text-teal-600 border border-teal-200' : 'bg-slate-50 text-slate-600 border border-transparent hover:bg-slate-100'}`}
+                  >
+                    {kat}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="mb-6">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 block">Urutkan</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Urutkan</label>
               <div className="flex flex-wrap gap-2">
                 {['terbaru', 'termurah', 'termahal'].map((sortType) => (
-                  <button key={sortType} onClick={() => setSortBy(sortType)} className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${sortBy === sortType ? 'bg-fluent-accent/20 text-fluent-accent border border-fluent-accent/50' : 'bg-fluent-accent/5 text-text-muted border border-transparent hover:bg-white/10'}`}>
+                  <button key={sortType} onClick={() => setSortBy(sortType)} className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${sortBy === sortType ? 'bg-teal-50 text-teal-600 border border-teal-200' : 'bg-slate-50 text-slate-600 border border-transparent hover:bg-slate-100'}`}>
                     {sortType}
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* 🌟 BARU: Rentang Harga (Min & Max) Tanpa Spinner & Pakai Titik Rupiah */}
             <div className="mb-6">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 block">Maksimal Harga</label>
-              <div className="relative flex items-center">
-                <span className="absolute left-4 text-sm font-bold text-fluent-accent">Rp</span>
-                <input type="number" placeholder="Tanpa batas" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} className="w-full bg-fluent-bg border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-fluent-accent transition-all" />
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Rentang Harga</label>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 flex items-center">
+                  <span className="absolute left-3 text-sm font-bold text-slate-400">Rp</span>
+                  <input 
+                    type="text" 
+                    inputMode="numeric"
+                    placeholder="Min" 
+                    value={priceMin} 
+                    onChange={(e) => setPriceMin(formatRupiah(e.target.value))} 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-9 pr-3 text-sm focus:outline-none focus:border-teal-400 focus:bg-white transition-all text-slate-800" 
+                  />
+                </div>
+                <span className="text-slate-400 font-bold">-</span>
+                <div className="relative flex-1 flex items-center">
+                  <span className="absolute left-3 text-sm font-bold text-slate-400">Rp</span>
+                  <input 
+                    type="text" 
+                    inputMode="numeric"
+                    placeholder="Max" 
+                    value={priceMax} 
+                    onChange={(e) => setPriceMax(formatRupiah(e.target.value))} 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-9 pr-3 text-sm focus:outline-none focus:border-teal-400 focus:bg-white transition-all text-slate-800" 
+                  />
+                </div>
               </div>
             </div>
 
             <div className="mb-8">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 block">Kondisi Alat</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Kondisi Alat</label>
               <div className="grid grid-cols-2 gap-2">
                 {['Semua', 'Sangat Baik', 'Baik', 'Cukup'].map((kondisi) => (
-                  <button key={kondisi} onClick={() => setFilterCondition(kondisi)} className={`px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all flex justify-between items-center ${filterCondition === kondisi ? 'bg-fluent-accent text-white shadow-lg border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border border-transparent hover:bg-white/10'}`}>
+                  <button key={kondisi} onClick={() => setFilterCondition(kondisi)} className={`px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all flex justify-between items-center ${filterCondition === kondisi ? 'bg-teal-500 text-white shadow-md border-teal-600' : 'bg-slate-50 text-slate-600 border border-transparent hover:bg-slate-100'}`}>
                     {kondisi}
                     {filterCondition === kondisi && <Check className="w-4 h-4" />}
                   </button>
                 ))}
               </div>
             </div>
-
             <div className="flex gap-3">
-              <button onClick={handleResetFilter} className="flex-1 py-3.5 rounded-xl font-bold text-text-muted bg-fluent-accent/5 hover:bg-white/10 transition-colors">Reset</button>
-              <button onClick={() => setIsFilterOpen(false)} className="flex-[2] py-3.5 rounded-xl font-bold text-white bg-fluent-accent hover:bg-[#b58eff] shadow-[0_4px_20px_rgba(163,116,255,0.4)] transition-colors">Terapkan</button>
+              <button onClick={handleResetFilter} className="flex-1 py-3.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Reset</button>
+              <button onClick={() => setIsFilterOpen(false)} className="flex-[2] py-3.5 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-lg shadow-teal-500/30 transition-colors">Terapkan</button>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* BLOK ATAS */}
-      <div className="w-full relative z-40 bg-fluent-bg/95 backdrop-blur-md shrink-0">
+      <main 
+        ref={mainScrollRef} 
+        onScroll={handleMainScroll}
+        className="flex-1 overflow-y-auto scrollbar-hide pb-24 w-full scroll-smooth"
+      >
         
-        <header className="w-full px-4 pt-10">
-          <div className="flex items-center space-x-3">
-            <div className="flex-1 relative">
-              <div className={`relative rounded-full p-[1.5px] overflow-hidden transition-shadow duration-500 ${isSearchFocused ? 'shadow-[0_0_15px_rgba(163,116,255,0.2)]' : 'shadow-inner'}`}>
+        {/* HEADER LOKASI */}
+        <div className="w-full bg-gradient-to-br from-[#00C6B5] to-[#0092D0] rounded-b-[40px] pt-12 pb-20 px-6 relative overflow-hidden shadow-lg shadow-teal-500/20 shrink-0">
+          <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-[-20px] left-[-20px] w-32 h-32 bg-cyan-300/20 rounded-full blur-2xl"></div>
+
+          <div className="flex justify-between items-center relative z-10">
+            <div>
+              <p className="text-white/80 text-xs font-medium mb-1">Lokasi Anda</p>
+              {/* 🌟 Tambahan class group & cursor-pointer biar interaktif */}
+              <div className="flex items-center text-white font-bold text-sm cursor-pointer group">
                 
-                {/* Animasi Satu Garis yang Diperbaiki (Lebih Lebar dan Tipis) */}
-                {isSearchFocused && (
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300%] aspect-square animate-[spin_3.5s_linear_infinite] bg-[conic-gradient(transparent_345deg,#A374FF_360deg)]"></div>
-                )}
-                
-                <div className="relative bg-fluent-card text-fluent-accent rounded-full p-3 flex items-center z-10 w-full h-full">
-                  <Search className="w-5 h-5 mr-2 shrink-0" />
-                  <input type="text" placeholder="Mau cari barang apa?" className="w-full text-text-main focus:outline-none placeholder:text-text-muted bg-transparent text-sm" onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsSearchFocused(true)} onBlur={() => setIsSearchFocused(false)} />
+                {/* 🌟 Bungkus MapPin untuk menambahkan efek animasi Radar/GPS */}
+                <div className="relative mr-1.5 flex items-center justify-center">
+                  {/* Efek pancaran radar (ping) di belakang ikon */}
+                  <span className="absolute w-4 h-4 bg-yellow-400/50 rounded-full animate-ping"></span>
+                  {/* Ikon MapPin utama (bisa loncat kecil saat disentuh/di-hover) */}
+                  <MapPin className="w-4 h-4 text-yellow-300 relative z-10 group-hover:-translate-y-1 transition-transform duration-300" />
                 </div>
+                
+                Singkawang, ID
               </div>
             </div>
-            <button type="button" onClick={() => setIsFilterOpen(true)} className="bg-fluent-card p-3 rounded-full text-text-muted hover:text-fluent-accent hover:bg-fluent-accent/5 border border-fluent-accent/10 shadow-lg transition-colors shrink-0 relative">
-              <SlidersHorizontal className="w-5 h-5" />
-              {(sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMax !== '') && (
-                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-fluent-accent rounded-full border border-fluent-bg"></span>
-              )}
-            </button>
-          </div>
-        </header>
-
-        {/* ================= FILTER ADAPTIF & KATEGORI CEPAT ================= */}
-        <section 
-          ref={scrollContainerRef}
-          onWheel={handleWheelScroll} 
-          className="w-full px-4 pt-5 pb-4 flex items-center space-x-2.5 overflow-x-auto scrollbar-hide"
-        >
-          {priceMax && (
-            <button onClick={() => setPriceMax('')} className="flex-shrink-0 px-4 py-2 rounded-full text-[13px] font-bold bg-fluent-accent text-white shadow-lg flex items-center gap-1.5 transition-all border border-fluent-accent animate-in zoom-in duration-200">
-              Maks Rp {new Intl.NumberFormat('id-ID').format(Number(priceMax))}
-              <X className="w-3.5 h-3.5 opacity-80" />
-            </button>
-          )}
-
-          {filterCondition !== 'Semua' && (
-            <button onClick={() => setFilterCondition('Semua')} className="flex-shrink-0 px-4 py-2 rounded-full text-[13px] font-bold bg-fluent-accent text-white shadow-lg flex items-center gap-1.5 transition-all border border-fluent-accent animate-in zoom-in duration-200">
-              Kondisi: {filterCondition}
-              <X className="w-3.5 h-3.5 opacity-80" />
-            </button>
-          )}
-
-          {['Semua', 'Elektronik', 'Musik', 'Fashion'].map((kat) => (
-            <button
-              key={kat}
-              type="button"
-              onClick={() => setActiveCategory(kat)} 
-              className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-300 cursor-pointer border ${
-                activeCategory === kat
-                  ? 'bg-fluent-accent text-white shadow-[0_4px_15px_rgba(163,116,255,0.4)] border-fluent-accent' 
-                  : 'bg-fluent-card text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10 hover:text-fluent-accent' 
-              }`}
-            >
-              {kat}
-            </button>
-          ))}
-        </section>
-      </div>
-
-      {/* BLOK BAWAH (Grid Terkunci 2 Kolom untuk Mobile) */}
-      <main className="flex-1 overflow-y-auto px-4 pb-24 scrollbar-hide pt-2 w-full">
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin h-6 w-6 border-b-2 border-fluent-accent rounded-full"></div>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-text-muted animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-4">
-              <Search className="w-8 h-8 opacity-50" />
+            
+            <div className="flex items-center gap-3">
+              {/* 🌟 Dibungkus Link menuju /notifications */}
+              <Link href="/notifications">
+                <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white relative border border-white/20 hover:bg-white/30 transition-colors cursor-pointer">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+                </button>
+              </Link>
+              
+              {/* 🌟 Dibungkus Link menuju /profile */}
+              <Link href="/profile">
+                {/* 🌟 FIX: Menggunakan border solid putih & overflow-hidden agar bulat sempurna */}
+                <div className="w-10 h-10 rounded-full bg-white shadow-md hover:scale-105 transition-transform cursor-pointer border-[2px] border-white overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="https://ui-avatars.com/api/?name=US&background=00C6B5&color=fff" alt="Profile" className="w-full h-full object-cover" />
+                </div>
+              </Link>
             </div>
-            <p className="text-sm font-bold text-text-main">Barang tidak ditemukan</p>
-            <p className="text-xs mt-1 text-center max-w-[200px]">Coba ubah kata kunci atau sesuaikan filter pencarianmu.</p>
-            {(sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMax !== '') && (
-               <button onClick={handleResetFilter} className="mt-4 px-4 py-2 bg-fluent-accent/20 text-fluent-accent text-xs font-bold rounded-full transition-colors hover:bg-fluent-accent/30">
-                 Reset Filter
-               </button>
+          </div>
+        </div>
+
+        {/* AREA PENCARIAN DENGAN TOMBOL CLEAR */}
+        <div className="px-5 -mt-8 relative z-20 flex gap-2">
+          <div className="flex-1 bg-white rounded-2xl p-2 shadow-[0_10px_40px_rgba(0,198,181,0.15)] flex items-center border border-slate-100 relative">
+            <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center shrink-0">
+              <Search className="w-5 h-5 text-teal-600" />
+            </div>
+            <input 
+              id="search-input"
+              type="text" 
+              placeholder="Cari alat untuk disewa..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent px-3 py-2 text-[13px] font-medium text-slate-700 focus:outline-none placeholder:text-slate-400 pr-10" 
+            />
+            {/* 🌟 TOMBOL SILANG UNTUK MENGHAPUS PENCARIAN */}
+            {isSearching && (
+              <button 
+                onClick={() => setSearchQuery('')} 
+                className="absolute right-3 p-1.5 bg-slate-100 rounded-full text-slate-400 hover:bg-rose-100 hover:text-rose-500 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
-        ) : (
-          <section className="grid grid-cols-2 gap-3">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
-          </section>
+          <button onClick={() => setIsFilterOpen(true)} className="w-[58px] h-[58px] bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,198,181,0.15)] flex items-center justify-center border border-slate-100 shrink-0 relative hover:bg-slate-50 transition-colors">
+            <SlidersHorizontal className="w-5 h-5 text-teal-600" />
+            {(sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMax !== '') && (
+              <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+            )}
+          </button>
+        </div>
+
+        {/* 🌟 LOGIKA SULAP: TAMPIL JIKA TIDAK MENCARI, KATEGORI "Semua", DAN FILTER TIDAK AKTIF */}
+        {(!isSearching && activeCategory === 'Semua' && !isFilterActive) && (
+          <div className="animate-in fade-in duration-500">
+            {/* CAROUSEL PROMO */}
+            <div className="mt-8 relative w-full shrink-0">
+              <div ref={promoRef} onScroll={handlePromoScroll} className="flex w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
+                {promos.map((promo) => {
+                  const PromoIcon = promo.icon;
+                  return (
+                    <div key={promo.id} className="w-full shrink-0 snap-center px-5">
+                      <div className={`w-full bg-gradient-to-r ${promo.bg} rounded-[24px] p-6 text-white relative overflow-hidden shadow-lg shadow-teal-500/10`}>
+                        <div className="absolute right-0 top-0 w-32 h-32 bg-white/20 rounded-full blur-2xl translate-x-10 -translate-y-10"></div>
+                        <div className="relative z-10 w-[70%]">
+                          <span className="inline-block px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider uppercase mb-2">{promo.tag}</span>
+                          <h2 className="text-lg font-black leading-tight mb-3 drop-shadow-sm">{promo.title}</h2>
+                          <button className="bg-white text-slate-800 text-[11px] font-bold px-4 py-2 rounded-full shadow-md hover:scale-105 transition-transform">{promo.btn}</button>
+                        </div>
+                        <PromoIcon className="absolute bottom-4 right-4 w-16 h-16 text-white/30" strokeWidth={1} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-center gap-1.5 mt-2">
+                {promos.map((_, idx) => (
+                  <div key={idx} className={`h-1.5 rounded-full transition-all duration-300 ${activePromo === idx ? 'w-5 bg-teal-500' : 'w-1.5 bg-slate-300'}`} />
+                ))}
+              </div>
+            </div>
+
+            {/* KATEGORI */}
+            <div className="pl-5 mt-6 shrink-0">
+              <div className="pr-5 flex justify-between items-end mb-4">
+                {/* 🌟 Font dihaluskan menjadi semibold & warnanya sedikit dilembutkan */}
+                <h3 className="text-[16px] font-bold text-slate-700">Kategori Alat</h3>
+                
+                {/* 🌟 Tombol Lihat Semua dikembalikan & dibuat mengarahkan user ke kotak pencarian */}
+                <span 
+                  onClick={() => document.getElementById('search-input')?.focus()}
+                  className="text-[11px] font-medium text-teal-500 flex items-center cursor-pointer hover:underline"
+                >
+                  Lihat Semua <ChevronRight className="w-3 h-3 ml-0.5" />
+                </span>
+              </div>
+          
+          {/* 🌟 Container Scroll Menyamping */}
+          <div className="flex overflow-x-auto scrollbar-hide gap-2.5 pb-2 pr-5">
+            {categories.map((cat, idx) => {
+              const Icon = cat.icon;
+              const isActive = activeCategory === cat.name;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setActiveCategory(cat.name)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-300 shrink-0 ${
+                    isActive 
+                      ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20' 
+                      : 'bg-white border-slate-100 hover:border-teal-200 hover:bg-teal-50/50'
+                  }`}
+                >
+                  {/* Ikon tetap berwarna imut saat tidak aktif, jadi putih saat aktif */}
+                  <div className={`${isActive ? 'text-white' : cat.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className={`text-[12px] tracking-wide ${isActive ? 'font-bold' : 'font-medium text-slate-600'}`}>
+                    {cat.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          
+        </div>
+          </div>
         )}
+
+        {/* DAFTAR BARANG (TAMPIL TERUS) */}
+        {/* 🌟 Margin menyesuaikan jika mode pencarian, kategori, atau filter aktif */}
+        <div className={`px-5 ${(isSearching || activeCategory !== 'Semua' || isFilterActive) ? 'mt-8' : 'mt-10'} shrink-0`}>
+          
+          {/* 🌟 JUDUL & RESET FILTER HANYA MUNCUL JIKA TIDAK SEDANG MENGETIK */}
+          {!isSearching && (
+            <div className="flex justify-between items-end mb-4">
+              
+              {/* 🌟 Judul otomatis berubah jadi "Hasil Filter" kalau filter aktif */}
+              <h3 className="text-[16px] font-bold text-slate-700">
+                {activeCategory !== 'Semua' 
+                  ? `Kategori: ${activeCategory}` 
+                  : isFilterActive 
+                    ? 'Hasil Filter' 
+                    : 'Alat Terpopuler'}
+              </h3>
+              
+              {(isFilterActive || activeCategory !== 'Semua') && (
+                 <button onClick={handleResetFilter} className="text-[11px] font-semibold text-rose-400 flex items-center cursor-pointer hover:underline">
+                   Reset Filter
+                 </button>
+              )}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center items-center py-10">
+              <div className="animate-spin h-6 w-6 border-b-2 border-teal-500 rounded-full"></div>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+              <Search className="w-8 h-8 opacity-50 mb-3" />
+              <p className="text-sm font-bold text-slate-600">Barang tidak ditemukan</p>
+              {isSearching && (
+                 <p className="text-xs text-slate-500 mt-2 text-center">Coba gunakan kata kunci lain yang lebih umum.</p>
+              )}
+            </div>
+          ) : (
+            <section className="grid grid-cols-2 gap-4">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} {...product} />
+              ))}
+            </section>
+          )}
+        </div>
+
       </main>
 
       <BottomNav />
-      
     </div>
   );
 };

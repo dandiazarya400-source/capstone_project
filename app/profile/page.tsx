@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Headphones, Wallet, Box, Truck, CheckCircle2, Star, 
-  Banknote, Store, Link2, Ticket, Heart, MapPin, 
+  Banknote, Store, Link2, Ticket, Heart, MapPin, MessageSquare,
   BadgeCheck, LogOut, Edit3, LayoutDashboard, ChevronRight, 
   Loader2, AlertCircle, Clock, ShieldCheck
 } from 'lucide-react';
@@ -273,23 +273,24 @@ export default function ProfilePage() {
           </section>
         )}
 
-        {/* ================= TOMBOL KHUSUS ADMIN ================= */}
+        {/* ================= TOMBOL KHUSUS ADMIN & SUPERADMIN ================= */}
         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <section>
-            <Link href="/admin">
-              {/* 🌟 PERBAIKAN: Hover mengubah intensitas gradient, bukan menumpuk warna solid */}
+            {/* 🌟 PERBAIKAN 1: Rute URL dinamis menyesuaikan role! */}
+            <Link href={profile?.role === 'superadmin' ? '/superadmin' : '/admin'}>
               <div className="relative overflow-hidden bg-gradient-to-r from-fluent-accent/10 to-transparent border border-fluent-accent/20 p-4 rounded-fluent-rounded flex items-center justify-between hover:from-fluent-accent/20 hover:to-fluent-accent/5 transition-all duration-300 shadow-sm group">
                 <div className="flex items-center space-x-4 relative z-10">
                   <div className="w-12 h-12 bg-fluent-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    {/* 🌟 PERBAIKAN: Efek Drop shadow menyala dihilangkan agar lebih solid di light mode */}
                     <LayoutDashboard className="w-6 h-6 text-fluent-accent" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-text-main text-lg">Admin Workspace</h2>
+                    {/* 🌟 PERBAIKAN 2: Teks judul juga otomatis berubah! */}
+                    <h2 className="font-bold text-text-main text-lg">
+                      {profile?.role === 'superadmin' ? 'Superadmin Workspace' : 'Admin Workspace'}
+                    </h2>
                     <p className="text-xs text-text-muted mt-0.5">Kelola barang, pesanan, dan pengguna</p>
                   </div>
                 </div>
-                {/* 🌟 PERBAIKAN: Bulatan panah diberi warna ungu muda, berubah full ungu saat dihover */}
                 <div className="w-8 h-8 bg-fluent-accent/10 rounded-full flex items-center justify-center relative z-10 group-hover:bg-fluent-accent transition-colors">
                   <ChevronRight className="w-5 h-5 text-fluent-accent group-hover:text-white transition-colors" />
                 </div>
@@ -298,6 +299,34 @@ export default function ProfilePage() {
             </Link>
           </section>
         )}
+        {/* ================= KOTAK MASUK (USER INBOX) ================= */}
+        <section>
+          {/* Nanti URL-nya sesuaikan dengan halaman riwayat chat user buatanmu ya */}
+          <Link href="/inbox"> 
+            <div className="bg-fluent-card p-4 rounded-fluent-rounded border border-fluent-accent/10 shadow-lg flex items-center justify-between hover:border-fluent-accent/30 transition-all duration-300 group cursor-pointer relative overflow-hidden">
+              {/* Efek Glow Tipis */}
+              <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-colors"></div>
+              
+              <div className="flex items-center space-x-4 relative z-10">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageSquare className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-text-main text-sm">Kotak Masuk</h2>
+                  <p className="text-[11px] text-text-muted mt-0.5">Riwayat chat dengan toko & CS</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 relative z-10">
+                {/* 🌟 Bonus: Anggap saja ini indikator ada pesan baru (bisa didinamiskan nanti) */}
+                <span className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse">
+                  BARU
+                </span>
+                <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-fluent-accent transition-colors" />
+              </div>
+            </div>
+          </Link>
+        </section>
         
         {/* ================= TRANSAKSI & SALDO ================= */}
         <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-fluent-accent/10 shadow-lg">

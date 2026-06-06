@@ -15,17 +15,17 @@ const BottomNav = () => {
       <div className="flex items-center justify-around">
         
         {/* Tombol Beranda */}
-        <Link href="/" className={isActive("/") ? "text-fluent-accent" : "text-text-muted hover:text-fluent-accent transition-colors"}>
+        <Link href="/" className={isActive("/") ? "text-teal-500" : "text-text-muted hover:text-teal-500 transition-colors"}>
           <Home className="w-6 h-6" strokeWidth={isActive("/") ? 2.5 : 2} />
         </Link>
 
         {/* Tombol Riwayat */}
-        <Link href="/history" className={isActive("/history") ? "text-fluent-accent" : "text-text-muted hover:text-fluent-accent transition-colors"}>
+        <Link href="/history" className={isActive("/history") ? "text-teal-500" : "text-text-muted hover:text-teal-500 transition-colors"}>
           <History className="w-6 h-6" strokeWidth={isActive("/history") ? 2.5 : 2} />
         </Link>
 
         {/* Tombol Profil */}
-        <Link href="/profile" className={isActive("/profile") ? "text-fluent-accent" : "text-text-muted hover:text-fluent-accent transition-colors"}>
+        <Link href="/profile" className={isActive("/profile") ? "text-teal-500" : "text-text-muted hover:text-teal-500 transition-colors"}>
           <User className="w-6 h-6" strokeWidth={isActive("/profile") ? 2.5 : 2} />
         </Link>
 
