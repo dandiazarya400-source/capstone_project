@@ -109,38 +109,42 @@ export default function ProfilePage() {
 
   if (!isMounted) return null;
 
-  const handleTopup = () => {
-    setTopupAmount('');
-    setShowTopupModal(true);
-  };
-
+  // ================= LOGIKA XENDIT TOP UP =================
   const submitTopup = async () => {
     const amount = Number(topupAmount);
-    if (amount <= 0 || !profile) return;
+    
+    if (amount < 10000) {
+      alert("Minimal Top Up Rp 10.000");
+      return;
+    }
 
     setIsProcessingTopup(true);
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      // 1. Dapatkan User ID yang sedang login
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData?.user) throw new Error("Silakan login kembali.");
 
-      const newBalance = profile.balance + amount;
-      
-      await supabase.from('profiles').update({ balance: newBalance }).eq('id', session.user.id);
-      await supabase.from('wallet_transactions').insert([{ user_id: session.user.id, amount, type: 'topup', status: 'Berhasil' }]);
+      // 2. Tembak API Top Up kita
+      const response = await fetch('/api/topup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: authData.user.id,
+          amount: amount // Kirim nominal yang sudah diubah ke angka
+        })
+      });
 
-      updateBalance(amount);
-      
-      const cached = localStorage.getItem('user_profile_cache');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        parsed.balance = newBalance;
-        localStorage.setItem('user_profile_cache', JSON.stringify(parsed));
-      }
+      const result = await response.json();
 
-      setShowTopupModal(false);
-      alert(`Berhasil isi saldo sebesar Rp ${amount.toLocaleString('id-ID')}!`);
-    } catch (error) {
-      alert("Terjadi kesalahan sistem.");
+      if (!response.ok) throw new Error(result.message);
+
+      // 3. AJAIB! Lempar user ke halaman UI Pembayaran Xendit!
+      window.location.href = result.invoiceUrl;
+
+    } catch (error: any) {
+      console.error("Gagal top up:", error);
+      alert(error.message || "Terjadi kendala saat memproses Top Up.");
     } finally {
       setIsProcessingTopup(false);
     }
@@ -328,7 +332,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex space-x-3 mt-1">
               {/* 🌟 PERBAIKAN: Teks diubah ke shade 600, dan background ke 50/100 agar super kontras dan tajam */}
-              <button onClick={handleTopup} className="flex-1 bg-emerald-50 text-emerald-600 border border-emerald-200 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors shadow-sm">
+              <button onClick={() => setShowTopupModal(true)} className="flex-1 bg-emerald-50 text-emerald-600 border border-emerald-200 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors shadow-sm">
                 Isi Saldo
               </button>
               <button className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-100 transition-colors shadow-sm">

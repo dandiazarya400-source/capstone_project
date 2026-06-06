@@ -87,59 +87,52 @@ const CheckoutInstructionContent = () => {
     alert('Tersalin ke papan klip!');
   };
 
-  // ================= LOGIKA SIMPAN KE DATABASE =================
   const handlePaymentConfirm = async () => {
-    // Validasi pencegahan jika URL tidak lengkap
-    if (!itemId || !startDay || !endDay) {
-      alert("Data pesanan tidak lengkap (ID atau Tanggal hilang). Silakan ulangi proses dari awal.");
-      return;
-    }
-
-    // [FIX KEAMANAN] Pastikan total pembayaran sudah ditarik dan valid
-    if (totalPayment <= 0) {
-      alert("Harga sedang dimuat atau tidak valid. Tunggu sebentar.");
+    if (!itemId || !startDay || !endDay || totalPayment <= 0) {
+      alert("Data pesanan tidak valid.");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // 1. Ambil User ID yang sedang login
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData?.user) throw new Error("Sesi tidak valid. Silakan login kembali.");
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData?.user) throw new Error("Silakan login kembali.");
 
-      // 2. Format Tanggal (Sesuai mockup kalendermu: April 2025)
       const formattedStart = `2025-04-${startDay.padStart(2, '0')}`;
       const formattedEnd = `2025-04-${endDay.padStart(2, '0')}`;
-      
-      // PERBAIKAN DI SINI: Kirim kode mentah ('owner' atau 'self') agar lolos Check Constraint Supabase
       const methodStr = deliveryParam === 'self' ? 'self' : 'owner';
 
-      // 3. Masukkan ke tabel transactions
-      const { error: insertError } = await supabase.from('transactions').insert([{
-        tenant_id: authData.user.id,
-        item_id: itemId,
-        start_date: formattedStart,
-        end_date: formattedEnd,
-        total_price: totalPayment,
-        delivery_method: methodStr,
-        quantity: parseInt(qtyParam || '1'),
-        status: 'menunggu' // Status awal pesanan masuk
-      }]);
+      // 🌟 TEMBAK API BACKEND KITA!
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemId: itemId,
+          tenantId: authData.user.id,
+          startDate: formattedStart,
+          endDate: formattedEnd,
+          totalPayment: totalPayment,
+          deliveryMethod: methodStr,
+          quantity: parseInt(qtyParam || '1')
+        })
+      });
 
-      if (insertError) throw insertError;
+      const result = await response.json();
 
-      // 4. Lanjut ke halaman sukses jika berhasil!
-      router.push('/payment/success');
+      if (!response.ok) throw new Error(result.message);
+
+      // 🌟 AJAIB! Lempar user ke halaman UI Pembayaran Xendit!
+      window.location.href = result.invoiceUrl;
 
     } catch (error: any) {
-      console.error("Gagal memproses pesanan:", error);
-      alert(error.message || "Terjadi kendala saat menghubungi server.");
+      console.error("Gagal checkout:", error);
+      alert(error.message || "Terjadi kendala saat membuat tagihan.");
     } finally {
       setIsProcessing(false);
     }
   };
-
+  
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
       

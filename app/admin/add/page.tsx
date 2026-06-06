@@ -266,6 +266,7 @@ const AddProductPage = () => {
                     ))
                   )}
                 </select>
+                
                 {/* 🌟 PANAH DROPDOWN */}
                 <ChevronDown className="absolute right-3 w-4 h-4 text-text-muted pointer-events-none z-10" />
               </div>

@@ -21,6 +21,7 @@ const BookingContent = () => {
   // State Interaktif lainnya
   const [quantity, setQuantity] = useState(1);
   const [deliveryMethod, setDeliveryMethod] = useState<'owner' | 'self'>('owner');
+  const [allowedDelivery, setAllowedDelivery] = useState<string>('both');
 
   const [loadingPrice, setLoadingPrice] = useState(true);
   const [price, setPrice] = useState(0);
@@ -33,19 +34,33 @@ const BookingContent = () => {
       setLoadingPrice(true);
       try {
         const { data, error } = await supabase
-          .from('items') // Nama tabel barang aslimu
-          .select('price_per_day, owner_id')
+          .from('items') 
+          // 🌟 PERBAIKAN 1: Tambahkan delivery_option di sini!
+          .select('price_per_day, owner_id, delivery_option')
           .eq('id', itemId)
           .single();
 
-          if (error) {
-          // 🌟 PASANG CCTV DI SINI!
+        if (error) {
           console.error("CCTV Database Error:", error.message, " | Hint:", error.hint);
         }
           
         if (data) {
           if (data.price_per_day) setPrice(data.price_per_day);
-          if (data.owner_id) setOwnerId(data.owner_id)
+          if (data.owner_id) setOwnerId(data.owner_id);
+          
+          // 🌟 PERBAIKAN 2: Simpan batasannya dan auto-select!
+          if (data.delivery_option) {
+            setAllowedDelivery(data.delivery_option);
+            
+            // Kalau cuma bisa ambil sendiri, otomatis ter-klik "self"
+            if (data.delivery_option === 'pickup_only') {
+              setDeliveryMethod('self');
+            } 
+            // Kalau cuma bisa diantar, otomatis ter-klik "owner"
+            else if (data.delivery_option === 'delivery_only') {
+              setDeliveryMethod('owner');
+            }
+          }
         }
       } catch (error) {
         console.error("Gagal mengambil harga:", error);
@@ -217,22 +232,31 @@ const BookingContent = () => {
           <div className="flex flex-col pt-4 border-t border-fluent-accent/10 gap-3">
             <span className="text-sm font-medium text-text-muted">Metode Pengiriman</span>
             <div className="flex w-full gap-2">
-              <button 
-                onClick={() => setDeliveryMethod('owner')}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
-                  deliveryMethod === 'owner' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10'
-                }`}
-              >
-                Diantar Pemilik
-              </button>
-              <button 
-                onClick={() => setDeliveryMethod('self')}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
-                  deliveryMethod === 'self' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10'
-                }`}
-              >
-                Ambil Sendiri
-              </button>
+              
+              {/* TOMBOL DIANTAR: Muncul kalau allowedDelivery = 'both' atau 'delivery_only' */}
+              {(allowedDelivery === 'both' || allowedDelivery === 'delivery_only') && (
+                <button 
+                  onClick={() => setDeliveryMethod('owner')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
+                    deliveryMethod === 'owner' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10'
+                  }`}
+                >
+                  Diantar Pemilik
+                </button>
+              )}
+
+              {/* TOMBOL AMBIL SENDIRI: Muncul kalau allowedDelivery = 'both' atau 'pickup_only' */}
+              {(allowedDelivery === 'both' || allowedDelivery === 'pickup_only') && (
+                <button 
+                  onClick={() => setDeliveryMethod('self')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm border ${
+                    deliveryMethod === 'self' ? 'bg-fluent-accent text-white border-fluent-accent' : 'bg-fluent-accent/5 text-text-muted border-fluent-accent/10 hover:bg-fluent-accent/10'
+                  }`}
+                >
+                  Ambil Sendiri
+                </button>
+              )}
+
             </div>
           </div>
         </div>
