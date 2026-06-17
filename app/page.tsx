@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { 
   Search, Bell, MapPin, BadgeCheck, 
   MonitorPlay, Music, Shirt, Grid, 
@@ -29,13 +29,17 @@ const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, o
   <Link href={`/product/${id}`} className="block h-full">
     <div className="bg-white rounded-[20px] shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col overflow-hidden group">
       
-      {/* 🌟 Gambar Bersih Total Tanpa Stiker Menggantung */}
       <div className="w-full aspect-square relative bg-slate-50 overflow-hidden shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt={title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <img 
+          src={image} 
+          alt={title} 
+          loading="lazy" 
+          decoding="async" 
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+        />
       </div>
       
-      {/* 🌟 Konten Bawah Terstruktur Rapi */}
       <div className="p-3.5 flex flex-col flex-1">
         <h3 className="text-[13px] font-semibold text-slate-800 line-clamp-2 min-h-[36px] leading-snug mb-1.5">{title}</h3>
         
@@ -45,7 +49,6 @@ const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, o
             <span className="text-[9px] font-medium text-slate-400">/hari</span>
           </div>
           
-          {/* 🌟 Rating & Disewa Digabung Menjadi Teks Kecil yang Manis */}
           <div className="flex items-center text-[10px] font-medium text-slate-500 gap-1.5">
             <div className="flex items-center gap-0.5">
               <span className="text-yellow-400 text-[11px] mb-[1px]">★</span>
@@ -55,7 +58,6 @@ const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, o
             <span>{sold} disewa</span>
           </div>
           
-          {/* Garis Pembatas Halus */}
           <div className="w-full h-px bg-slate-50 my-1"></div>
           
           <div className="flex items-center text-[10px] text-slate-500 space-x-1.5">
@@ -74,10 +76,48 @@ const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, o
 );
 
 const HomePage = () => {
-  const [products, setProducts] = useState<ProductProps[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  // 🌟 JURUS 1: Ambil data produk & jumlah dari memori
+  const [products, setProducts] = useState<ProductProps[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('homeProductsCache');
+      if (cached) return JSON.parse(cached);
+    }
+    return [];
+  });
   
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // 🌟 Hanya loading jika data memori kosong
+  const [loading, setLoading] = useState(() => products.length === 0);
+  
+  const [visibleCount, setVisibleCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(sessionStorage.getItem('homeVisibleCount') || '10', 10);
+    }
+    return 10;
+  });
+
+  // 🌟 JURUS 2: "Jubah Transparan" 
+  // Jika ada scroll yang harus di-restore, buat layar transparan (sembunyi) dulu sedetik!
+  const [isReady, setIsReady] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(sessionStorage.getItem('homeScrollPosition') || '0', 10) === 0;
+    }
+    return true;
+  });
+
+  // 🌟 (Hanya 1 blok F5 Refresh)
+  useEffect(() => {
+    const handleRefresh = () => {
+      sessionStorage.removeItem('homeScrollPosition');
+      sessionStorage.removeItem('homeVisibleCount');
+      sessionStorage.removeItem('homeProductsCache');
+    };
+    window.addEventListener('beforeunload', handleRefresh);
+    return () => window.removeEventListener('beforeunload', handleRefresh);
+  }, []);
+
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [isFilterOpen, setIsFilterOpen] = useState(false); 
   
@@ -90,19 +130,21 @@ const HomePage = () => {
   const [activePromo, setActivePromo] = useState(0);
   const mainScrollRef = useRef<HTMLElement>(null);
 
-  // 🌟 INDIKATOR APAKAH USER SEDANG MENGETIK
-  const isSearching = searchQuery.trim().length > 0;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const isSearching = debouncedSearch.trim().length > 0;
   const isFilterActive = sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMin !== '' || priceMax !== '';
 
-  // 🌟 TAMBAHAN: Fungsi Format Titik (Rupiah) Otomatis dengan Limit
   const formatRupiah = (value: string) => {
     let numberString = value.replace(/[^,\d]/g, '').toString();
-    
-    // 🌟 LOGIKA BARU: Jika angka lebih dari 100 Juta, paksa mentok di 100 Juta
     if (numberString && parseInt(numberString, 10) > 100000000) {
       numberString = '100000000';
     }
-
     const split = numberString.split(',');
     const sisa = split[0].length % 3;
     let rupiah = split[0].substr(0, sisa);
@@ -115,9 +157,7 @@ const HomePage = () => {
   };
 
   const categoryMap: { [key: string]: string } = {
-    'Elektronik': '1',
-    'Musik': '2',
-    'Fashion': '3'
+    'Elektronik': '1', 'Musik': '2', 'Fashion': '3'
   };
 
   const categories = [
@@ -156,7 +196,11 @@ const HomePage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        setLoading(true);
+        // 🌟 JURUS 3: JANGAN HANCURKAN DOM JIKA DATA CACHE SUDAH ADA!
+        if (products.length === 0) {
+          setLoading(true);
+        }
+
         const { data, error } = await supabase
           .from('items')
           .select(`*, profiles!owner_id (full_name)`)
@@ -187,7 +231,10 @@ const HomePage = () => {
               condition: item.condition || "Baik"
             };
           });
+          
           setProducts(mappedData);
+          sessionStorage.setItem('homeProductsCache', JSON.stringify(mappedData));
+
         } else {
           setProducts([]);
         }
@@ -198,30 +245,51 @@ const HomePage = () => {
       }
     };
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!loading && products.length > 0) {
-      const savedScroll = sessionStorage.getItem('homeScrollPosition');
-      if (savedScroll && mainScrollRef.current) {
-        setTimeout(() => {
-          mainScrollRef.current?.scrollTo(0, parseInt(savedScroll, 10));
-        }, 50);
+  // 🌟 JURUS 4: Teleportasi Sempurna di balik layar transparan!
+  useLayoutEffect(() => {
+    if (!isReady && products.length > 0 && !loading) {
+      const savedScroll = parseInt(sessionStorage.getItem('homeScrollPosition') || '0', 10);
+      if (savedScroll > 0 && mainScrollRef.current) {
+        mainScrollRef.current.scrollTop = savedScroll;
       }
+      
+      // Buka "Jubah Transparan" setelah scroll selesai dipasang secara diam-diam!
+      requestAnimationFrame(() => {
+        setIsReady(true);
+      });
     }
-  }, [loading, products]);
+  }, [isReady, products.length, loading]);
 
-  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
-    sessionStorage.setItem('homeScrollPosition', e.currentTarget.scrollTop.toString());
-  };
+  const prevFilters = useRef({ debouncedSearch, activeCategory, sortBy, filterCondition, priceMin, priceMax });
+
+  useEffect(() => {
+    const isFilterChanged = 
+      debouncedSearch !== prevFilters.current.debouncedSearch ||
+      activeCategory !== prevFilters.current.activeCategory ||
+      sortBy !== prevFilters.current.sortBy ||
+      filterCondition !== prevFilters.current.filterCondition ||
+      priceMin !== prevFilters.current.priceMin ||
+      priceMax !== prevFilters.current.priceMax;
+
+    if (isFilterChanged) {
+      setVisibleCount(10);
+      sessionStorage.removeItem('homeScrollPosition'); 
+      sessionStorage.removeItem('homeVisibleCount'); 
+      mainScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+      
+      prevFilters.current = { debouncedSearch, activeCategory, sortBy, filterCondition, priceMin, priceMax };
+    }
+  }, [debouncedSearch, activeCategory, sortBy, filterCondition, priceMin, priceMax]);
 
   let filteredProducts = products.filter(product => {
-    const matchSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = product.title.toLowerCase().includes(debouncedSearch.toLowerCase());
     const productCategoryIdStr = String(product.category_id);
     const matchCategory = activeCategory === 'Semua' || productCategoryIdStr === categoryMap[activeCategory];
     const matchCondition = filterCondition === 'Semua' || product.condition === filterCondition;
     
-    // Hapus titik sebelum konversi ke angka
     const minVal = priceMin === '' ? 0 : parseInt(priceMin.replace(/\D/g, ''), 10);
     const maxVal = priceMax === '' ? Infinity : parseInt(priceMax.replace(/\D/g, ''), 10);
     const matchPrice = product.rawPrice >= minVal && product.rawPrice <= maxVal;
@@ -235,19 +303,34 @@ const HomePage = () => {
     filteredProducts.sort((a, b) => b.rawPrice - a.rawPrice);
   }
 
+  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+    const target = e.currentTarget;
+    sessionStorage.setItem('homeScrollPosition', target.scrollTop.toString());
+    sessionStorage.setItem('homeVisibleCount', visibleCount.toString());
+
+    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 150) {
+      if (visibleCount < filteredProducts.length) {
+        setVisibleCount(prev => prev + 10); 
+      }
+    }
+  };
+
+  const displayedProducts = filteredProducts.slice(0, visibleCount);
+
   const handleResetFilter = () => {
     setSortBy('terbaru');
     setFilterCondition('Semua');
-    setPriceMin(''); // 🌟 Reset Min
-    setPriceMax(''); // 🌟 Reset Max
+    setPriceMin(''); 
+    setPriceMax(''); 
     setActiveCategory('Semua');
     setIsFilterOpen(false);
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative">
+    // 🌟 JURUS 5: Jika layar belum siap ditarik (isReady=false), buat layar transparan (opacity-0)!
+    <div className={`h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative transition-opacity duration-0 ${!isReady ? 'opacity-0' : 'opacity-100'}`}>
       
-      {/* MODAL FILTER (Tetap sama) */}
+      {/* MODAL FILTER */}
       {isFilterOpen && (
         <div className="absolute inset-0 z-[100] flex items-end justify-center overflow-hidden p-0">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsFilterOpen(false)}></div>
@@ -262,7 +345,6 @@ const HomePage = () => {
               </button>
             </div>
             
-            {/* 🌟 BARU: Filter Kategori di Dalam Modal */}
             <div className="mb-6">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Kategori</label>
               <div className="flex flex-wrap gap-2">
@@ -289,7 +371,6 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* 🌟 BARU: Rentang Harga (Min & Max) Tanpa Spinner & Pakai Titik Rupiah */}
             <div className="mb-6">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Rentang Harga</label>
               <div className="flex items-center gap-3">
@@ -341,10 +422,9 @@ const HomePage = () => {
       <main 
         ref={mainScrollRef} 
         onScroll={handleMainScroll}
-        className="flex-1 overflow-y-auto scrollbar-hide pb-24 w-full scroll-smooth"
+        className="flex-1 overflow-y-auto scrollbar-hide pb-24 w-full"
       >
         
-        {/* HEADER LOKASI */}
         <div className="w-full bg-gradient-to-br from-[#00C6B5] to-[#0092D0] rounded-b-[40px] pt-12 pb-20 px-6 relative overflow-hidden shadow-lg shadow-teal-500/20 shrink-0">
           <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-[-20px] left-[-20px] w-32 h-32 bg-cyan-300/20 rounded-full blur-2xl"></div>
@@ -352,23 +432,16 @@ const HomePage = () => {
           <div className="flex justify-between items-center relative z-10">
             <div>
               <p className="text-white/80 text-xs font-medium mb-1">Lokasi Anda</p>
-              {/* 🌟 Tambahan class group & cursor-pointer biar interaktif */}
               <div className="flex items-center text-white font-bold text-sm cursor-pointer group">
-                
-                {/* 🌟 Bungkus MapPin untuk menambahkan efek animasi Radar/GPS */}
                 <div className="relative mr-1.5 flex items-center justify-center">
-                  {/* Efek pancaran radar (ping) di belakang ikon */}
                   <span className="absolute w-4 h-4 bg-yellow-400/50 rounded-full animate-ping"></span>
-                  {/* Ikon MapPin utama (bisa loncat kecil saat disentuh/di-hover) */}
                   <MapPin className="w-4 h-4 text-yellow-300 relative z-10 group-hover:-translate-y-1 transition-transform duration-300" />
                 </div>
-                
                 Singkawang, ID
               </div>
             </div>
             
             <div className="flex items-center gap-3">
-              {/* 🌟 Dibungkus Link menuju /notifications */}
               <Link href="/notifications">
                 <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white relative border border-white/20 hover:bg-white/30 transition-colors cursor-pointer">
                   <Bell className="w-5 h-5" />
@@ -376,9 +449,7 @@ const HomePage = () => {
                 </button>
               </Link>
               
-              {/* 🌟 Dibungkus Link menuju /profile */}
               <Link href="/profile">
-                {/* 🌟 FIX: Menggunakan border solid putih & overflow-hidden agar bulat sempurna */}
                 <div className="w-10 h-10 rounded-full bg-white shadow-md hover:scale-105 transition-transform cursor-pointer border-[2px] border-white overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="https://ui-avatars.com/api/?name=US&background=00C6B5&color=fff" alt="Profile" className="w-full h-full object-cover" />
@@ -388,7 +459,6 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* AREA PENCARIAN DENGAN TOMBOL CLEAR */}
         <div className="px-5 -mt-8 relative z-20 flex gap-2">
           <div className="flex-1 bg-white rounded-2xl p-2 shadow-[0_10px_40px_rgba(0,198,181,0.15)] flex items-center border border-slate-100 relative">
             <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center shrink-0">
@@ -402,7 +472,6 @@ const HomePage = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-transparent px-3 py-2 text-[13px] font-medium text-slate-700 focus:outline-none placeholder:text-slate-400 pr-10" 
             />
-            {/* 🌟 TOMBOL SILANG UNTUK MENGHAPUS PENCARIAN */}
             {isSearching && (
               <button 
                 onClick={() => setSearchQuery('')} 
@@ -420,10 +489,8 @@ const HomePage = () => {
           </button>
         </div>
 
-        {/* 🌟 LOGIKA SULAP: TAMPIL JIKA TIDAK MENCARI, KATEGORI "Semua", DAN FILTER TIDAK AKTIF */}
         {(!isSearching && activeCategory === 'Semua' && !isFilterActive) && (
           <div className="animate-in fade-in duration-500">
-            {/* CAROUSEL PROMO */}
             <div className="mt-8 relative w-full shrink-0">
               <div ref={promoRef} onScroll={handlePromoScroll} className="flex w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
                 {promos.map((promo) => {
@@ -450,13 +517,9 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* KATEGORI */}
             <div className="pl-5 mt-6 shrink-0">
               <div className="pr-5 flex justify-between items-end mb-4">
-                {/* 🌟 Font dihaluskan menjadi semibold & warnanya sedikit dilembutkan */}
                 <h3 className="text-[16px] font-bold text-slate-700">Kategori Alat</h3>
-                
-                {/* 🌟 Tombol Lihat Semua dikembalikan & dibuat mengarahkan user ke kotak pencarian */}
                 <span 
                   onClick={() => document.getElementById('search-input')?.focus()}
                   className="text-[11px] font-medium text-teal-500 flex items-center cursor-pointer hover:underline"
@@ -465,46 +528,37 @@ const HomePage = () => {
                 </span>
               </div>
           
-          {/* 🌟 Container Scroll Menyamping */}
-          <div className="flex overflow-x-auto scrollbar-hide gap-2.5 pb-2 pr-5">
-            {categories.map((cat, idx) => {
-              const Icon = cat.icon;
-              const isActive = activeCategory === cat.name;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setActiveCategory(cat.name)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-300 shrink-0 ${
-                    isActive 
-                      ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20' 
-                      : 'bg-white border-slate-100 hover:border-teal-200 hover:bg-teal-50/50'
-                  }`}
-                >
-                  {/* Ikon tetap berwarna imut saat tidak aktif, jadi putih saat aktif */}
-                  <div className={`${isActive ? 'text-white' : cat.color}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className={`text-[12px] tracking-wide ${isActive ? 'font-bold' : 'font-medium text-slate-600'}`}>
-                    {cat.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          
-        </div>
+              <div className="flex overflow-x-auto scrollbar-hide gap-2.5 pb-2 pr-5">
+                {categories.map((cat, idx) => {
+                  const Icon = cat.icon;
+                  const isActive = activeCategory === cat.name;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveCategory(cat.name)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-300 shrink-0 ${
+                        isActive 
+                          ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20' 
+                          : 'bg-white border-slate-100 hover:border-teal-200 hover:bg-teal-50/50'
+                      }`}
+                    >
+                      <div className={`${isActive ? 'text-white' : cat.color}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className={`text-[12px] tracking-wide ${isActive ? 'font-bold' : 'font-medium text-slate-600'}`}>
+                        {cat.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* DAFTAR BARANG (TAMPIL TERUS) */}
-        {/* 🌟 Margin menyesuaikan jika mode pencarian, kategori, atau filter aktif */}
         <div className={`px-5 ${(isSearching || activeCategory !== 'Semua' || isFilterActive) ? 'mt-8' : 'mt-10'} shrink-0`}>
-          
-          {/* 🌟 JUDUL & RESET FILTER HANYA MUNCUL JIKA TIDAK SEDANG MENGETIK */}
           {!isSearching && (
             <div className="flex justify-between items-end mb-4">
-              
-              {/* 🌟 Judul otomatis berubah jadi "Hasil Filter" kalau filter aktif */}
               <h3 className="text-[16px] font-bold text-slate-700">
                 {activeCategory !== 'Semua' 
                   ? `Kategori: ${activeCategory}` 
@@ -521,7 +575,8 @@ const HomePage = () => {
             </div>
           )}
 
-          {loading ? (
+          {/* 🌟 SPINNER LOADING HANYA MUNCUL JIKA MEMANG KOSONG */}
+          {loading && products.length === 0 ? (
             <div className="flex justify-center items-center py-10">
               <div className="animate-spin h-6 w-6 border-b-2 border-teal-500 rounded-full"></div>
             </div>
@@ -535,9 +590,15 @@ const HomePage = () => {
             </div>
           ) : (
             <section className="grid grid-cols-2 gap-4">
-              {filteredProducts.map((product) => (
+              {displayedProducts.map((product) => (
                 <ProductCard key={product.id} {...product} />
               ))}
+              
+              {visibleCount < filteredProducts.length && (
+                <div className="col-span-2 flex justify-center py-4">
+                  <div className="animate-spin h-5 w-5 border-b-2 border-teal-500 rounded-full"></div>
+                </div>
+              )}
             </section>
           )}
         </div>

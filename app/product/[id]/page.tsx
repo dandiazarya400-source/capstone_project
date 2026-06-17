@@ -23,7 +23,7 @@ const ProductDetailPage = () => {
   
   // State untuk Validasi Reviewer
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [eligibleTxId, setEligibleTxId] = useState<string | null>(null); // ID Transaksi jika dia berhak mereview
+  const [eligibleTxId, setEligibleTxId] = useState<string | null>(null); 
   
   // State untuk Form Input Review
   const [userRating, setUserRating] = useState(5);
@@ -33,6 +33,7 @@ const ProductDetailPage = () => {
   // === STATE UNTUK SENSOR MOUSE SWIPE ===
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
@@ -87,7 +88,6 @@ const ProductDetailPage = () => {
           setCurrentUserId(authData.user.id);
           const userId = authData.user.id;
 
-          // Cari transaksi user untuk barang ini yang sudah Selesai
           const { data: txData } = await supabase.from('transactions')
             .select('id')
             .eq('item_id', id)
@@ -95,22 +95,30 @@ const ProductDetailPage = () => {
             .eq('status', 'Selesai');
 
           if (txData && txData.length > 0) {
-            // Cek apakah transaksi tersebut sudah direview
             const { data: myReviews } = await supabase.from('reviews')
               .select('transaction_id')
               .eq('item_id', id)
               .eq('reviewer_id', userId);
             
             const reviewedTxIds = myReviews?.map(r => r.transaction_id) || [];
-            
-            // Cari 1 saja transaksi yang belum direview
             const eligibleTx = txData.find(tx => !reviewedTxIds.includes(tx.id));
             if (eligibleTx) {
-              setEligibleTxId(eligibleTx.id); // Buka gembok form ulasan!
+              setEligibleTxId(eligibleTx.id); 
+            }
+          }
+          if (data.owner_id) { // 'data' ini dari fetchProduct paling atas
+            const { data: followData, error: followError } = await supabase
+              .from('follows')
+              .select('id')
+              .eq('follower_id', userId) // Gunakan userId yang sudah diambil di atas
+              .eq('following_id', data.owner_id)
+              .maybeSingle();
+              
+            if (!followError && followData) {
+              setIsFollowing(true);
             }
           }
         }
-
       } catch (err) {
         console.error("Gagal memuat produk:", err);
       } finally {
@@ -121,7 +129,7 @@ const ProductDetailPage = () => {
     fetchProduct();
   }, [id]);
 
-  // Update indikator titik saat di-scroll
+  // Ini fungsi ASLI milikmu untuk foto (Biarkan saja)
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollPosition = e.currentTarget.scrollLeft;
     const containerWidth = e.currentTarget.clientWidth;
@@ -129,20 +137,25 @@ const ProductDetailPage = () => {
     setCurrentImageIndex(newIndex);
   };
 
-  // === FUNGSI DRAG MOUSE UNTUK PC ===
+  // 🌟 BARU: Tambahkan fungsi ini untuk mendeteksi scroll Halaman
+  const handlePageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    // Jika halaman turun lebih dari 40px, nyalakan background putih
+    setIsScrolled(e.currentTarget.scrollTop > 40);
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     if (carouselRef.current) {
       setStartX(e.pageX - carouselRef.current.offsetLeft);
       setScrollLeft(carouselRef.current.scrollLeft);
-      carouselRef.current.style.scrollBehavior = 'auto'; // Matikan smooth sementara agar responsif
+      carouselRef.current.style.scrollBehavior = 'auto'; 
     }
   };
 
   const handleMouseLeaveOrUp = () => {
     setIsDragging(false);
     if (carouselRef.current) {
-      carouselRef.current.style.scrollBehavior = 'smooth'; // Nyalakan lagi efek snap-nya
+      carouselRef.current.style.scrollBehavior = 'smooth'; 
     }
   };
 
@@ -150,11 +163,10 @@ const ProductDetailPage = () => {
     if (!isDragging || !carouselRef.current) return;
     e.preventDefault();
     const x = e.pageX - carouselRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5; // Kecepatan tarikan
+    const walk = (x - startX) * 1.5; 
     carouselRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  // === FUNGSI KIRIM ULASAN ===
   const handleSubmitReview = async () => {
     if (!currentUserId || !eligibleTxId || !id) return;
     setIsSubmittingReview(true);
@@ -171,7 +183,7 @@ const ProductDetailPage = () => {
       if (error) throw error;
       
       alert("Terima kasih! Ulasanmu berhasil dikirim.");
-      window.location.reload(); // Refresh instan untuk memunculkan ulasan baru
+      window.location.reload(); 
     } catch (error) {
       console.error("Gagal mengirim ulasan:", error);
       alert("Gagal mengirim ulasan.");
@@ -180,28 +192,78 @@ const ProductDetailPage = () => {
     }
   };
 
-  if (loading) return <div className="h-full w-full flex items-center justify-center bg-fluent-bg text-fluent-accent">Memuat...</div>;
-  if (!product) return <div className="h-full w-full flex items-center justify-center bg-fluent-bg text-text-main">Produk tidak ditemukan.</div>;
+  // === FUNGSI TOGGLE FOLLOW ===
+  const handleToggleFollow = async () => {
+    if (!currentUserId) {
+      alert("Silakan login untuk mengikuti toko.");
+      return;
+    }
+    if (!product?.owner_id) return;
 
-  return (
-    <div className="h-full w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        // Berhenti mengikuti (Unfollow)
+        await supabase.from('follows').delete()
+          .eq('follower_id', currentUserId)
+          .eq('following_id', product.owner_id);
+        setIsFollowing(false);
+      } else {
+        // Mulai mengikuti (Follow)
+        const { error } = await supabase.from('follows').insert({ 
+          follower_id: currentUserId, 
+          following_id: product.owner_id 
+        });
+        if (error) throw error;
+        setIsFollowing(true);
+      }
+    } catch (error) {
+      console.error("Gagal follow:", error);
+      // Tetap ubah UI secara optimis kalau terjadi error (atau tabelnya belum kamu buat)
+      setIsFollowing(!isFollowing); 
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
+  // === [BARU] STATE UNTUK FITUR FOLLOW ===
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+
+  // 🌟 JURUS KEAMANAN: Hapus cache Home saat berpindah navigasi (agar stok di Home terupdate nanti)
+  const handleBackToHome = () => {
+    sessionStorage.removeItem('homeProductsCache');
+    router.back();
+  };
+
+  const handleBooking = () => {
+    sessionStorage.removeItem('homeProductsCache');
+    router.push(`/booking?stock=${product.stock}&id=${id}&price=${product.rawPrice}`);
+  };
+
+  if (loading) return <div className="h-[100dvh] w-full flex items-center justify-center bg-[#F2FDFB] text-teal-600"><div className="animate-spin h-8 w-8 border-b-2 border-teal-500 rounded-full"></div></div>;
+  if (!product) return <div className="h-[100dvh] w-full flex items-center justify-center bg-[#F2FDFB] text-slate-500 font-medium">Produk tidak ditemukan.</div>;
+
+return (
+    <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative">
       
-      <header className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/70 to-transparent z-40 px-4 py-4 md:pt-12 pt-4 flex justify-between items-center pointer-events-none">
-        <button onClick={() => router.back()} className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white cursor-pointer hover:bg-black/60 transition-colors border border-white/10 pointer-events-auto">
+      {/* 🌟 1. HEADER DINAMIS (Berubah warna pakai isScrolled) */}
+      <header className={`absolute top-0 left-0 w-full z-40 px-4 py-4 md:pt-12 pt-4 flex justify-between items-center transition-all duration-300 ${
+        isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-transparent pointer-events-none'
+      }`}>
+        <button onClick={handleBackToHome} className="p-2.5 bg-white/80 backdrop-blur-xl rounded-full text-slate-700 cursor-pointer hover:bg-white transition-colors border border-white pointer-events-auto shadow-sm">
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <div className="flex space-x-3 text-white pointer-events-auto">
-          <button className="p-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10"><ShoppingCart className="w-5 h-5" /></button>
-          <button className="p-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10"><Menu className="w-5 h-5" /></button>
+        <div className="flex space-x-3 text-slate-700 pointer-events-auto">
+          <button className="p-2.5 bg-white/80 backdrop-blur-xl rounded-full border border-white hover:bg-white transition-colors shadow-sm"><ShoppingCart className="w-5 h-5" /></button>
+          <button className="p-2.5 bg-white/80 backdrop-blur-xl rounded-full border border-white hover:bg-white transition-colors shadow-sm"><Menu className="w-5 h-5" /></button>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        
-        <div className="w-full h-[400px] relative bg-fluent-card group">
-          
-          {/* Wadah yang sudah dipasangi sensor Mouse Drag */}
+      {/* Area yang bisa di-scroll */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide relative" onScroll={handlePageScroll}>
+        <div className="w-full h-[400px] relative bg-slate-100 group">
           <div 
             ref={carouselRef}
             className={`w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-hide ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
@@ -212,19 +274,27 @@ const ProductDetailPage = () => {
             onMouseMove={handleMouseMove}
           >
             {product.images.map((imgUrl: string, index: number) => (
-              <div key={index} className="w-full h-full flex-shrink-0 snap-center relative">
-                {/* Pointer-events-none pada gambar penting agar tidak mengganggu klik mouse */}
-                <img src={imgUrl} alt={`${product.title} - ${index + 1}`} className="w-full h-full object-cover pointer-events-none" />
+              // 🌟 PERBAIKAN 1: Tambahkan pt-20 (padding-top) agar gambar turun menghindari tombol header
+              // Tambahkan pb-10 agar tidak menabrak titik indikator carousel di bawah
+              <div key={index} className="w-full h-full flex-shrink-0 snap-center relative pt-20 pb-10 px-6 flex items-center justify-center">
+                
+                {/* 🌟 PERBAIKAN 2: Ubah object-cover menjadi object-contain agar gambar tidak terpotong */}
+                {/* Opsional: Tambahkan mix-blend-multiply jika background fotonya putih agar menyatu dengan background slate-100 */}
+                <img 
+                  src={imgUrl} 
+                  alt={`${product.title} - ${index + 1}`} 
+                  className="w-full h-full object-contain pointer-events-none mix-blend-multiply" 
+                />
               </div>
             ))}
           </div>
 
-          <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-fluent-bg to-transparent pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#F2FDFB] to-transparent pointer-events-none"></div>
           
           {product.images.length > 1 && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-1.5 z-10">
               {product.images.map((_: any, index: number) => (
-                <div key={index} className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === index ? 'bg-fluent-accent w-4' : 'bg-fluent-accent/50 w-1.5'}`} />
+                <div key={index} className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === index ? 'bg-teal-500 w-5' : 'bg-teal-500/30 w-1.5'}`} />
               ))}
             </div>
           )}
@@ -232,96 +302,98 @@ const ProductDetailPage = () => {
 
         <main className="px-5 mt-2 pb-10">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-text-main leading-tight">{product.title}</h1>
-            <p className="text-2xl font-extrabold text-fluent-accent mt-2">{product.price} <span className="text-sm font-medium text-text-muted">/ hari</span></p>
+            <h1 className="text-[22px] font-bold text-slate-800 leading-tight">{product.title}</h1>
+            <p className="text-[26px] font-black text-teal-600 mt-1">{product.price} <span className="text-sm font-semibold text-slate-400">/ hari</span></p>
             
-            <div className="flex items-center text-sm text-text-muted mt-3 space-x-3">
-              <div className="flex items-center text-fluent-accent">
-                <Star className="w-4 h-4 fill-fluent-accent mr-1" />
-                <span className="font-bold text-text-main">{product.rating}</span>
+            <div className="flex items-center text-[12px] text-slate-500 mt-3 space-x-3">
+              <div className="flex items-center text-yellow-500">
+                <Star className="w-4 h-4 fill-yellow-400 mr-1" />
+                <span className="font-bold text-slate-700">{averageRating}</span>
               </div>
-              <span>•</span>
+              <span className="text-slate-300">•</span>
               <div className="flex items-center">
-                <Tag className="w-4 h-4 mr-1.5 opacity-70" />
-                <span>Kondisi: <span className="font-semibold text-text-main">{product.condition}</span></span>
+                <Tag className="w-4 h-4 mr-1.5 text-slate-400" />
+                <span>Kondisi: <span className="font-bold text-slate-700">{product.condition}</span></span>
               </div>
-              <span>•</span>
+              <span className="text-slate-300">•</span>
               <div className="flex items-center">
-                <span>Stok: <span className="font-semibold text-text-main">{product.stock}</span></span>
+                {/* 🌟 WARNA STOK DINAMIS (Merah jika habis) */}
+                <span className={product.stock === 0 ? "text-rose-500 font-bold" : ""}>
+                  Stok: <span className="font-bold">{product.stock}</span>
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-fluent-card rounded-[24px] p-4 border border-fluent-accent/10 shadow-lg mb-6">
-            <div className="flex justify-between items-center border-b border-fluent-accent/10 pb-4 mb-4">
+          <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-6">
+            <div className="flex justify-between items-center border-b border-slate-50 pb-4 mb-4">
               <div className="flex items-center space-x-3">
-                {/* 🌟 TAMPILKAN FOTO ASLI ATAU INISIAL NAMA */}
-                <div className="w-12 h-12 bg-gradient-to-br from-[#1A0B2E] to-fluent-accent rounded-full flex items-center justify-center shadow-inner overflow-hidden border border-fluent-accent/30 text-white font-black text-xl">
+                <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-400 rounded-full flex items-center justify-center shadow-inner overflow-hidden border border-teal-100 text-white font-black text-xl">
                   {product.owner_avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={product.owner_avatar} alt={product.owner} className="w-full h-full object-cover" />
                   ) : (
-                    product.owner.substring(0, 1).toUpperCase() // Ambil huruf pertama jika tidak ada foto
+                    product.owner.substring(0, 1).toUpperCase() 
                   )}
                 </div>
                 <div>
                   <div className="flex items-center">
-                    <h3 className="font-bold text-text-main text-base">{product.owner}</h3>
-                    {product.is_verified && <BadgeCheck className="w-4 h-4 text-fluent-accent ml-1" />}
+                    <h3 className="font-bold text-slate-800 text-[15px]">{product.owner}</h3>
+                    {product.is_verified && <BadgeCheck className="w-4 h-4 text-blue-500 ml-1.5" />}
                   </div>
-                  <p className="text-xs text-text-muted">Kota Singkawang</p>
+                  <p className="text-[11px] font-medium text-slate-500">Kota Singkawang</p>
                 </div>
               </div>
-              <button className="px-4 py-1.5 rounded-full border border-fluent-accent text-fluent-accent text-xs font-bold hover:bg-fluent-accent/10 transition-colors">
-                Ikuti
+              <button 
+                onClick={handleToggleFollow}
+                disabled={isFollowLoading}
+                className={`px-5 py-1.5 rounded-full border-2 text-[11px] font-bold transition-all duration-300 disabled:opacity-50 ${
+                  isFollowing 
+                    ? 'bg-teal-50 border-teal-100 text-teal-600' // Jika sudah follow
+                    : 'border-teal-500 text-teal-600 hover:bg-teal-50' // Jika belum follow
+                }`}
+              >
+                {isFollowLoading ? '...' : isFollowing ? 'Mengikuti' : 'Ikuti'}
               </button>
             </div>
-            <div className="space-y-2 text-sm text-text-muted">
+            <div className="space-y-2 text-[12px] font-medium text-slate-500">
               <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-2 text-fluent-accent" /> 
+                <Clock className="w-4 h-4 mr-2 text-teal-500" /> 
                 ± {product.process_time} pesanan diproses
               </div>
             </div>
           </div>
 
-          {/* UBAH RATING JADI DINAMIS (Ubah ini di bagian atas juga kalau ada) */}
-          {/* Di atas tadi ada blok: <span className="font-bold text-text-main">{product.rating}</span> */}
-          {/* Ubah menjadi: <span className="font-bold text-text-main">{averageRating} ({reviews.length})</span> */}
-
           <div className="mb-8">
-            <h3 className="text-lg font-bold text-text-main mb-3 flex items-center">
-              <AlignLeft className="w-5 h-5 mr-2 text-fluent-accent" />
+            <h3 className="text-[16px] font-bold text-slate-800 mb-3 flex items-center">
+              <AlignLeft className="w-5 h-5 mr-2 text-teal-500" />
               Deskripsi Alat
             </h3>
-            <p className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">
+            <p className="text-[13px] text-slate-600 leading-relaxed whitespace-pre-wrap font-medium">
               {product.description}
             </p>
           </div>
 
-          {/* ========================================================= */}
-          {/* [BARU] SEGMEN ULASAN PENYEWA */}
-          {/* ========================================================= */}
-          <div className="mb-8 border-t border-white/10 pt-6">
-            <h3 className="text-lg font-bold text-text-main mb-4 flex items-center justify-between">
+          <div className="mb-8 border-t border-slate-200/60 pt-6">
+            <h3 className="text-[16px] font-bold text-slate-800 mb-4 flex items-center justify-between">
               <div className="flex items-center">
-                <MessageCircle className="w-5 h-5 mr-2 text-fluent-accent" />
+                <MessageCircle className="w-5 h-5 mr-2 text-teal-500" />
                 Ulasan Penyewa
               </div>
-              <span className="text-sm font-medium text-text-muted bg-fluent-accent/5 px-3 py-1 rounded-full">
-                <Star className="w-3.5 h-3.5 inline text-yellow-400 mr-1 mb-0.5" />
+              <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100">
+                <Star className="w-3.5 h-3.5 inline fill-yellow-400 text-yellow-400 mr-1 mb-0.5" />
                 {averageRating} ({reviews.length} Ulasan)
               </span>
             </h3>
 
-            {/* FORM INPUT ULASAN (HANYA MUNCUL JIKA USER ELIGIBLE) */}
             {eligibleTxId && (
-              <div className="bg-fluent-accent/10 border border-fluent-accent/30 rounded-2xl p-4 mb-6 animate-in fade-in zoom-in duration-300">
-                <p className="text-xs font-bold text-fluent-accent mb-2">Kamu sudah menyewa alat ini. Yuk, beri ulasan!</p>
+              <div className="bg-teal-50 border border-teal-100 rounded-[20px] p-4 mb-6 animate-in fade-in zoom-in duration-300">
+                <p className="text-[12px] font-bold text-teal-700 mb-3">Kamu sudah menyewa alat ini. Yuk, beri ulasan!</p>
                 
                 <div className="flex space-x-2 mb-3">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <button key={star} onClick={() => setUserRating(star)} className="focus:outline-none">
-                      <Star className={`w-7 h-7 transition-colors ${star <= userRating ? 'fill-yellow-400 text-yellow-400' : 'text-white/20'}`} />
+                    <button key={star} onClick={() => setUserRating(star)} className="focus:outline-none hover:scale-110 transition-transform">
+                      <Star className={`w-8 h-8 transition-colors ${star <= userRating ? 'fill-yellow-400 text-yellow-400 drop-shadow-sm' : 'text-slate-300'}`} />
                     </button>
                   ))}
                 </div>
@@ -330,41 +402,40 @@ const ProductDetailPage = () => {
                   value={userComment}
                   onChange={(e) => setUserComment(e.target.value)}
                   placeholder="Bagaimana kondisi alat ini saat kamu gunakan?"
-                  className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-fluent-accent resize-none mb-3 shadow-inner"
+                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 resize-none mb-3 shadow-sm placeholder:text-slate-400"
                   rows={3}
                 ></textarea>
                 
                 <button 
                   onClick={handleSubmitReview}
                   disabled={isSubmittingReview || !userComment.trim()}
-                  className="w-full bg-fluent-accent text-white text-xs font-bold py-3 rounded-xl hover:bg-[#b58eff] transition-colors disabled:opacity-50"
+                  className="w-full bg-teal-500 text-white text-[13px] font-bold py-3 rounded-xl hover:bg-teal-600 transition-colors disabled:opacity-50 shadow-md shadow-teal-500/20"
                 >
                   {isSubmittingReview ? "Mengirim..." : "Kirim Ulasan"}
                 </button>
               </div>
             )}
 
-            {/* DAFTAR ULASAN */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {reviews.length === 0 ? (
-                <p className="text-xs text-text-muted text-center py-6 bg-fluent-accent/5 rounded-2xl border border-fluent-accent/10 border-dashed">Belum ada ulasan untuk barang ini.</p>
+                <p className="text-[12px] font-medium text-slate-500 text-center py-8 bg-slate-50 rounded-[20px] border border-slate-200 border-dashed">Belum ada ulasan untuk barang ini.</p>
               ) : (
                 reviews.map((review) => (
-                  <div key={review.id} className="bg-fluent-card p-4 rounded-2xl border border-fluent-accent/10 shadow-md">
+                  <div key={review.id} className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2.5">
-                        <img src={review.profiles?.avatar_url || 'https://via.placeholder.com/40'} alt="User" className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10" />
+                      <div className="flex items-center gap-3">
+                        <img src={review.profiles?.avatar_url || 'https://via.placeholder.com/40'} alt="User" className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-50" />
                         <div>
-                          <p className="text-xs font-bold text-text-main leading-none">{review.profiles?.full_name || 'Pengguna'}</p>
-                          <p className="text-[9px] text-text-muted mt-1">{new Date(review.created_at).toLocaleDateString('id-ID')}</p>
+                          <p className="text-[13px] font-bold text-slate-800 leading-none mb-1">{review.profiles?.full_name || 'Pengguna'}</p>
+                          <p className="text-[10px] font-medium text-slate-400">{new Date(review.created_at).toLocaleDateString('id-ID')}</p>
                         </div>
                       </div>
-                      <div className="flex items-center bg-yellow-400/10 px-2 py-0.5 rounded flex-shrink-0">
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-                        <span className="text-[10px] font-bold text-yellow-400">{review.rating}.0</span>
+                      <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-lg flex-shrink-0 border border-yellow-100">
+                        <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 mr-1" />
+                        <span className="text-[11px] font-bold text-yellow-600">{review.rating}.0</span>
                       </div>
                     </div>
-                    <p className="text-xs text-text-muted mt-2 leading-relaxed">"{review.comment}"</p>
+                    <p className="text-[12px] font-medium text-slate-600 mt-2.5 leading-relaxed">"{review.comment}"</p>
                   </div>
                 ))
               )}
@@ -374,27 +445,32 @@ const ProductDetailPage = () => {
         </main>
       </div>
 
-    
-
-      <nav className="w-full bg-fluent-card/95 backdrop-blur-md p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.5)] border-t border-fluent-accent/10 z-50 shrink-0">
+      <nav className="w-full bg-white/95 backdrop-blur-xl p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] border-t border-slate-100 z-50 shrink-0">
         <div className="flex items-center space-x-3">
           <button 
             disabled={!product}
             onClick={() => {
               if (product?.owner_id) {
               router.push(`/chat?targetId=${product.owner_id}&targetName=${encodeURIComponent(product.owner)}&targetAvatar=${encodeURIComponent(product.owner_avatar || '')}`);              } else {
-                router.push('/chat'); // Fallback ke CS Pusat
+                router.push('/chat'); 
               }
             }} 
-            className="flex-1 bg-transparent border-2 border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors disabled:opacity-50"
+            className="flex-1 bg-teal-50 border-2 border-teal-100 text-teal-600 font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 hover:bg-teal-100 transition-colors disabled:opacity-50"
           >
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm">Chat Pemilik</span>
+            <span className="text-[13px]">Chat Pemilik</span>
           </button>
           
-          <button onClick={() => router.push(`/booking?stock=${product.stock}&id=${id}&price=${product.rawPrice}`)} className="flex-1 bg-fluent-accent text-white font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 shadow-[0_4px_20px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition-colors">
+          {/* 🌟 PERBAIKAN BUG KRITIS: Tombol akan nonaktif (disabled) jika stok = 0 */}
+          <button 
+            disabled={product.stock === 0}
+            onClick={handleBooking} 
+            className="flex-1 bg-teal-500 text-white font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <CalendarCheck className="w-5 h-5" />
-            <span className="text-sm">Sewa Sekarang</span>
+            <span className="text-[13px]">
+              {product.stock === 0 ? "Stok Habis" : "Sewa Sekarang"}
+            </span>
           </button>
         </div>
       </nav>

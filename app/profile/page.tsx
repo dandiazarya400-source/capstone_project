@@ -19,19 +19,34 @@ interface ProductProps {
 }
 
 const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, owner, image, isVerified }) => (
-  <Link href={`/product/${id}`} className="block">
-    <div className="bg-fluent-card rounded-fluent-rounded p-3 shadow-lg border border-fluent-accent/10 hover:scale-[1.02] transition-transform cursor-pointer">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image} alt={title} className="w-full h-36 object-cover rounded-[18px] mb-3" />
-      <h3 className="text-sm font-medium text-text-main line-clamp-2 min-h-[40px]">{title}</h3>
-      <p className="text-base font-bold text-text-main mt-1">{price}</p>
-      <div className="flex items-center text-xs mt-1 space-x-1.5">
-        <span className="text-fluent-accent font-semibold flex items-center drop-shadow-[0_0_5px_rgba(163,116,255,0.5)]">★ {rating}</span>
-        <span className="text-text-muted">• {sold} Terpinjam</span>
+  <Link href={`/product/${id}`} className="block h-full">
+    <div className="bg-white rounded-[20px] shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col overflow-hidden group">
+      <div className="w-full aspect-square relative bg-slate-50 overflow-hidden shrink-0">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt={title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
       </div>
-      <div className="flex items-center text-xs text-text-muted mt-2 space-x-1.5">
-        {isVerified && <BadgeCheck className="w-4 h-4 text-fluent-accent" />}
-        <span className={isVerified ? 'text-fluent-accent font-medium' : 'font-medium'}>{owner}</span>
+      <div className="p-3.5 flex flex-col flex-1">
+        <h3 className="text-[13px] font-semibold text-slate-800 line-clamp-2 min-h-[36px] leading-snug mb-1.5">{title}</h3>
+        <div className="mt-auto flex flex-col gap-1.5">
+          <p className="text-[14px] font-bold text-teal-600">{price}</p>
+          <div className="flex items-center text-[10px] font-medium text-slate-500 gap-1.5">
+            <div className="flex items-center gap-0.5">
+              <span className="text-yellow-400 text-[11px] mb-[1px]">★</span>
+              <span className="text-slate-600">{rating}</span>
+            </div>
+            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+            <span>{sold} Terpinjam</span>
+          </div>
+          <div className="w-full h-px bg-slate-50 my-1"></div>
+          <div className="flex items-center text-[10px] text-slate-500 space-x-1.5">
+            {isVerified ? (
+              <BadgeCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            ) : (
+              <div className="w-3.5 h-3.5 rounded-full bg-slate-200 shrink-0"></div>
+            )}
+            <span className={`line-clamp-1 ${isVerified ? 'text-slate-700 font-semibold' : 'font-medium'}`}>{owner}</span>
+          </div>
+        </div>
       </div>
     </div>
   </Link>
@@ -60,7 +75,6 @@ export default function ProfilePage() {
           }
         }
 
-        // 1. Tangkap error saat mengambil sesi
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -81,7 +95,7 @@ export default function ProfilePage() {
 
         if (profileError) {
           console.error("CCTV Profil Error 400:", profileError.message);
-          return; // Hentikan proses, TAPI JANGAN tendang ke halaman login
+          return; 
         }
 
         if (data) {
@@ -98,7 +112,6 @@ export default function ProfilePage() {
         }
 
       } catch (fatalError) {
-        // Tangkap error jaringan (ERR_CONNECTION_CLOSED) agar tidak langsung crash
         console.error("Error Fatal Jaringan/Sistem:", fatalError);
       }
     };
@@ -121,17 +134,15 @@ export default function ProfilePage() {
     setIsProcessingTopup(true);
 
     try {
-      // 1. Dapatkan User ID yang sedang login
       const { data: authData } = await supabase.auth.getUser();
       if (!authData?.user) throw new Error("Silakan login kembali.");
 
-      // 2. Tembak API Top Up kita
       const response = await fetch('/api/topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: authData.user.id,
-          amount: amount // Kirim nominal yang sudah diubah ke angka
+          amount: amount
         })
       });
 
@@ -139,7 +150,6 @@ export default function ProfilePage() {
 
       if (!response.ok) throw new Error(result.message);
 
-      // 3. AJAIB! Lempar user ke halaman UI Pembayaran Xendit!
       window.location.href = result.invoiceUrl;
 
     } catch (error: any) {
@@ -155,53 +165,48 @@ export default function ProfilePage() {
     { id: "5", title: "Setelan Jas Formal", price: "Rp. 100.000", rating: "4.8", sold: "198", owner: "Asoka Maju", image: "https://via.placeholder.com/150", isVerified: true },
   ];
 
-  // Fungsi pembuat inisial nama otomatis (Cuma 1 Huruf)
   const getInitials = (name: string) => {
-    if (!name) return 'U'; // Default kalau namanya kosong
-    return name.trim().charAt(0).toUpperCase(); // Ambil huruf paling pertama aja
+    if (!name) return 'U'; 
+    return name.trim().charAt(0).toUpperCase(); 
   };
 
   const userInitials = getInitials(profile?.full_name || '');
 
-  
-
-  // Logika penentuan label di bawah nama
   let roleLabel = 'Pengguna Reguler';
   if (profile?.role === 'superadmin') roleLabel = 'Super Administrator';
   else if (profile?.role === 'admin') roleLabel = 'Admin Toko';
 
   return (
-    <div className="h-full w-full overflow-y-auto overflow-x-hidden bg-fluent-bg text-text-main pb-32 scrollbar-hide animate-in fade-in duration-300">
+    <div className="min-h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 pb-32 scrollbar-hide animate-in fade-in duration-300">
       
       {/* ================= HEADER PROFIL ================= */}
-      <div className="bg-gradient-to-r from-fluent-accent to-blue-500 pt-12 pb-8 px-6 rounded-b-[40px] shadow-[0_10px_25px_rgba(59,130,246,0.3)] border-b border-white/20 relative overflow-hidden">
+      <div className="relative pt-16 pb-10 px-6 shadow-[0_10px_30px_rgba(20,184,166,0.2)] rounded-b-[40px] border-b border-teal-300/30">
         
-        {/* Efek Cahaya / Glow di Background */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-300/30 rounded-full blur-2xl"></div>
+        {/* 🌟 LAYER 1: Background & Glow (Dibungkus terpisah agar overflow-hidden tidak memotong konten) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-teal-400 rounded-b-[40px] overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-teal-300/30 rounded-full blur-2xl"></div>
+        </div>
         
+        {/* 🌟 LAYER 2: Konten Utama (Aman dari potongan) */}
         <div className="flex items-center justify-between relative z-10">
           
-          {/* 🌟 SELURUH AREA INI SEKARANG BISA DIKLIK */}
           <Link href="/profile/edit" className="flex items-center space-x-4 group cursor-pointer">
-            {/* Avatar dengan efek animasi saat disentuh */}
             <div className="w-20 h-20 rounded-full bg-white p-1 ring-4 ring-white/30 shadow-xl shrink-0 flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
               {profile?.avatar_url && profile.avatar_url.startsWith('http') ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profile.avatar_url} alt="Profile" className="w-full h-full rounded-full object-cover" />
               ) : (
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#1A0B2E] to-fluent-accent flex items-center justify-center text-white text-2xl font-black shadow-inner tracking-widest">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-teal-700 to-teal-400 flex items-center justify-center text-white text-2xl font-black shadow-inner tracking-widest">
                   {userInitials}
                 </div>
               )}
             </div>
             
             <div>
-              {/* Teks Nama & Role */}
               <h1 className="text-2xl font-bold text-white line-clamp-1 drop-shadow-sm group-hover:text-white/90 transition-colors">{profile?.full_name || 'Menyiapkan...'}</h1>
-              <p className="text-white/90 text-sm font-medium mb-1 drop-shadow-sm">{roleLabel}</p>
+              <p className="text-teal-50 text-[13px] font-medium mb-1 drop-shadow-sm">{roleLabel}</p>
               
-              {/* 🌟 Teks hint dikembalikan ke gaya awal yang lebih lembut */}
               <span className="flex items-center gap-1.5 text-[10px] font-medium text-white/80 group-hover:text-white transition-colors mt-1.5">
                 <Edit3 className="w-3 h-3" /> Ubah Profil
               </span>
@@ -209,63 +214,63 @@ export default function ProfilePage() {
           </Link>
           
           <div className="flex flex-col space-y-3">
-            <button onClick={() => router.push('/chat')} className="p-2 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm">
+            <button onClick={() => router.push('/chat')} className="p-2.5 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm">
               <Headphones className="w-5 h-5 text-white" />
             </button>
-            <button onClick={() => setShowLogoutModal(true)} className="p-2 bg-white/20 hover:bg-rose-500/80 hover:border-rose-500 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm cursor-pointer group">
-              <LogOut className="w-5 h-5 text-white group-hover:text-white" />
+            <button onClick={() => setShowLogoutModal(true)} className="p-2.5 bg-white/20 hover:bg-rose-500 hover:border-rose-500 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm cursor-pointer group">
+              <LogOut className="w-5 h-5 text-white" />
             </button> 
           </div>
         </div>
       </div>
+      
+      <main className="px-5 mt-6 space-y-5">
 
-      <main className="px-4 mt-6 space-y-6">
-
-        {/* ================= STATUS VERIFIKASI (Hanya untuk User Biasa) ================= */}
+        {/* ================= STATUS VERIFIKASI ================= */}
         {profile?.role === 'user' && profile?.verification_status && (
           <section className="animate-in fade-in slide-in-from-bottom-3 duration-300">
             {profile.verification_status === 'unverified' && (
               <Link href="/verify">
-                <div className="bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20 p-4 rounded-fluent-rounded flex items-center justify-between hover:bg-red-500/15 transition-colors group cursor-pointer shadow-lg">
+                <div className="bg-rose-50 border border-rose-100 p-4 rounded-[20px] flex items-center justify-between hover:bg-rose-100/50 transition-colors group cursor-pointer shadow-sm">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 group-hover:scale-105 transition-transform shadow-inner">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-rose-500 group-hover:scale-105 transition-transform shadow-sm">
                       <AlertCircle className="w-6 h-6 animate-pulse" />
                     </div>
                     <div>
-                      <h2 className="font-bold text-text-main text-sm">Verifikasi KTP Belum Lengkap</h2>
-                      <p className="text-[11px] text-text-muted mt-0.5">Lengkapi KTP & Selfie untuk bisa menyewa alat</p>
+                      <h2 className="font-bold text-slate-800 text-[14px]">Verifikasi Belum Lengkap</h2>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Lengkapi KTP & Selfie untuk menyewa alat</p>
                     </div>
                   </div>
-                  <div className="w-8 h-8 bg-fluent-accent/5 rounded-full flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
-                    <ChevronRight className="w-4 h-4 text-red-400" />
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                    <ChevronRight className="w-4 h-4 text-rose-400 group-hover:text-white" />
                   </div>
                 </div>
               </Link>
             )}
 
             {profile.verification_status === 'pending' && (
-              <div className="bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20 p-4 rounded-fluent-rounded flex items-center justify-between shadow-lg">
+              <div className="bg-amber-50 border border-amber-100 p-4 rounded-[20px] flex items-center justify-between shadow-sm">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 shadow-inner">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-amber-500 shadow-sm">
                     <Clock className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-text-main text-sm">Verifikasi Sedang Diproses</h2>
-                    <p className="text-[11px] text-text-muted mt-0.5">Mohon tunggu, admin sedang memeriksa berkas Anda</p>
+                    <h2 className="font-bold text-slate-800 text-[14px]">Verifikasi Sedang Diproses</h2>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Mohon tunggu, admin sedang memeriksa berkas</p>
                   </div>
                 </div>
               </div>
             )}
 
             {profile.verification_status === 'verified' && (
-              <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 p-4 rounded-fluent-rounded flex items-center justify-between shadow-lg">
+              <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-[20px] flex items-center justify-between shadow-sm">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 shadow-inner">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-sm">
                     <ShieldCheck className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-text-main text-sm">Akun Terverifikasi</h2>
-                    <p className="text-[11px] text-text-muted mt-0.5">Identitas Anda valid. Selamat menyewa dengan aman!</p>
+                    <h2 className="font-bold text-slate-800 text-[14px]">Akun Terverifikasi</h2>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Identitas Anda valid. Selamat menyewa dengan aman!</p>
                   </div>
                 </div>
               </div>
@@ -276,107 +281,99 @@ export default function ProfilePage() {
         {/* ================= TOMBOL KHUSUS ADMIN & SUPERADMIN ================= */}
         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <section>
-            {/* 🌟 PERBAIKAN 1: Rute URL dinamis menyesuaikan role! */}
             <Link href={profile?.role === 'superadmin' ? '/superadmin' : '/admin'}>
-              <div className="relative overflow-hidden bg-gradient-to-r from-fluent-accent/10 to-transparent border border-fluent-accent/20 p-4 rounded-fluent-rounded flex items-center justify-between hover:from-fluent-accent/20 hover:to-fluent-accent/5 transition-all duration-300 shadow-sm group">
+              <div className="bg-white border border-slate-100 p-4 rounded-[20px] flex items-center justify-between hover:border-teal-200 transition-all duration-300 shadow-sm group relative overflow-hidden">
                 <div className="flex items-center space-x-4 relative z-10">
-                  <div className="w-12 h-12 bg-fluent-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <LayoutDashboard className="w-6 h-6 text-fluent-accent" />
+                  <div className="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <LayoutDashboard className="w-6 h-6 text-teal-600" />
                   </div>
                   <div>
-                    {/* 🌟 PERBAIKAN 2: Teks judul juga otomatis berubah! */}
-                    <h2 className="font-bold text-text-main text-lg">
+                    <h2 className="font-bold text-slate-800 text-[15px]">
                       {profile?.role === 'superadmin' ? 'Superadmin Workspace' : 'Admin Workspace'}
                     </h2>
-                    <p className="text-xs text-text-muted mt-0.5">Kelola barang, pesanan, dan pengguna</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Kelola barang, pesanan, dan pengguna</p>
                   </div>
                 </div>
-                <div className="w-8 h-8 bg-fluent-accent/10 rounded-full flex items-center justify-center relative z-10 group-hover:bg-fluent-accent transition-colors">
-                  <ChevronRight className="w-5 h-5 text-fluent-accent group-hover:text-white transition-colors" />
+                <div className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center relative z-10 group-hover:bg-teal-500 transition-colors">
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
                 </div>
-                <div className="absolute -right-6 -top-6 w-24 h-24 bg-fluent-accent/20 rounded-full blur-2xl group-hover:bg-fluent-accent/30 transition-colors"></div>
               </div>
             </Link>
           </section>
         )}
-        {/* ================= KOTAK MASUK (USER INBOX) ================= */}
+
+        {/* ================= KOTAK MASUK ================= */}
         <section>
-          {/* Nanti URL-nya sesuaikan dengan halaman riwayat chat user buatanmu ya */}
           <Link href="/inbox"> 
-            <div className="bg-fluent-card p-4 rounded-fluent-rounded border border-fluent-accent/10 shadow-lg flex items-center justify-between hover:border-fluent-accent/30 transition-all duration-300 group cursor-pointer relative overflow-hidden">
-              {/* Efek Glow Tipis */}
-              <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-colors"></div>
-              
-              <div className="flex items-center space-x-4 relative z-10">
-                <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <MessageSquare className="w-5 h-5 text-blue-400" />
+            <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center justify-between hover:border-blue-200 transition-all duration-300 group cursor-pointer">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageSquare className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-text-main text-sm">Kotak Masuk</h2>
-                  <p className="text-[11px] text-text-muted mt-0.5">Riwayat chat dengan toko & CS</p>
+                  <h2 className="font-bold text-slate-800 text-[14px]">Kotak Masuk</h2>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Riwayat chat dengan toko & CS</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-3 relative z-10">
-                {/* 🌟 Bonus: Anggap saja ini indikator ada pesan baru (bisa didinamiskan nanti) */}
-                <span className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse">
+              <div className="flex items-center space-x-3">
+                <span className="bg-rose-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
                   BARU
                 </span>
-                <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-fluent-accent transition-colors" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
               </div>
             </div>
           </Link>
         </section>
         
-        {/* ================= TRANSAKSI & SALDO ================= */}
-        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-fluent-accent/10 shadow-lg">
-          <h2 className="font-bold text-text-main mb-4">Transaksi</h2>
-          <div className="flex justify-between items-center px-2">
-            {[ { icon: Wallet, label: 'Bayar' }, { icon: Box, label: 'Diproses' }, { icon: Truck, label: 'Dikirim' }, { icon: CheckCircle2, label: 'Sudah Tiba', alert: true }, { icon: Star, label: 'Ulasan' } ].map((item, idx) => (
+        {/* ================= TRANSAKSI ================= */}
+        <section className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm">
+          <h2 className="font-bold text-slate-800 mb-4 text-[15px]">Transaksi</h2>
+          <div className="flex justify-between items-center px-1">
+            {[ { icon: Wallet, label: 'Bayar' }, { icon: Box, label: 'Diproses' }, { icon: Truck, label: 'Dikirim' }, { icon: CheckCircle2, label: 'Tiba', alert: true }, { icon: Star, label: 'Ulasan' } ].map((item, idx) => (
               <div key={idx} className="flex flex-col items-center space-y-2">
-                <div className="w-10 h-10 rounded-full bg-fluent-accent/10 flex items-center justify-center relative">
-                  <item.icon className="w-5 h-5 text-fluent-accent" />
-                  {item.alert && <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border border-fluent-card"></span>}
+                <div className="w-11 h-11 rounded-full bg-slate-50 flex items-center justify-center relative border border-slate-100">
+                  <item.icon className="w-5 h-5 text-teal-600" />
+                  {item.alert && <span className="absolute 0top-0 right-0 w-3 h-3 bg-rose-500 rounded-full border-2 border-white"></span>}
                 </div>
-                <span className="text-[10px] text-text-muted">{item.label}</span>
+                <span className="text-[10px] font-medium text-slate-500">{item.label}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="bg-fluent-card p-5 rounded-fluent-rounded border border-fluent-accent/10 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        {/* ================= SALDO ================= */}
+        <section className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm relative overflow-hidden">
           <div className="relative z-10 flex flex-col gap-4">
             <div className="flex items-center space-x-3">
-              {/* 🌟 PERBAIKAN: Ikon dompet dibuat lebih clean tanpa shadow glow */}
-              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 shadow-inner">
-                <Banknote className="w-6 h-6 text-emerald-500" />
+              <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center">
+                <Banknote className="w-6 h-6 text-teal-600" />
               </div>
               <div>
-                <p className="text-xs font-medium text-text-muted mb-0.5">Saldo Aktif</p>
-                <h3 className="font-extrabold text-text-main text-2xl tracking-tight">
+                <p className="text-[11px] font-medium text-slate-500 mb-0.5">Saldo Aktif</p>
+                <h3 className="font-black text-slate-800 text-[22px] tracking-tight">
                   {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(profile?.balance || 0)}
                 </h3>
               </div>
             </div>
             <div className="flex space-x-3 mt-1">
-              {/* 🌟 PERBAIKAN: Teks diubah ke shade 600, dan background ke 50/100 agar super kontras dan tajam */}
-              <button onClick={() => setShowTopupModal(true)} className="flex-1 bg-emerald-50 text-emerald-600 border border-emerald-200 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors shadow-sm">
+              <button onClick={() => setShowTopupModal(true)} className="flex-1 bg-teal-50 text-teal-600 border border-teal-100 py-2.5 rounded-xl text-[13px] font-bold hover:bg-teal-100 transition-colors shadow-sm">
                 Isi Saldo
               </button>
-              <button className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-100 transition-colors shadow-sm">
+              <button className="flex-1 bg-slate-50 text-slate-600 border border-slate-200 py-2.5 rounded-xl text-[13px] font-bold hover:bg-slate-100 transition-colors shadow-sm">
                 Tarik Dana
               </button>
             </div>
           </div>
         </section>
 
+        {/* ================= REKOMENDASI ================= */}
         <section>
           <div className="flex items-center space-x-2 mb-4">
-            <div className="w-1 h-5 bg-fluent-accent rounded-full"></div>
-            <h2 className="font-bold text-text-main">Rekomendasi untuk anda</h2>
+            <div className="w-1 h-5 bg-teal-500 rounded-full"></div>
+            <h2 className="font-bold text-slate-800 text-[15px]">Rekomendasi untuk anda</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 pb-8">
             {recommendations.map((product) => <ProductCard key={product.id} {...product} />)}
           </div>
         </section>
@@ -385,27 +382,26 @@ export default function ProfilePage() {
 
       {/* ================= MODAL TOPUP ================= */}
       {showTopupModal && (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm">
-          <div className="bg-fluent-card border border-white/10 w-full max-w-[300px] rounded-[28px] p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl"></div>
-            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-4 shadow-inner border border-emerald-500/30 relative z-10">
-              <Banknote className="w-7 h-7 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-5 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-100 w-full max-w-[300px] rounded-[28px] p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            <div className="w-14 h-14 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center mb-4 relative z-10">
+              <Banknote className="w-7 h-7" />
             </div>
-            <h3 className="text-lg font-bold text-text-main mb-1 relative z-10">Isi Saldo</h3>
-            <p className="text-xs text-text-muted mb-6 relative z-10 leading-relaxed">Masukkan nominal uang yang ingin kamu tambahkan ke dompet.</p>
+            <h3 className="text-[17px] font-bold text-slate-800 mb-1 relative z-10">Isi Saldo</h3>
+            <p className="text-[12px] text-slate-500 mb-6 relative z-10 leading-relaxed">Masukkan nominal uang yang ingin kamu tambahkan ke dompet.</p>
             <div className="w-full relative z-10 mb-6">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-main font-bold">Rp</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-800 font-bold">Rp</span>
               <input
                 type="text"
                 value={topupAmount ? new Intl.NumberFormat('id-ID').format(Number(topupAmount)) : ''}
                 onChange={(e) => setTopupAmount(e.target.value.replace(/\D/g, ''))}
-                placeholder="500.000"
-                className="w-full bg-fluent-bg border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-text-main focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-white/20"
+                placeholder="50.000"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-800 focus:outline-none focus:border-teal-500 focus:bg-white transition-colors placeholder:text-slate-400"
               />
             </div>
             <div className="flex w-full gap-3 relative z-10">
-              <button onClick={() => setShowTopupModal(false)} className="flex-1 py-3 rounded-2xl text-xs font-bold text-text-muted bg-fluent-accent/5 hover:bg-white/10 transition-colors border border-fluent-accent/10">Batal</button>
-              <button disabled={isProcessingTopup || !topupAmount || Number(topupAmount) <= 0} onClick={submitTopup} className="flex-1 py-3 rounded-2xl text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-400 transition-colors shadow-[0_4px_20px_rgba(16,185,129,0.3)] disabled:opacity-50 flex justify-center items-center gap-2">
+              <button onClick={() => setShowTopupModal(false)} className="flex-1 py-3 rounded-2xl text-[13px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors">Batal</button>
+              <button disabled={isProcessingTopup || !topupAmount || Number(topupAmount) <= 0} onClick={submitTopup} className="flex-1 py-3 rounded-2xl text-[13px] font-bold text-white bg-teal-500 hover:bg-teal-600 transition-colors shadow-md shadow-teal-500/20 disabled:opacity-50 flex justify-center items-center gap-2">
                 {isProcessingTopup ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Konfirmasi'}
               </button>
             </div>
@@ -415,23 +411,19 @@ export default function ProfilePage() {
 
       {/* ================= MODAL LOGOUT ================= */}
       {showLogoutModal && (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm">
-          <div className="bg-fluent-card border border-white/10 w-full max-w-[280px] rounded-[28px] p-5 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200 relative overflow-hidden">
-            
-            <div className="w-14 h-14 bg-rose-500/10 text-rose-400 rounded-full flex items-center justify-center mb-3 shadow-inner border border-rose-500/20 relative z-10">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-5 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-100 w-full max-w-[280px] rounded-[28px] p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-3 relative z-10">
               <LogOut className="w-6 h-6 ml-1" />
             </div>
-            
-            <h3 className="text-base font-bold text-text-main mb-1.5 relative z-10">Keluar Akun?</h3>
-            
-            <p className="text-xs text-text-muted mb-6 leading-relaxed relative z-10">
+            <h3 className="text-[17px] font-bold text-slate-800 mb-1.5 relative z-10">Keluar Akun?</h3>
+            <p className="text-[12px] text-slate-500 mb-6 leading-relaxed relative z-10">
               Sesi kamu akan diakhiri. Kamu harus masuk kembali untuk menyewa alat.
             </p>
-            
-            <div className="flex w-full gap-2.5 relative z-10">
+            <div className="flex w-full gap-3 relative z-10">
               <button 
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-text-muted bg-fluent-accent/5 border border-fluent-accent/10 hover:bg-white/10 hover:text-text-main transition-colors"
+                className="flex-1 py-2.5 rounded-2xl text-[13px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors"
               >
                 Batal
               </button>
@@ -443,12 +435,11 @@ export default function ProfilePage() {
                   clearProfile();
                   router.push('/login');
                 }}
-                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-white bg-rose-500 shadow-[0_4px_20px_rgba(244,63,94,0.4)] hover:bg-rose-600 transition-colors"
+                className="flex-1 py-2.5 rounded-2xl text-[13px] font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 transition-colors"
               >
                 Ya, Keluar
               </button>
             </div>
-
           </div>
         </div>
       )}

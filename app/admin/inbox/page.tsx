@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Search, Loader2, BadgeCheck, Clock, Check } from 'lucide-react';
+import { ArrowLeft, Send, Search, Loader2, BadgeCheck, Clock, Check, CheckCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ChatContact {
@@ -36,21 +36,20 @@ export default function AdminInboxPage() {
   }, [messages, view]);
 
   useEffect(() => {
+    let isMounted = true; // 🌟 JURUS KEAMANAN MEMORI
     let messageChannel: any;
     let presenceChannel: any;
 
     const fetchInbox = async () => {
       try {
         const { data: authData } = await supabase.auth.getUser();
-        if (!authData.user) {
+        if (!authData.user || !isMounted) {
           router.push('/login');
           return;
         }
         
         const currentAdminId = authData.user.id;
-
-        // 🌟 PERBAIKAN: Gunakan Try-Catch dan Fallback
-        let userRole = 'user'; // Default
+        let userRole = 'user'; 
 
         try {
           const { data: profileData, error: profileError } = await supabase
@@ -60,37 +59,29 @@ export default function AdminInboxPage() {
             .single();
 
           if (profileError) {
-             console.error("CCTV Supabase Error:", profileError.message);
-             // JIKA ERROR (Misal cache nyangkut), ambil dari localStorage!
              userRole = localStorage.getItem('admin_dashboard_role') || 'user';
           } else if (profileData) {
              userRole = profileData.role?.trim().toLowerCase() || 'user';
           }
         } catch (dbError) {
-          console.error("Database gagal merespon:", dbError);
           userRole = localStorage.getItem('admin_dashboard_role') || 'user';
         }
 
-        console.log("CCTV Final Role:", userRole);
-
-        // Jika dia BUKAN superadmin, tendang keluar!
         if (userRole !== 'superadmin') {
-          console.warn("Akses Ditolak! Role kamu dibaca oleh sistem sebagai:", `"${userRole}"`);
           router.push('/admin'); 
           return;
         }
 
+        if (!isMounted) return;
         setMyId(currentAdminId);
 
-        // ------------------------------------------------------------------
-        // JANGAN LUPA: Gunakan HMR Fix untuk Presence seperti yang saya 
-        // berikan sebelumnya agar konsolmu tidak merah-merah!
+        // HMR Fix untuk Presence
         const presenceChannelName = 'admin-status';
         supabase.removeChannel(supabase.channel(presenceChannelName));
 
         presenceChannel = supabase.channel(presenceChannelName);
         presenceChannel.subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED') {
+          if (status === 'SUBSCRIBED' && isMounted) {
             await presenceChannel.track({
               user_id: currentAdminId,
               status: 'online'
@@ -104,7 +95,7 @@ export default function AdminInboxPage() {
           .or(`sender_id.eq.${currentAdminId},receiver_id.eq.${currentAdminId}`)
           .order('created_at', { ascending: false });
 
-        if (allMessages && allMessages.length > 0) {
+        if (allMessages && allMessages.length > 0 && isMounted) {
           const contactMap = new Map();
           
           allMessages.forEach(msg => {
@@ -121,18 +112,17 @@ export default function AdminInboxPage() {
 
           const contactIds = Array.from(contactMap.keys());
 
-          // 🌟 PRO-TIP: Cek dulu apakah ada ID kontaknya, kalau kosong jangan nembak ke Supabase
           if (contactIds.length > 0) {
             const { data: profiles } = await supabase
               .from('profiles')
               .select('id, full_name, avatar_url')
               .in('id', contactIds);
 
-            if (profiles) {
+            if (profiles && isMounted) {
               const finalChatList: ChatContact[] = profiles.map(profile => ({
                 id: profile.id,
                 full_name: profile.full_name || 'Pengguna Tanpa Nama',
-                avatar_url: profile.avatar_url || 'https://ui-avatars.com/api/?name=User&background=2B164D&color=A374FF&bold=true',
+                avatar_url: profile.avatar_url || 'https://ui-avatars.com/api/?name=User&background=00C6B5&color=fff&bold=true',
                 last_message: contactMap.get(profile.id).last_message,
                 last_time: contactMap.get(profile.id).time,
                 timestamp: contactMap.get(profile.id).timestamp
@@ -142,32 +132,13 @@ export default function AdminInboxPage() {
               setChatList(finalChatList);
             }
           } else {
-             // Kalau kosong, ya langsung set list kosong
-             setChatList([]);
+             if(isMounted) setChatList([]);
           }
-
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url')
-            .in('id', contactIds);
-
-          if (profiles) {
-            const finalChatList: ChatContact[] = profiles.map(profile => ({
-              id: profile.id,
-              full_name: profile.full_name || 'Pengguna Tanpa Nama',
-              avatar_url: profile.avatar_url || 'https://ui-avatars.com/api/?name=User&background=2B164D&color=A374FF&bold=true',
-              last_message: contactMap.get(profile.id).last_message,
-              last_time: contactMap.get(profile.id).time,
-              timestamp: contactMap.get(profile.id).timestamp
-            }));
-
-            finalChatList.sort((a, b) => b.timestamp - a.timestamp);
-            setChatList(finalChatList);
-          }
+          // 🌟 PERBAIKAN BUG: Kode duplikat profiles fetch di bawah ini SUDAH DIHAPUS!
         }
-        setLoadingList(false);
+        
+        if (isMounted) setLoadingList(false);
 
-        // HMR Fix: Nama channel unik
         const uniqueChannelName = `admin_inbox_${Date.now()}`;
         messageChannel = supabase
           .channel(uniqueChannelName)
@@ -175,19 +146,22 @@ export default function AdminInboxPage() {
             const newMsg = payload.new as any;
             
             setActiveUser((currentActiveUser) => {
-              // 🌟 PERBAIKAN: Hanya tangkap pesan JIKA PENGIRIMNYA ADALAH USER (Pelanggan)
               if (
                 currentActiveUser && 
                 newMsg.sender_id === currentActiveUser.id && 
                 newMsg.receiver_id === currentAdminId
               ) {
+                // 🌟 Trik: Jika admin sedang buka chat, otomatis jadikan Read!
+                supabase.from('messages').update({ is_read: true }).eq('id', newMsg.id).then();
+
                 setMessages(prev => {
                   if (prev.find(m => m.id === newMsg.id)) return prev;
                   return [...prev, {
                     id: newMsg.id,
                     text: newMsg.content,
-                    sender: 'user', // Pasti dari user
-                    time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    sender: 'user', 
+                    time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                    is_read: true
                   }];
                 });
               }
@@ -198,18 +172,22 @@ export default function AdminInboxPage() {
 
       } catch (error) {
         console.error("Gagal memuat inbox:", error);
-        setLoadingList(false);
+        if (isMounted) setLoadingList(false);
       }
     };
 
     fetchInbox();
 
     return () => {
+      isMounted = false;
       if (messageChannel) supabase.removeChannel(messageChannel);
       if (presenceChannel) supabase.removeChannel(presenceChannel); 
     };
   }, [router]);
 
+  // ========================================================
+  // 🌟 JURUS CENTANG DUA: Memicu HP Pelanggan
+  // ========================================================
   const openChatRoom = async (user: ChatContact) => {
     setActiveUser(user);
     setView('chat');
@@ -217,6 +195,7 @@ export default function AdminInboxPage() {
     
     if (!myId) return;
 
+    // 1. Ambil History Chat
     const { data: chatHistory } = await supabase
       .from('messages')
       .select('*')
@@ -228,10 +207,20 @@ export default function AdminInboxPage() {
         id: m.id,
         text: m.content,
         sender: m.sender_id === myId ? 'me' : 'user',
-        time: new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+        time: new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        is_read: m.is_read
       }));
       setMessages(formatted);
     }
+
+    // 2. Tandai pesan dari pelanggan tersebut sebagai DIBACA!
+    // Ini akan memicu centang biru di HP Pelanggan.
+    await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('sender_id', user.id)
+      .eq('receiver_id', myId)
+      .eq('is_read', false);
   };
 
   const handleSendReply = async (e: React.FormEvent) => {
@@ -241,17 +230,16 @@ export default function AdminInboxPage() {
     const textToSend = inputText;
     setInputText(''); 
     
-    // 🌟 JURUS OPTIMISTIC UI: Pesan palsu instan
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage = {
       id: tempId,
       text: textToSend,
       sender: 'me',
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      isSending: true // <--- Penanda efek memudar & jam
+      isSending: true,
+      is_read: false
     };
 
-    // Tembak ke layar admin tanpa nunggu Supabase!
     setMessages(prev => [...prev, optimisticMessage]);
     setIsSending(true);
 
@@ -261,14 +249,14 @@ export default function AdminInboxPage() {
         .insert([{
           sender_id: myId,
           receiver_id: activeUser.id,
-          content: textToSend
+          content: textToSend,
+          is_read: false
         }])
         .select()
-        .single(); // Wajib ada ini untuk ngambil ID asli
+        .single(); 
 
       if (error) throw error;
 
-      // Sukses terkirim! Sulap jam menjadi centang
       setMessages(prev => prev.map(msg => 
         msg.id === tempId 
           ? { ...msg, id: insertedMsg.id, isSending: false } 
@@ -276,7 +264,6 @@ export default function AdminInboxPage() {
       ));
     } catch (error) {
       console.error("Gagal mengirim balasan:", error);
-      // Tarik balik jika beneran gagal
       setMessages(prev => prev.filter(msg => msg.id !== tempId));
       alert("Koneksi terputus. Pesan gagal dikirim.");
     } finally {
@@ -284,56 +271,55 @@ export default function AdminInboxPage() {
     }
   };
 
-  // TAMPILAN LIST (KOTAK MASUK)
+  // ================== TAMPILAN LIST (KOTAK MASUK) ==================
   if (view === 'list') {
     return (
-      <div className="h-full w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
-        {/* Hapus padding atas yang terlalu besar agar pas dengan navbar layout */}
-        <header className="w-full bg-fluent-card/95 backdrop-blur-md z-40 px-5 py-3 flex flex-col border-b border-fluent-accent/10 shadow-sm shrink-0">
-          <div className="flex items-center space-x-3 mb-3">
-            <button onClick={() => router.back()} className="p-1.5 -ml-1.5 rounded-full hover:bg-white/10 transition-colors">
+      <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative">
+        <header className="w-full bg-white/95 backdrop-blur-md z-40 px-5 py-4 flex flex-col border-b border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] shrink-0">
+          <div className="flex items-center space-x-3 mb-4 mt-2">
+            <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-bold">Kotak Masuk</h1>
+            <h1 className="text-[18px] font-bold text-slate-800">Kotak Masuk</h1>
           </div>
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text" 
               placeholder="Cari pelanggan..." 
-              className="w-full bg-fluent-bg border border-white/10 rounded-xl py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all placeholder:text-text-muted/70"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-[13px] font-medium focus:outline-none focus:border-teal-400 focus:bg-white transition-all placeholder:text-slate-400 text-slate-700 shadow-sm"
             />
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto scrollbar-hide pb-20">
           {loadingList ? (
-            <div className="flex flex-col items-center justify-center h-40 opacity-50">
-              <Loader2 className="w-6 h-6 text-fluent-accent animate-spin mb-2" />
-              <p className="text-xs text-text-muted">Memuat pesan...</p>
+            <div className="flex flex-col items-center justify-center h-40 opacity-60">
+              <Loader2 className="w-7 h-7 text-teal-500 animate-spin mb-3" />
+              <p className="text-[13px] font-medium text-slate-500">Memuat pesan...</p>
             </div>
           ) : chatList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 opacity-50 mt-10">
-              <div className="w-16 h-16 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-3">
-                <Clock className="w-8 h-8 text-text-muted" />
+            <div className="flex flex-col items-center justify-center h-40 opacity-70 mt-10">
+              <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mb-3 shadow-sm border border-teal-100">
+                <Clock className="w-7 h-7 text-teal-600" />
               </div>
-              <p className="text-sm font-medium text-text-main">Belum ada pesan masuk.</p>
-              <p className="text-xs text-text-muted mt-1">Pesan dari pelanggan akan muncul di sini.</p>
+              <p className="text-[14px] font-bold text-slate-700">Belum ada pesan masuk.</p>
+              <p className="text-[12px] font-medium text-slate-500 mt-1">Pesan dari pelanggan akan muncul di sini.</p>
             </div>
           ) : (
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-slate-100 px-2 py-2">
               {chatList.map((chat) => (
-                <div key={chat.id} onClick={() => openChatRoom(chat)} className="flex items-center p-4 hover:bg-fluent-accent/5 transition-colors cursor-pointer active:bg-white/10">
-                  <div className="w-12 h-12 rounded-full bg-fluent-card shrink-0 mr-4 overflow-hidden border border-white/10">
+                <div key={chat.id} onClick={() => openChatRoom(chat)} className="flex items-center p-3 rounded-2xl hover:bg-white transition-colors cursor-pointer active:scale-[0.98] mb-1">
+                  <div className="w-[50px] h-[50px] rounded-full bg-slate-100 shrink-0 mr-4 overflow-hidden border border-slate-200 shadow-sm">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={chat.avatar_url} alt={chat.full_name} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-1">
-                      <h3 className="font-bold text-sm text-text-main truncate pr-2">{chat.full_name}</h3>
-                      <span className="text-[10px] text-text-muted shrink-0">{chat.last_time}</span>
+                      <h3 className="font-bold text-[14px] text-slate-800 truncate pr-2">{chat.full_name}</h3>
+                      <span className="text-[10px] font-medium text-slate-400 shrink-0">{chat.last_time}</span>
                     </div>
-                    <p className="text-xs text-text-muted truncate">{chat.last_message}</p>
+                    <p className="text-[12px] font-medium text-slate-500 truncate">{chat.last_message}</p>
                   </div>
                 </div>
               ))}
@@ -344,25 +330,25 @@ export default function AdminInboxPage() {
     );
   }
 
-  // TAMPILAN RUANG CHAT
+  // ================== TAMPILAN RUANG CHAT ==================
   return (
-    <div className="h-full w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative animate-in slide-in-from-right-4 duration-300">
-      <header className="w-full bg-fluent-card/95 backdrop-blur-md z-40 px-4 py-3 flex items-center justify-between border-b border-fluent-accent/10 shrink-0 shadow-sm">
-        <div className="flex items-center space-x-3">
-          <button onClick={() => setView('list')} className="p-1.5 -ml-1.5 rounded-full hover:bg-white/10 transition-colors">
+    <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative animate-in slide-in-from-right-4 duration-300">
+      <header className="w-full bg-white/95 backdrop-blur-md z-40 px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0 shadow-sm">
+        <div className="flex items-center space-x-3 mt-2">
+          <button onClick={() => setView('list')} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           
           <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-full shrink-0 overflow-hidden border border-white/10">
+            <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden border border-slate-200 shadow-sm">
                {/* eslint-disable-next-line @next/next/no-img-element */}
                <img src={activeUser?.avatar_url} alt="User" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="text-sm font-bold leading-tight">{activeUser?.full_name}</h1>
+              <h1 className="text-[15px] font-bold text-slate-800 leading-tight">{activeUser?.full_name}</h1>
               <div className="flex items-center mt-0.5">
-                <span className="text-[10px] text-text-muted flex items-center gap-1">
-                  Membalas sebagai: <span className="text-white font-bold inline-flex items-center gap-0.5">Pinjam Dong <BadgeCheck className="w-3.5 h-3.5 text-blue-400" /></span>
+                <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                  Pelanggan Toko
                 </span>
               </div>
             </div>
@@ -371,34 +357,40 @@ export default function AdminInboxPage() {
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 scrollbar-hide space-y-4 pb-20">
+        <div className="flex justify-center mb-6 mt-2">
+          <span className="bg-teal-50 border border-teal-100 text-teal-700 text-[10px] font-bold px-4 py-1.5 rounded-full tracking-widest uppercase shadow-sm">
+            Riwayat Pesan
+          </span>
+        </div>
+
         {messages.map((msg) => {
           const isMe = msg.sender === 'me';
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
               <div className="max-w-[75%] flex flex-col">
                 
-                {/* 🌟 EFEK TRANSLUCENT: Memudar dan mengecil saat isSending */}
-                <div className={`px-4 py-2.5 text-sm shadow-md relative transition-all duration-300 ${
+                <div className={`px-4 py-2.5 text-[13px] font-medium shadow-sm relative transition-all duration-300 ${
                   msg.isSending ? 'opacity-70 scale-95' : 'opacity-100 scale-100'
                 } ${
                   isMe 
-                    ? 'bg-fluent-accent text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px]' 
-                    : 'bg-fluent-card border border-fluent-accent/10 text-text-main rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]'
+                    ? 'bg-teal-500 text-white rounded-t-[20px] rounded-bl-[20px] rounded-br-[4px] shadow-teal-500/20' 
+                    : 'bg-white border border-slate-100 text-slate-700 rounded-t-[20px] rounded-br-[20px] rounded-bl-[4px]'
                 }`}>
                   {msg.text}
                 </div>
 
-                {/* 🌟 STATUS TERKIRIM: Jam -> Centang */}
                 <div className={`flex items-center gap-1 mt-1.5 ${isMe ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
-                  <span className="text-[10px] text-text-muted">
+                  <span className="text-[10px] font-medium text-slate-400">
                     {msg.time}
                   </span>
                   
                   {isMe && (
                     msg.isSending ? (
-                      <Clock className="w-3 h-3 text-text-muted opacity-70 animate-pulse" />
+                      <Clock className="w-3 h-3 text-slate-400 opacity-70 animate-pulse" />
+                    ) : msg.is_read ? (
+                      <CheckCheck className="w-4 h-4 text-blue-500 drop-shadow-sm" />
                     ) : (
-                      <Check className="w-3.5 h-3.5 text-fluent-accent drop-shadow-[0_0_2px_rgba(163,116,255,0.8)]" />
+                      <Check className="w-3.5 h-3.5 text-teal-500 drop-shadow-sm" />
                     )
                   )}
                 </div>
@@ -410,7 +402,7 @@ export default function AdminInboxPage() {
         <div ref={chatEndRef} />
       </main>
 
-      <div className="w-full bg-fluent-card/95 backdrop-blur-xl px-4 py-3 pb-6 border-t border-fluent-accent/10 shrink-0 z-50">
+      <div className="w-full bg-white/95 backdrop-blur-xl px-4 py-4 md:pb-8 pb-6 border-t border-slate-100 shrink-0 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
         <form onSubmit={handleSendReply} className="flex items-center space-x-2">
           <input 
             type="text" 
@@ -418,10 +410,10 @@ export default function AdminInboxPage() {
             onChange={(e) => setInputText(e.target.value)}
             disabled={isSending}
             placeholder={`Balas ${activeUser?.full_name.split(' ')[0]}...`}
-            className="flex-1 bg-fluent-bg border border-white/10 rounded-full px-5 py-2.5 text-sm text-text-main focus:outline-none focus:border-fluent-accent/50 transition-colors shadow-inner"
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-5 py-3.5 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-colors shadow-inner placeholder:text-slate-400 disabled:opacity-50"
           />
-          <button type="submit" disabled={!inputText.trim() || isSending} className="w-10 h-10 rounded-full bg-fluent-accent flex items-center justify-center text-white shrink-0 shadow-lg hover:bg-[#b58eff] transition-all disabled:opacity-50">
-            {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
+          <button type="submit" disabled={!inputText.trim() || isSending} className="w-[46px] h-[46px] rounded-full bg-teal-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-all disabled:opacity-50 disabled:grayscale">
+            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-1" />}
           </button>
         </form>
       </div>
