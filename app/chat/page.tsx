@@ -101,7 +101,9 @@ const ChatContent = () => {
               id: m.id,
               text: m.content,
               sender: m.sender_id === currentUserId ? 'me' : 'store',
-              time: new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+              time: new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+              is_read: m.is_read
+              
             }));
             setMessages(formatted);
           }
@@ -127,6 +129,16 @@ const ChatContent = () => {
                 }];
               });
             }
+          })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+            const updatedMsg = payload.new as any;
+            
+            // Jika ada pesan yang di-update (is_read berubah), perbarui state messages!
+            setMessages(prev => prev.map(msg => 
+              msg.id === updatedMsg.id 
+                ? { ...msg, is_read: updatedMsg.is_read } 
+                : msg
+            ));
           })
           .subscribe();
 
