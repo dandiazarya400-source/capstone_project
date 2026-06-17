@@ -37,7 +37,7 @@ export default function AdminInboxPage() {
   }, [messages, view]);
 
   useEffect(() => {
-    let isMounted = true; // 🌟 JURUS KEAMANAN MEMORI
+    let isMounted = true; 
     let messageChannel: any;
     let presenceChannel: any;
 
@@ -76,7 +76,6 @@ export default function AdminInboxPage() {
         if (!isMounted) return;
         setMyId(currentAdminId);
 
-        // HMR Fix untuk Presence
         const presenceChannelName = 'admin-status';
         supabase.removeChannel(supabase.channel(presenceChannelName));
 
@@ -135,7 +134,6 @@ export default function AdminInboxPage() {
           } else {
              if(isMounted) setChatList([]);
           }
-          // 🌟 PERBAIKAN BUG: Kode duplikat profiles fetch di bawah ini SUDAH DIHAPUS!
         }
         
         if (isMounted) setLoadingList(false);
@@ -147,13 +145,11 @@ export default function AdminInboxPage() {
             const newMsg = payload.new as any;
             const isFromUser = newMsg.sender_id !== currentAdminId;
             
-            // 🌟 JURUS 1: Update otomatis Daftar Kotak Masuk (List) di halaman depan!
             setChatList((prevList) => {
               const contactId = isFromUser ? newMsg.sender_id : newMsg.receiver_id;
               const existingContact = prevList.find(c => c.id === contactId);
               
               if (existingContact) {
-                // Jika pelanggan sudah ada di list, naikkan posisinya ke paling atas & perbarui teksnya
                 const updatedList = prevList.map(c => 
                   c.id === contactId 
                     ? { 
@@ -166,18 +162,15 @@ export default function AdminInboxPage() {
                 );
                 return updatedList.sort((a, b) => b.timestamp - a.timestamp);
               }
-              // Catatan: Jika ini dari pelanggan yang 100% baru, idealnya kita me-refresh fungsi list.
               return prevList; 
             });
 
-            // 🌟 JURUS 2: Update isi Room Chat (HANYA jika sedang dibuka)
             setActiveUser((currentActiveUser) => {
               if (
                 currentActiveUser && 
                 newMsg.sender_id === currentActiveUser.id && 
                 newMsg.receiver_id === currentAdminId
               ) {
-                // Trik: Jika admin sedang asyik buka chat, otomatis jadikan Read di database!
                 supabase.from('messages').update({ is_read: true }).eq('id', newMsg.id).then();
 
                 setMessages(prev => {
@@ -187,14 +180,13 @@ export default function AdminInboxPage() {
                     text: newMsg.content,
                     sender: 'user', 
                     time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-                    is_read: true // Langsung anggap terbaca
+                    is_read: true 
                   }];
                 });
               }
               return currentActiveUser;
             });
           })
-          // 🌟 JURUS 3: Pasang "Telinga" UPDATE untuk deteksi Centang Biru jika Pelanggan membaca!
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
             const updatedMsg = payload.new as any;
             setMessages(prev => prev.map(msg => 
@@ -220,9 +212,6 @@ export default function AdminInboxPage() {
     };
   }, [router]);
 
-  // ========================================================
-  // 🌟 JURUS CENTANG DUA: Memicu HP Pelanggan
-  // ========================================================
   const openChatRoom = async (user: ChatContact) => {
     setActiveUser(user);
     setView('chat');
@@ -230,7 +219,6 @@ export default function AdminInboxPage() {
     
     if (!myId) return;
 
-    // 1. Ambil History Chat
     const { data: chatHistory } = await supabase
       .from('messages')
       .select('*')
@@ -248,8 +236,6 @@ export default function AdminInboxPage() {
       setMessages(formatted);
     }
 
-    // 2. Tandai pesan dari pelanggan tersebut sebagai DIBACA!
-    // Ini akan memicu centang biru di HP Pelanggan.
     await supabase
       .from('messages')
       .update({ is_read: true })
@@ -264,9 +250,6 @@ export default function AdminInboxPage() {
 
     const textToSend = inputText;
     setInputText('');  
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 10); 
     
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage = {
@@ -312,7 +295,8 @@ export default function AdminInboxPage() {
   // ================== TAMPILAN LIST (KOTAK MASUK) ==================
   if (view === 'list') {
     return (
-      <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative">
+      // 🌟 PERBAIKAN BUG SCROLL: Tambah max-w-[100vw] dan overflow-x-hidden
+      <div className="h-[100dvh] w-full max-w-[100vw] flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden overflow-x-hidden relative">
         <header className="w-full bg-white/95 backdrop-blur-md z-40 px-5 py-4 flex flex-col border-b border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] shrink-0">
           <div className="flex items-center space-x-3 mb-4 mt-2">
             <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
@@ -330,7 +314,7 @@ export default function AdminInboxPage() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto scrollbar-hide pb-20">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pb-20">
           {loadingList ? (
             <div className="flex flex-col items-center justify-center h-40 opacity-60">
               <Loader2 className="w-7 h-7 text-teal-500 animate-spin mb-3" />
@@ -370,7 +354,8 @@ export default function AdminInboxPage() {
 
   // ================== TAMPILAN RUANG CHAT ==================
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative animate-in slide-in-from-right-4 duration-300">
+    // 🌟 PERBAIKAN BUG SCROLL: Tambah max-w-[100vw] dan overflow-x-hidden
+    <div className="h-[100dvh] w-full max-w-[100vw] flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden overflow-x-hidden relative animate-in slide-in-from-right-4 duration-300">
       <header className="w-full bg-white/95 backdrop-blur-md z-40 px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0 shadow-sm">
         <div className="flex items-center space-x-3 mt-2">
           <button onClick={() => setView('list')} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
@@ -394,7 +379,8 @@ export default function AdminInboxPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 scrollbar-hide space-y-4 pb-20">
+      {/* 🌟 PERBAIKAN BUG SCROLL: Tambah overflow-x-hidden di kontainer pesan */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-hide space-y-4 pb-20">
         <div className="flex justify-center mb-6 mt-2">
           <span className="bg-teal-50 border border-teal-100 text-teal-700 text-[10px] font-bold px-4 py-1.5 rounded-full tracking-widest uppercase shadow-sm">
             Riwayat Pesan
@@ -405,9 +391,10 @@ export default function AdminInboxPage() {
           const isMe = msg.sender === 'me';
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
-              <div className="max-w-[75%] flex flex-col">
+              <div className="max-w-[85%] sm:max-w-[75%] flex flex-col">
                 
-                <div className={`px-4 py-2.5 text-[13px] font-medium shadow-sm relative transition-all duration-300 ${
+                {/* 🌟 PERBAIKAN BUG SCROLL: Tambah break-words whitespace-pre-wrap agar teks panjang tidak menembus layar */}
+                <div className={`px-4 py-2.5 text-[13px] font-medium shadow-sm relative transition-all duration-300 break-words whitespace-pre-wrap ${
                   msg.isSending ? 'opacity-70 scale-95' : 'opacity-100 scale-100'
                 } ${
                   isMe 
@@ -442,19 +429,25 @@ export default function AdminInboxPage() {
 
       <div className="w-full bg-white/95 backdrop-blur-xl px-4 py-4 md:pb-8 pb-6 border-t border-slate-100 shrink-0 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
         <form onSubmit={handleSendReply} className="flex items-center space-x-2">
+          
+          {/* 🌟 PERBAIKAN BUG KEYBOARD: Hapus disabled={isSending} dari input! */}
           <input 
             type="text"
             ref={inputRef} 
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            disabled={isSending}
             placeholder={`Balas ${activeUser?.full_name.split(' ')[0]}...`}
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-5 py-3.5 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-colors shadow-inner placeholder:text-slate-400 disabled:opacity-50"
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-5 py-3.5 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-colors shadow-inner placeholder:text-slate-400"
           />
+          
+          {/* 🌟 PERBAIKAN BUG KEYBOARD: Tambah onTouchStart biar fokus tidak dicolong saat disentuh jari */}
           <button 
-          type="submit" 
-          onMouseDown={(e) => e.preventDefault()}
-          disabled={!inputText.trim() || isSending} className="w-[46px] h-[46px] rounded-full bg-teal-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-all disabled:opacity-50 disabled:grayscale">
+            type="submit" 
+            onMouseDown={(e) => e.preventDefault()}
+            onTouchStart={(e) => e.preventDefault()}
+            disabled={!inputText.trim() || isSending} 
+            className="w-[46px] h-[46px] rounded-full bg-teal-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-all disabled:opacity-50 disabled:grayscale"
+          >
             {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-1" />}
           </button>
         </form>
