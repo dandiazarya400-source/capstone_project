@@ -156,16 +156,20 @@ const HomePage = () => {
     return rupiah ? rupiah : '';
   };
 
-  const categoryMap: { [key: string]: string } = {
-    'Elektronik': '1', 'Musik': '2', 'Fashion': '3'
+  // 🌟 JURUS DETEKSI IKON OTOMATIS UNTUK KATEGORI BARU
+  const getCategoryStyle = (name: string) => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('elektronik')) return { icon: MonitorPlay, color: 'text-blue-500', bg: 'bg-blue-50' };
+    if (lowerName.includes('musik')) return { icon: Music, color: 'text-purple-500', bg: 'bg-purple-50' };
+    if (lowerName.includes('fashion') || lowerName.includes('pakaian')) return { icon: Shirt, color: 'text-pink-500', bg: 'bg-pink-50' };
+    if (lowerName.includes('kamera')) return { icon: Camera, color: 'text-orange-500', bg: 'bg-orange-50' };
+    
+    // Default jika Superadmin membuat kategori baru yang aneh-aneh
+    return { icon: Grid, color: 'text-teal-500', bg: 'bg-teal-50' };
   };
 
-  const categories = [
-    { name: 'Semua', icon: Grid, color: 'text-teal-500', bg: 'bg-teal-50' },
-    { name: 'Elektronik', icon: MonitorPlay, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { name: 'Musik', icon: Music, color: 'text-purple-500', bg: 'bg-purple-50' },
-    { name: 'Fashion', icon: Shirt, color: 'text-pink-500', bg: 'bg-pink-50' },
-  ];
+  // 🌟 STATE BARU UNTUK MENAMPUNG KATEGORI DARI SUPABASE
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
 
   const promos = [
     { id: 1, tag: 'PROMO SPESIAL', title: 'Diskon 20% Untuk Sewa Pertamamu!', btn: 'Pesan Sekarang', bg: 'from-[#20D2EB] to-[#04E09E]', icon: Sparkles },
@@ -196,26 +200,30 @@ const HomePage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // 🌟 JURUS 3: JANGAN HANCURKAN DOM JIKA DATA CACHE SUDAH ADA!
         if (products.length === 0) {
           setLoading(true);
         }
 
-        const { data, error } = await supabase
-          .from('items')
-          .select(`*, profiles!owner_id (full_name)`)
-          .eq('is_available', true);
+        // 🌟 JURUS PARALEL: Tarik data barang DAN list kategori dari DB sekaligus!
+        const [itemsResponse, categoriesResponse] = await Promise.all([
+          supabase.from('items').select(`*, profiles!owner_id (full_name)`).eq('is_available', true),
+          supabase.from('categories').select('id, name')
+        ]);
 
-        if (error) throw error;
+        if (categoriesResponse.data) {
+          setDbCategories(categoriesResponse.data);
+        }
+
+        if (itemsResponse.error) throw itemsResponse.error;
         
-        if (data && data.length > 0) {
-          const itemIds = data.map(item => item.id);
+        if (itemsResponse.data && itemsResponse.data.length > 0) {
+          const itemIds = itemsResponse.data.map(item => item.id);
           const { data: txData } = await supabase
             .from('transactions')
             .select('item_id')
             .in('item_id', itemIds);
 
-          const mappedData = data.map((item: any) => {
+          const mappedData = itemsResponse.data.map((item: any) => {
             const borrowedCount = txData ? txData.filter(tx => tx.item_id === item.id).length : 0;
             return {
               id: item.id,
@@ -234,7 +242,6 @@ const HomePage = () => {
           
           setProducts(mappedData);
           sessionStorage.setItem('homeProductsCache', JSON.stringify(mappedData));
-
         } else {
           setProducts([]);
         }
@@ -286,8 +293,11 @@ const HomePage = () => {
 
   let filteredProducts = products.filter(product => {
     const matchSearch = product.title.toLowerCase().includes(debouncedSearch.toLowerCase());
-    const productCategoryIdStr = String(product.category_id);
-    const matchCategory = activeCategory === 'Semua' || productCategoryIdStr === categoryMap[activeCategory];
+    
+    // 🌟 PERBAIKAN LOGIKA: COCOKKAN NAMA KATEGORI KE ID DI DATABASE
+    const targetCategoryObj = dbCategories.find(c => c.name === activeCategory);
+    const matchCategory = activeCategory === 'Semua' || String(product.category_id) === String(targetCategoryObj?.id);
+    
     const matchCondition = filterCondition === 'Semua' || product.condition === filterCondition;
     
     const minVal = priceMin === '' ? 0 : parseInt(priceMin.replace(/\D/g, ''), 10);
@@ -348,13 +358,22 @@ const HomePage = () => {
             <div className="mb-6">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Kategori</label>
               <div className="flex flex-wrap gap-2">
-                {['Semua', 'Elektronik', 'Musik', 'Fashion'].map((kat) => (
+                {/* 🌟 TOMBOL SEBAGAI KUNCI UTAMA "SEMUA" */}
+                <button 
+                  onClick={() => setActiveCategory('Semua')} 
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeCategory === 'Semua' ? 'bg-teal-50 text-teal-600 border border-teal-200' : 'bg-slate-50 text-slate-600 border border-transparent hover:bg-slate-100'}`}
+                >
+                  Semua
+                </button>
+
+                {/* 🌟 MERENDER KATEGORI SECARA OTOMATIS DARI SUPABASE */}
+                {dbCategories.map((kat) => (
                   <button 
-                    key={kat} 
-                    onClick={() => setActiveCategory(kat)} 
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeCategory === kat ? 'bg-teal-50 text-teal-600 border border-teal-200' : 'bg-slate-50 text-slate-600 border border-transparent hover:bg-slate-100'}`}
+                    key={kat.id} 
+                    onClick={() => setActiveCategory(kat.name)} 
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeCategory === kat.name ? 'bg-teal-50 text-teal-600 border border-teal-200' : 'bg-slate-50 text-slate-600 border border-transparent hover:bg-slate-100'}`}
                   >
-                    {kat}
+                    {kat.name}
                   </button>
                 ))}
               </div>
@@ -529,12 +548,30 @@ const HomePage = () => {
               </div>
           
               <div className="flex overflow-x-auto scrollbar-hide gap-2.5 pb-2 pr-5">
-                {categories.map((cat, idx) => {
-                  const Icon = cat.icon;
+                {/* 1. TOMBOL STATIS KHUSUS UNTUK "SEMUA" */}
+                <button
+                  onClick={() => setActiveCategory('Semua')}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-300 shrink-0 ${
+                    activeCategory === 'Semua' 
+                      ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20' 
+                      : 'bg-white border-slate-100 hover:border-teal-200 hover:bg-teal-50/50'
+                  }`}
+                >
+                  <Grid className="w-4 h-4" />
+                  <span className={`text-[12px] tracking-wide ${activeCategory === 'Semua' ? 'font-bold' : 'font-medium text-slate-600'}`}>
+                    Semua
+                  </span>
+                </button>
+
+                {/* 2. MERENDER KATEGORI DINAMIS DARI SUPABASE BESERTA IKON PINTARNYA */}
+                {dbCategories.map((cat) => {
+                  const style = getCategoryStyle(cat.name);
+                  const Icon = style.icon;
                   const isActive = activeCategory === cat.name;
+                  
                   return (
                     <button
-                      key={idx}
+                      key={cat.id}
                       onClick={() => setActiveCategory(cat.name)}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-300 shrink-0 ${
                         isActive 
@@ -542,7 +579,7 @@ const HomePage = () => {
                           : 'bg-white border-slate-100 hover:border-teal-200 hover:bg-teal-50/50'
                       }`}
                     >
-                      <div className={`${isActive ? 'text-white' : cat.color}`}>
+                      <div className={`${isActive ? 'text-white' : style.color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <span className={`text-[12px] tracking-wide ${isActive ? 'font-bold' : 'font-medium text-slate-600'}`}>

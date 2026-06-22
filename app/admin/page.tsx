@@ -4,8 +4,11 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Users, Package, CalendarCheck, TrendingUp, MessageSquare, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 const AdminDashboard = () => {
+  const router = useRouter();
+  
   // 1. GHOST CACHE: Ambil data dari memori (0 milidetik loading)
   const [stats, setStats] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -23,28 +26,31 @@ const AdminDashboard = () => {
   });
 
   const [adminRole, setAdminRole] = useState<string | null>(null);
-
-  // State untuk menghindari Hydration Mismatch Next.js
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true); // Aman untuk dirender
+    setIsMounted(true); 
 
     const fetchRealData = async () => {
       try {
-        // 1. INSTAN: Gunakan getSession
         const { data: { session } } = await supabase.auth.getSession();
         const currentUserId = session?.user?.id;
         
         if (!currentUserId) return;
 
-        // 2. PARALEL: Tarik Profil (termasuk ROLE) dan Data Barang
         const [profileResponse, itemsResponse] = await Promise.all([
           supabase.from('profiles').select('full_name, role').eq('id', currentUserId).maybeSingle(),
           supabase.from('items').select('id').eq('owner_id', currentUserId)
         ]);
 
-        // --- Set Nama Admin & Role ---
+        const userRole = profileResponse.data?.role?.trim().toLowerCase() || 'user';
+        
+        if (userRole !== 'admin' && userRole !== 'superadmin') {
+           localStorage.removeItem('admin_dashboard_role');
+           router.push('/profile'); 
+           return;
+        }
+
         let newName = 'Admin';
         if (profileResponse.data?.full_name) {
           newName = profileResponse.data.full_name;
@@ -54,12 +60,9 @@ const AdminDashboard = () => {
         setAdminName(newName);
         localStorage.setItem('admin_dashboard_name', newName);
 
-        if (profileResponse.data?.role) {
-          setAdminRole(profileResponse.data.role); // Update state dari DB
-          localStorage.setItem('admin_dashboard_role', profileResponse.data.role);
-        }
+        setAdminRole(userRole); 
+        localStorage.setItem('admin_dashboard_role', userRole);
 
-        // --- Kalkulasi Statistik Awal ---
         const myItemIds = itemsResponse.data ? itemsResponse.data.map(item => item.id) : [];
         const totalItemsCount = myItemIds.length;
 
@@ -67,7 +70,6 @@ const AdminDashboard = () => {
         let totalCustomersCount = 0;
         let totalRevenue = 0;
 
-        // 3. TARIK TRANSAKSI (Hanya jika admin punya barang)
         if (myItemIds.length > 0) {
           const { data: myTransactions } = await supabase
             .from('transactions')
@@ -86,7 +88,6 @@ const AdminDashboard = () => {
           }
         }
 
-        // 4. PERBARUI UI & CACHE Sembunyi-Sembunyi
         const newStats = {
           totalItems: totalItemsCount,
           activeBookings: activeBookingsCount,
@@ -103,7 +104,7 @@ const AdminDashboard = () => {
     };
 
     fetchRealData();
-  }, []);
+  }, [router]);
 
   const formatRupiah = (angka: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
@@ -115,25 +116,25 @@ const AdminDashboard = () => {
     <div className="p-5 w-full mx-auto pb-20 animate-in fade-in duration-300">
       
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-text-main capitalize">Selamat Datang, {adminName}!</h1>
-        <p className="text-text-muted text-[11px] mt-1">Ringkasan performa tokomu hari ini.</p>
+        <h1 className="text-xl font-black text-slate-800 capitalize tracking-tight">Selamat Datang, {adminName}!</h1>
+        <p className="text-slate-500 text-[12px] mt-0.5 font-medium">Ringkasan performa tokomu hari ini.</p>
       </div>
 
       {/* ================= TOMBOL EKSKLUSIF SUPERADMIN ================= */}
       {adminRole === 'superadmin' && (
-        <Link href="/admin/inbox" className="block mb-5">
-          <div className="bg-gradient-to-r from-fluent-accent to-blue-600 p-4 rounded-2xl shadow-[0_8px_20px_rgba(163,116,255,0.25)] flex items-center justify-between hover:scale-[1.02] transition-transform cursor-pointer relative overflow-hidden border border-white/10">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-            <div className="flex items-center gap-3 relative z-10">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm shadow-inner">
-                <MessageSquare className="w-5 h-5 text-white" />
+        <Link href="/admin/inbox" className="block mb-6">
+          <div className="bg-gradient-to-r from-teal-500 to-emerald-400 p-4 rounded-[20px] shadow-[0_8px_20px_rgba(20,184,166,0.25)] flex items-center justify-between hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer relative overflow-hidden border border-teal-400/50">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-inner border border-white/30">
+                <MessageSquare className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-white font-bold text-sm">Kotak Masuk Pusat</h2>
-                <p className="text-white/80 text-[10px] mt-0.5">Pantau keluhan & pertanyaan pelanggan</p>
+                <h2 className="text-white font-bold text-[15px] drop-shadow-sm">Kotak Masuk Pusat</h2>
+                <p className="text-teal-50 text-[11px] mt-0.5 font-medium drop-shadow-sm">Pantau keluhan & pertanyaan pelanggan</p>
               </div>
             </div>
-            <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center relative z-10">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center relative z-10 backdrop-blur-sm">
               <ChevronRight className="w-4 h-4 text-white" />
             </div>
           </div>
@@ -141,45 +142,49 @@ const AdminDashboard = () => {
       )}
 
       {/* ================= GRID STATISTIK ================= */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3.5">
         
-        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
-          <div className="w-8 h-8 bg-fluent-accent/20 rounded-xl text-fluent-accent flex justify-center items-center">
-            <Package className="w-4 h-4" />
+        {/* Card Total Alat */}
+        <div className="bg-white border border-slate-100 p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-3 hover:border-teal-200 transition-colors group cursor-pointer">
+          <div className="w-10 h-10 bg-teal-50 rounded-2xl text-teal-600 flex justify-center items-center group-hover:scale-110 transition-transform">
+            <Package className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5 truncate">Total Alat</p>
-            <h2 className="text-xl font-black text-text-main">{stats.totalItems}</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 truncate">Total Alat</p>
+            <h2 className="text-[22px] font-black text-slate-800">{stats.totalItems}</h2>
           </div>
         </div>
 
-        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
-          <div className="w-8 h-8 bg-blue-500/20 rounded-xl text-blue-400 flex justify-center items-center">
-            <CalendarCheck className="w-4 h-4" />
+        {/* Card Pesanan Masuk */}
+        <div className="bg-white border border-slate-100 p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-3 hover:border-blue-200 transition-colors group cursor-pointer">
+          <div className="w-10 h-10 bg-blue-50 rounded-2xl text-blue-500 flex justify-center items-center group-hover:scale-110 transition-transform">
+            <CalendarCheck className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5 truncate">Pesanan Masuk</p>
-            <h2 className="text-xl font-black text-text-main">{stats.activeBookings}</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 truncate">Pesanan Masuk</p>
+            <h2 className="text-[22px] font-black text-slate-800">{stats.activeBookings}</h2>
           </div>
         </div>
 
-        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
-          <div className="w-8 h-8 bg-green-500/20 rounded-xl text-green-400 flex justify-center items-center">
-            <Users className="w-4 h-4" />
+        {/* Card Pelanggan */}
+        <div className="bg-white border border-slate-100 p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-3 hover:border-emerald-200 transition-colors group cursor-pointer">
+          <div className="w-10 h-10 bg-emerald-50 rounded-2xl text-emerald-500 flex justify-center items-center group-hover:scale-110 transition-transform">
+            <Users className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5 truncate">Pelanggan</p>
-            <h2 className="text-xl font-black text-text-main">{stats.totalUsers}</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 truncate">Pelanggan</p>
+            <h2 className="text-[22px] font-black text-slate-800">{stats.totalUsers}</h2>
           </div>
         </div>
 
-        <div className="bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl shadow-lg flex flex-col gap-3 hover:border-white/10 transition-colors">
-          <div className="w-8 h-8 bg-yellow-500/20 rounded-xl text-yellow-400 flex justify-center items-center">
-            <TrendingUp className="w-4 h-4" />
+        {/* Card Pendapatan */}
+        <div className="bg-white border border-slate-100 p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-3 hover:border-amber-200 transition-colors group cursor-pointer">
+          <div className="w-10 h-10 bg-amber-50 rounded-2xl text-amber-500 flex justify-center items-center group-hover:scale-110 transition-transform">
+            <TrendingUp className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5 truncate">Pendapatan</p>
-            <h2 className="text-base font-black text-fluent-accent line-clamp-1">{formatRupiah(stats.revenue)}</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 truncate">Pendapatan</p>
+            <h2 className="text-[15px] font-black text-teal-600 line-clamp-1 mt-1">{formatRupiah(stats.revenue)}</h2>
           </div>
         </div>
 

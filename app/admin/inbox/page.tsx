@@ -43,33 +43,36 @@ export default function AdminInboxPage() {
 
     const fetchInbox = async () => {
       try {
-        const { data: authData } = await supabase.auth.getUser();
-        if (!authData.user || !isMounted) {
+        // 🌟 JURUS 1: Tangkap user dengan 2 jaring (Session & GetUser) agar tidak lolos
+        const { data: { session } } = await supabase.auth.getSession();
+        let user: any = session?.user;
+
+        if (!user) {
+          const { data: userData } = await supabase.auth.getUser();
+          user = userData?.user;
+        }
+
+        if (!user || !isMounted) {
+          
           router.push('/login');
           return;
         }
-        
-        const currentAdminId = authData.user.id;
-        let userRole = 'user'; 
 
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', currentAdminId)
-            .single();
+        const currentAdminId = user.id;
 
-          if (profileError) {
-             userRole = localStorage.getItem('admin_dashboard_role') || 'user';
-          } else if (profileData) {
-             userRole = profileData.role?.trim().toLowerCase() || 'user';
-          }
-        } catch (dbError) {
-          userRole = localStorage.getItem('admin_dashboard_role') || 'user';
-        }
+        // 🌟 JURUS 2: Ambil Role Asli dari Database
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentAdminId)
+          .single();
 
-        if (userRole !== 'superadmin') {
-          router.push('/admin'); 
+        const userRole = profileData?.role?.trim().toLowerCase() || 'user';
+
+        // 🌟 JURUS 3: Pengecekan Role dengan Pemberitahuan (Alert)
+        if (userRole !== 'superadmin' && userRole !== 'admin') {
+          alert(`Akses Ditolak! Akunmu terdeteksi sebagai "${userRole}". Bukan admin!`);
+          router.push('/profile'); // Kita lempar ke profil saja, jangan ke login
           return;
         }
 

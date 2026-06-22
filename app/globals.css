@@ -2,31 +2,35 @@
 
 @theme {
   /* ========================================================
-     PALET WARNA "AURORA LIGHT PURPLE" (Mode Terang)
+     1. TEMA BARU (TEAL / EMERALD) - Design Tokens Standar
      ======================================================== */
+  --color-primary: #14b8a6;       /* teal-500 (Warna Utama Aplikasi) */
+  --color-primary-hover: #0d9488; /* teal-600 (Warna saat tombol di-hover) */
+  --color-danger: #f43f5e;        /* rose-500 (Warna Error/Hapus) */
   
-  /* Latar Belakang Utama (Putih dengan rona ungu/lavender sangat lembut) */
+  --color-background: #F2FDFB;    /* Background layar paling belakang */
+  --color-surface: #FFFFFF;       /* Background kotak/kartu/header */
+  
+  --color-text-main: #1e293b;     /* slate-800 (Judul/Teks Penting) */
+  --color-text-muted: #64748b;    /* slate-500 (Deskripsi/Teks Redup) */
+  --color-borderline: #f1f5f9;    /* slate-100 (Garis batas yang halus) */
+
+
+  /* ========================================================
+     2. LEGACY THEME (Mode Ungu Lama)
+     Dibiarkan sementara agar halaman lama tidak error
+     ======================================================== */
   --color-fluent-bg: #F8F5FF; 
-  
-  /* Latar Belakang Kartu & Navigasi (Putih bersih memantulkan cahaya) */
   --color-fluent-card: #FFFFFF;
-  
-  /* Warna Aksen Bercahaya (Tetap ungu khas Pinjam Dong agar identitas brand tidak hilang) */
   --color-fluent-accent: #A374FF; 
-  
-  /* Teks Utama (Ungu sangat gelap/hampir hitam - Kita ambil dari warna background lama!) */
-  --color-text-main: #1A0B2E;
-  
-  /* Teks Redup (Abu-abu dengan sedikit campuran ungu) */
-  --color-text-muted: #7A7289;
   
   /* Sudut membulat */
   --radius-fluent-rounded: 24px;
 }
 
 body {
-  /* Latar belakang luar HP dibuat abu-abu ungu pucat agar frame HP (putih) terlihat menonjol */
-  background-color: #EBE5F5; 
+  /* Latar belakang luar HP dibuat abu-abu hijau pucat menyesuaikan tema baru */
+  background-color: #E2F3F0; 
   color: var(--color-text-main);
 }
 

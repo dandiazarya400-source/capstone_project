@@ -157,7 +157,7 @@ const VerifyPage = () => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div className="h-[100dvh] w-full flex flex-col bg-background text-main overflow-hidden relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       
       {/* Toast */}
       {toast.show && (
@@ -172,8 +172,8 @@ const VerifyPage = () => {
       )}
 
       {/* Header */}
-      <header className="w-full px-5 py-4 border-b border-fluent-accent/10 flex items-center space-x-3 bg-fluent-bg/95 backdrop-blur-md sticky top-0 z-50 shrink-0">
-        <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors p-1 -ml-1 rounded-full">
+      <header className="w-full px-5 py-4 border-b border-primary/10 flex items-center space-x-3 bg-background/95 backdrop-blur-md sticky top-0 z-50 shrink-0">
+        <button onClick={() => router.back()} className="text-main hover:text-primary transition-colors p-1 -ml-1 rounded-full">
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
@@ -197,21 +197,21 @@ const VerifyPage = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           
           <section className="space-y-4">
-            <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider border-b border-white/10 pb-2">1. Unggah Foto</h2>
+            <h2 className="text-sm font-bold text-muted uppercase tracking-wider border-b border-white/10 pb-2">1. Unggah Foto</h2>
             
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-main flex justify-between">
+              <label className="text-xs font-bold text-main flex justify-between">
                 <span>Foto KTP Asli</span>
                 {ktpPreview && <span className="text-emerald-400">✓ Tersimpan</span>}
               </label>
-              <div className="relative w-full aspect-[16/9] bg-fluent-card border-2 border-dashed border-white/20 rounded-2xl overflow-hidden hover:border-fluent-accent transition-all group cursor-pointer flex flex-col items-center justify-center">
+              <div className="relative w-full aspect-[16/9] bg-surface border-2 border-dashed border-white/20 rounded-2xl overflow-hidden hover:border-primary transition-all group cursor-pointer flex flex-col items-center justify-center">
                 <input type="file" accept="image/*" capture="environment" onChange={handleKtpCapture} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 
                 {ktpPreview ? (
                   <img src={ktpPreview} alt="KTP" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center text-text-muted group-hover:text-fluent-accent transition-colors">
-                    <div className="w-12 h-12 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-2">
+                  <div className="flex flex-col items-center text-muted group-hover:text-primary transition-colors">
+                    <div className="w-12 h-12 bg-primary/5 rounded-full flex items-center justify-center mb-2">
                       <IdCard className="w-6 h-6" />
                     </div>
                     <span className="text-xs font-bold">Ambil Foto KTP</span>
@@ -222,18 +222,18 @@ const VerifyPage = () => {
             </div>
 
             <div className="space-y-2 pt-2">
-              <label className="text-xs font-bold text-text-main flex justify-between">
+              <label className="text-xs font-bold text-main flex justify-between">
                 <span>Selfie dengan KTP</span>
                 {selfiePreview && <span className="text-emerald-400">✓ Tersimpan</span>}
               </label>
-              <div className="relative w-[70%] mx-auto aspect-[3/4] bg-fluent-card border-2 border-dashed border-white/20 rounded-2xl overflow-hidden hover:border-fluent-accent transition-all group cursor-pointer flex flex-col items-center justify-center">
+              <div className="relative w-[70%] mx-auto aspect-[3/4] bg-surface border-2 border-dashed border-white/20 rounded-2xl overflow-hidden hover:border-primary transition-all group cursor-pointer flex flex-col items-center justify-center">
                 <input type="file" accept="image/*" capture="user" onChange={handleSelfieCapture} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 
                 {selfiePreview ? (
                   <img src={selfiePreview} alt="Selfie" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center text-text-muted group-hover:text-fluent-accent transition-colors">
-                    <div className="w-12 h-12 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-2">
+                  <div className="flex flex-col items-center text-muted group-hover:text-primary transition-colors">
+                    <div className="w-12 h-12 bg-primary/5 rounded-full flex items-center justify-center mb-2">
                       <Camera className="w-6 h-6" />
                     </div>
                     <span className="text-xs font-bold">Ambil Selfie</span>
@@ -245,29 +245,29 @@ const VerifyPage = () => {
           </section>
 
           <section className="space-y-4 pt-4">
-            <h2 className="text-sm font-bold text-text-muted uppercase tracking-wider border-b border-white/10 pb-2">2. Konfirmasi Data</h2>
+            <h2 className="text-sm font-bold text-muted uppercase tracking-wider border-b border-white/10 pb-2">2. Konfirmasi Data</h2>
             
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted">Nomor Induk Kependudukan (NIK)</label>
+              <label className="text-xs font-bold text-muted">Nomor Induk Kependudukan (NIK)</label>
               <div className="relative flex items-center">
-                <CreditCard className="absolute left-3 w-4 h-4 text-text-muted" />
-                <input type="number" required value={nik} onChange={(e) => setNik(e.target.value.slice(0, 16))} placeholder="16 Digit NIK KTP" className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3.5 pl-10 text-sm font-bold tracking-widest text-text-main focus:outline-none focus:border-fluent-accent transition-all" />
+                <CreditCard className="absolute left-3 w-4 h-4 text-muted" />
+                <input type="number" required value={nik} onChange={(e) => setNik(e.target.value.slice(0, 16))} placeholder="16 Digit NIK KTP" className="w-full bg-background border border-white/10 rounded-xl p-3.5 pl-10 text-sm font-bold tracking-widest text-main focus:outline-none focus:border-primary transition-all" />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted">Nama Lengkap (Sesuai KTP)</label>
+              <label className="text-xs font-bold text-muted">Nama Lengkap (Sesuai KTP)</label>
               <div className="relative flex items-center">
-                <User className="absolute left-3 w-4 h-4 text-text-muted" />
-                <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="NAMA LENGKAP" className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all uppercase" />
+                <User className="absolute left-3 w-4 h-4 text-muted" />
+                <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="NAMA LENGKAP" className="w-full bg-background border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-main focus:outline-none focus:border-primary transition-all uppercase" />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted">Alamat Domisili</label>
+              <label className="text-xs font-bold text-muted">Alamat Domisili</label>
               <div className="relative flex">
-                <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-text-muted" />
-                <textarea required value={address} onChange={(e) => setAddress(e.target.value)} rows={3} placeholder="Alamat lengkap saat ini..." className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all resize-none"></textarea>
+                <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-muted" />
+                <textarea required value={address} onChange={(e) => setAddress(e.target.value)} rows={3} placeholder="Alamat lengkap saat ini..." className="w-full bg-background border border-white/10 rounded-xl p-3.5 pl-10 text-sm text-main focus:outline-none focus:border-primary transition-all resize-none"></textarea>
               </div>
             </div>
           </section>

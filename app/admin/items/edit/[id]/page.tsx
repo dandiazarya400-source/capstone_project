@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
-  ArrowLeft, PackagePlus, Type, AlignLeft,
+  ArrowLeft, Type, AlignLeft, ChevronDown,
   Box, Folder, Save, UploadCloud, Tag, CheckCircle2, AlertCircle, X, Plus, Edit,
-  Truck
+  Truck, Loader2
 } from 'lucide-react';
 
 const EditProductPage = () => {
@@ -21,6 +21,13 @@ const EditProductPage = () => {
   const [condition, setCondition] = useState('Baik');
   const [categoryId, setCategoryId] = useState('1'); 
   const [deliveryOption, setDeliveryOption] = useState('both');
+
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [userRole, setUserRole] = useState<string>('admin');
   
   // STATE BARU UNTUK EDIT FOTO MULTIPLE
   const [existingImages, setExistingImages] = useState<string[]>([]); 
@@ -32,54 +39,70 @@ const EditProductPage = () => {
   const [fetching, setFetching] = useState(true);
   const [toast, setToast] = useState({ show: false, type: 'success', message: '' });
 
-  // 1. Ambil data barang yang mau diedit
+  // 1. Ambil data Barang, Kategori, & Role secara paralel
   useEffect(() => {
     if (!id) return;
 
-    const fetchItem = async () => {
+    const fetchData = async () => {
       try {
-        // [BARU] Dapatkan ID Admin yang sedang login
-        const { data: authData } = await supabase.auth.getUser();
-        const currentUserId = authData.user?.id;
+        const { data: { session } } = await supabase.auth.getSession();
+        let currentUserId = session?.user?.id;
 
-        if (!currentUserId) return;
+        if (!currentUserId) {
+          const { data: authData } = await supabase.auth.getUser();
+          currentUserId = authData.user?.id;
+        }
 
-        // [UBAH] Tarik data barang, dan tambahkan filter owner_id
-        const { data, error } = await supabase
-          .from('items')
-          .select('*')
-          .eq('id', id)
-          .eq('owner_id', currentUserId) // <--- KUNCI GEMBOKNYA DI SINI
-          .single();
+        if (!currentUserId) {
+          showToast('error', 'Sesi tidak valid, silakan login ulang.');
+          return;
+        }
 
-        if (error) {
-          // [BARU] Jika error (barang bukan miliknya/tidak ada), usir kembali ke daftar barang
+        // 🌟 JURUS PARALEL: Tarik 3 Data Sekaligus!
+        const [itemRes, catRes, profileRes] = await Promise.all([
+          supabase.from('items').select('*').eq('id', id).eq('owner_id', currentUserId).single(),
+          supabase.from('categories').select('id, name'),
+          supabase.from('profiles').select('role').eq('id', currentUserId).single()
+        ]);
+
+        if (itemRes.error) {
           showToast('error', 'Akses ditolak! Ini bukan barang milik Anda.');
           setTimeout(() => router.push('/admin/items'), 2000);
           return;
         }
 
-        if (data) {
-          setName(data.name || '');
-          setDescription(data.description || '');
-          setPricePerDay(data.price_per_day ? new Intl.NumberFormat('id-ID').format(data.price_per_day) : '');
-          setStock(data.stock ? String(data.stock) : '1');
-          setCondition(data.condition || 'Baik');
-          setCategoryId(data.category_id ? String(data.category_id) : '1');
-          setDeliveryOption(data.delivery_option || 'both');
+        // Set Data Barang
+        if (itemRes.data) {
+          setName(itemRes.data.name || '');
+          setDescription(itemRes.data.description || '');
+          setPricePerDay(itemRes.data.price_per_day ? new Intl.NumberFormat('id-ID').format(itemRes.data.price_per_day) : '');
+          setStock(itemRes.data.stock ? String(itemRes.data.stock) : '1');
+          setCondition(itemRes.data.condition || 'Baik');
+          setDeliveryOption(itemRes.data.delivery_option || 'both');
+          setExistingImages(itemRes.data.image_urls || []);
           
-          // Masukkan array foto dari DB ke state existingImages
-          setExistingImages(data.image_urls || []);
+          // Set Kategori terpilih (atau default)
+          if (itemRes.data.category_id) {
+            setCategoryId(String(itemRes.data.category_id));
+          } else if (catRes.data && catRes.data.length > 0) {
+            setCategoryId(String(catRes.data[0].id));
+          }
         }
+
+        // Set List Kategori & Role
+        if (catRes.data) setCategories(catRes.data);
+        if (profileRes.data?.role) setUserRole(profileRes.data.role.trim().toLowerCase());
+
       } catch (error) {
-        console.error("Gagal memuat data barang:", error);
-        showToast('error', 'Gagal memuat data barang.');
+        console.error("Gagal memuat data:", error);
+        showToast('error', 'Gagal memuat data.');
       } finally {
         setFetching(false);
+        setLoadingCategories(false);
       }
     };
 
-    fetchItem();
+    fetchData();
   }, [id]);
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,7 +139,6 @@ const EditProductPage = () => {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  // LOGIKA TAMBAH FOTO BARU
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
@@ -133,19 +155,43 @@ const EditProductPage = () => {
     }
   };
 
-  // LOGIKA HAPUS FOTO LAMA (Dari DB)
   const removeExistingImage = (indexToRemove: number) => {
-    // [FIX STORAGE] Masukkan URL ke keranjang sampah dulu sebelum dihilangkan dari UI
     const urlToRemove = existingImages[indexToRemove];
     setImagesToDelete(prev => [...prev, urlToRemove]);
-    
     setExistingImages(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
-  // LOGIKA HAPUS FOTO BARU (Belum diupload)
   const removeNewImage = (indexToRemove: number) => {
     setNewFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     setNewPreviewUrls(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  // 🌟 FUNGSI BARU: Simpan Kategori ke Supabase
+  const handleAddNewCategory = async () => {
+    if (!newCategoryName.trim()) {
+      showToast('error', 'Nama kategori tidak boleh kosong!');
+      return;
+    }
+    
+    setIsAddingCategory(true);
+    try {
+      const { data, error } = await supabase.from('categories').insert([{ name: newCategoryName.trim() }]).select().single();
+      if (error) throw error;
+
+      if (data) {
+        setCategories(prev => [...prev, data]);
+        setCategoryId(String(data.id));
+        setShowCategoryModal(false);
+        setNewCategoryName('');
+        showToast('success', 'Kategori baru berhasil ditambahkan!');
+      }
+    } catch (error: any) {
+      console.error('Gagal tambah kategori:', error);
+      showToast('error', error.message || 'Gagal menambah kategori.');
+      if (categories.length > 0) setCategoryId(String(categories[0].id));
+    } finally {
+      setIsAddingCategory(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,7 +207,6 @@ const EditProductPage = () => {
     try {
       const uploadedImageUrls: string[] = [];
 
-      // 1. Upload foto BARU (jika ada)
       for (let i = 0; i < newFiles.length; i++) {
         const file = newFiles[i];
         const fileExt = file.name.split('.').pop();
@@ -180,12 +225,9 @@ const EditProductPage = () => {
         uploadedImageUrls.push(urlData.publicUrl);
       }
       
-      // 2. Gabungkan foto LAMA (yang tidak dihapus) dengan foto BARU
       const finalImageUrls = [...existingImages, ...uploadedImageUrls];
-
       const dbPrice = Number(pricePerDay.replace(/\./g, ''));
 
-      // 3. Update database
       const { error: dbError } = await supabase
         .from('items')
         .update({ 
@@ -203,7 +245,15 @@ const EditProductPage = () => {
       if (dbError) throw dbError;
 
       if (imagesToDelete.length > 0) {
-        const filesToRemove = imagesToDelete.map(url => url.substring(url.lastIndexOf('/') + 1));
+        const filesToRemove = imagesToDelete.map(url => {
+          const marker = 'product-images/';
+          const index = url.indexOf(marker);
+          if (index !== -1) {
+            return url.substring(index + marker.length);
+          }
+          return url.substring(url.lastIndexOf('/') + 1);
+        });
+        
         await supabase.storage.from('product-images').remove(filesToRemove);
       }
 
@@ -222,18 +272,62 @@ const EditProductPage = () => {
   };
 
   if (fetching) {
-    return <div className="h-full w-full bg-fluent-bg flex items-center justify-center text-fluent-accent">Memuat Data...</div>;
+    return <div className="h-full w-full bg-background flex items-center justify-center text-primary">Memuat Data...</div>;
   }
 
   const totalCurrentImages = existingImages.length + newFiles.length;
 
   return (
-    // [FIX SCROLL] Hapus h-full dan overflow-y-auto
-    <div className="w-full flex flex-col text-text-main pb-12">
+    <div className="w-full flex flex-col text-slate-800 pb-12 min-h-screen bg-background">
+
+      {/* 🌟 MODAL TAMBAH KATEGORI BARU */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-5 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-[320px] shadow-2xl animate-in zoom-in-95 duration-300">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Tambah Kategori</h3>
+            <p className="text-xs text-slate-500 mb-5">Kategori ini akan langsung tersedia di aplikasi.</p>
+            
+            <input 
+              type="text" 
+              autoFocus
+              placeholder="Contoh: Alat Camping" 
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mb-6"
+            />
+            
+            <div className="flex gap-3 w-full">
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setNewCategoryName('');
+                  if (categories.length > 0) setCategoryId(String(categories[0].id));
+                }}
+                disabled={isAddingCategory}
+                className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                type="button"
+                onClick={handleAddNewCategory}
+                disabled={isAddingCategory}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/30 transition-colors flex justify-center items-center"
+              >
+                {isAddingCategory ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast.show && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-5 fade-in duration-300 w-[90%] max-w-[320px]">
           <div className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl ${
-            toast.type === 'success' ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'
+            toast.type === 'success' 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
+              : 'bg-danger/10 border-danger/30 text-danger'
           }`}>
             {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
             <span className="text-sm font-bold leading-tight">{toast.message}</span>
@@ -241,115 +335,143 @@ const EditProductPage = () => {
         </div>
       )}
 
-      <header className="w-full px-5 py-4 border-b border-fluent-accent/10 flex items-center space-x-3 bg-fluent-bg sticky top-0 z-50">
-        <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors cursor-pointer p-1 -ml-1">
+      
+      <header className="w-full px-5 py-4 flex items-center space-x-3 bg-surface z-30 border-b border-borderline shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+        <button onClick={() => router.back()} className="text-slate-600 hover:text-primary transition-colors cursor-pointer p-1 -ml-1 rounded-full hover:bg-primary/10">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
-          <Edit className="w-5 h-5 text-fluent-accent" />
+        <h1 className="text-lg font-bold tracking-tight flex items-center gap-2 text-slate-800">
+          <Edit className="w-5 h-5 text-primary" />
           Edit Data Alat
         </h1>
       </header>
 
-      <main className="p-5 pt-6 pb-24">
+      <main className="p-5 pt-6 pb-24 max-w-2xl mx-auto w-full">
         <form onSubmit={handleSubmit} className="space-y-6"> 
           
           <div className="space-y-2"> 
-            <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Nama Alat / Barang</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Alat / Barang</label>
             <div className="relative flex items-center">
-              <Type className="absolute left-3 w-4 h-4 text-text-muted" />
-              <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all" />
+              <Type className="absolute left-3 w-4 h-4 text-slate-400" />
+              <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface border border-borderline rounded-xl p-3.5 pl-10 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-400 shadow-sm" />
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Deskripsi Lengkap</label>
-              <span className={`text-[10px] font-bold ${currentWordCount >= 300 ? 'text-red-400' : 'text-text-muted'}`}>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Deskripsi Lengkap</label>
+              <span className={`text-[10px] font-bold ${currentWordCount >= 300 ? 'text-danger' : 'text-slate-500'}`}>
                 {currentWordCount} / 300 kata
               </span>
             </div>
             <div className="relative flex">
-              <AlignLeft className="absolute left-3 top-3.5 w-4 h-4 text-text-muted" />
-              <textarea required value={description} onChange={handleDescriptionChange} rows={6} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all resize-none scrollbar-hide"></textarea>
+              <AlignLeft className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+              <textarea required value={description} onChange={handleDescriptionChange} rows={6} className="w-full bg-surface border border-borderline rounded-xl p-3.5 pl-10 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-slate-400 shadow-sm"></textarea>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Harga (Per Hari)</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Harga (Per Hari)</label>
               <div className="relative flex items-center">
-                <span className="absolute left-3 text-sm font-bold text-fluent-accent">Rp</span>
-                <input type="text" required value={pricePerDay} onChange={handlePriceChange} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-9 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all" />
+                <span className="absolute left-3 text-[13px] font-bold text-primary">Rp</span>
+                <input type="text" required value={pricePerDay} onChange={handlePriceChange} className="w-full bg-surface border border-borderline rounded-xl p-3.5 pl-[34px] text-[13px] font-bold text-slate-800 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-400 shadow-sm" />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Jumlah Stok</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jumlah Stok</label>
               <div className="relative flex items-center">
-                <Box className="absolute left-3 w-4 h-4 text-text-muted" />
-                <input type="number" required min="1" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all" />
+                <Box className="absolute left-3 w-4 h-4 text-slate-400" />
+                <input type="number" required min="1" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-surface border border-borderline rounded-xl p-3.5 pl-10 text-[13px] font-bold text-slate-800 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm" />
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Kategori</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Kategori</label>
               <div className="relative flex items-center">
-                <Folder className="absolute left-3 w-4 h-4 text-text-muted" />
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                  <option value="1" className="bg-fluent-bg">Elektronik</option>
-                  <option value="2" className="bg-fluent-bg">Musik</option>
-                  <option value="3" className="bg-fluent-bg">Kamera</option>
-                  <option value="4" className="bg-fluent-bg">Fashion</option>
+                <Folder className="absolute left-3 w-4 h-4 text-slate-400 z-10" />
+                <select 
+                  value={categoryId} 
+                  onChange={(e) => {
+                    if (e.target.value === 'ADD_NEW') {
+                      setShowCategoryModal(true);
+                    } else {
+                      setCategoryId(e.target.value);
+                    }
+                  }} 
+                  className="w-full bg-surface border border-borderline rounded-xl p-3.5 pl-10 pr-10 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer relative z-0 shadow-sm"
+                >
+                  {loadingCategories ? (
+                    <option value="" disabled>Memuat...</option>
+                  ) : (
+                    <>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                      
+                      {/* 🌟 HANYA TAMPIL JIKA SUPERADMIN */}
+                      {userRole === 'superadmin' && (
+                        <>
+                          <option disabled>──────────</option>
+                          <option value="ADD_NEW" className="font-bold text-primary bg-primary/5">
+                            + Tambah Kategori Baru
+                          </option>
+                        </>
+                      )}
+                    </>
+                  )}
                 </select>
+                <ChevronDown className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none z-10" />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Kondisi</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Kondisi</label>
               <div className="relative flex items-center">
-                <Tag className="absolute left-3 w-4 h-4 text-text-muted" />
-                <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                  <option value="Sangat Baik" className="bg-fluent-bg">Sangat Baik</option>
-                  <option value="Baik" className="bg-fluent-bg">Baik</option>
-                  <option value="Cukup" className="bg-fluent-bg">Cukup</option>
+                <Tag className="absolute left-3 w-4 h-4 text-slate-400 z-10" />
+                <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full bg-surface border border-borderline rounded-xl p-3.5 pl-10 pr-10 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer relative z-0 shadow-sm">
+                  <option value="Sangat Baik">Sangat Baik</option>
+                  <option value="Baik">Baik</option>
+                  <option value="Cukup">Cukup</option>
                 </select>
+                <ChevronDown className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none z-10" />
               </div>
             </div>
           </div>
 
-          {/* ================= [BARU] UI OPSI PENGIRIMAN ================= */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Opsi Pengiriman</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Opsi Pengiriman</label>
             <div className="relative flex items-center">
-              <Truck className="absolute left-3 w-4 h-4 text-text-muted" />
-              <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-fluent-card border border-white/10 rounded-xl p-3 pl-10 text-sm text-text-main focus:outline-none focus:border-fluent-accent transition-all appearance-none cursor-pointer">
-                <option value="both" className="bg-fluent-bg">Bisa Diantar & Ambil Sendiri</option>
-                <option value="pickup_only" className="bg-fluent-bg">Hanya Ambil Sendiri (Ke Toko)</option>
-                <option value="delivery_only" className="bg-fluent-bg">Hanya Diantar (Oleh Pemilik)</option>
+              <Truck className="absolute left-3 w-4 h-4 text-slate-400 z-10" />
+              <select value={deliveryOption} onChange={(e) => setDeliveryOption(e.target.value)} className="w-full bg-surface border border-borderline rounded-xl p-3.5 pl-10 pr-10 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer relative z-0 shadow-sm">
+                <option value="both">Bisa Diantar & Ambil Sendiri</option>
+                <option value="pickup_only">Hanya Ambil Sendiri (Ke Toko)</option>
+                <option value="delivery_only">Hanya Diantar (Oleh Pemilik)</option>
               </select>
+              <ChevronDown className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none z-10" />
             </div>
           </div>
 
-          {/* ================= UI UPLOAD MULTIPLE FOTO (EDIT) ================= */}
+          {/* UPLOAD MULTIPLE FOTO */}
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Edit Foto Alat</label>
-              <span className="text-[10px] font-bold text-text-muted">{totalCurrentImages}/5 Foto</span>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Edit Foto Alat</label>
+              <span className="text-[10px] font-bold text-slate-500">{totalCurrentImages}/5 Foto</span>
             </div>
             
             <div className="flex overflow-x-auto space-x-3 pb-2 scrollbar-hide w-full">
               
               {/* 1. Render Foto Lama (Dari DB) */}
               {existingImages.map((url, idx) => (
-                <div key={`existing-${idx}`} className="relative w-28 h-28 shrink-0 bg-fluent-card rounded-xl border border-white/10 overflow-hidden group">
-                  <img src={url} alt={`Existing ${idx}`} className="w-full h-full object-cover" />
+                <div key={`existing-${idx}`} className="relative w-28 h-28 shrink-0 bg-surface rounded-xl border border-borderline overflow-hidden group shadow-sm">
+                  <img src={url} alt={`Existing ${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   <button 
                     type="button" 
                     onClick={() => removeExistingImage(idx)}
-                    className="absolute top-1.5 right-1.5 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full backdrop-blur-sm transition-colors z-10"
+                    className="absolute top-1.5 right-1.5 p-1 bg-danger/90 hover:bg-danger text-white rounded-full backdrop-blur-sm transition-colors z-10 shadow-sm"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -358,33 +480,33 @@ const EditProductPage = () => {
 
               {/* 2. Render Foto Baru (Belum Upload) */}
               {newPreviewUrls.map((url, idx) => (
-                <div key={`new-${idx}`} className="relative w-28 h-28 shrink-0 bg-fluent-card rounded-xl border border-fluent-accent/50 overflow-hidden group">
-                  <img src={url} alt={`New Preview ${idx}`} className="w-full h-full object-cover" />
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-fluent-accent/80 text-white text-[8px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">BARU</span>
+                <div key={`new-${idx}`} className="relative w-28 h-28 shrink-0 bg-surface rounded-xl border border-primary/50 overflow-hidden group shadow-sm">
+                  <img src={url} alt={`New Preview ${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-primary/90 text-white text-[8px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">BARU</span>
                   <button 
                     type="button" 
                     onClick={() => removeNewImage(idx)}
-                    className="absolute top-1.5 right-1.5 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full backdrop-blur-sm transition-colors z-10"
+                    className="absolute top-1.5 right-1.5 p-1 bg-danger/90 hover:bg-danger text-white rounded-full backdrop-blur-sm transition-colors z-10 shadow-sm"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
 
-              {/* 3. Tombol Tambah Foto (Jika masih bisa ditambah) */}
+              {/* 3. Tombol Tambah Foto */}
               {totalCurrentImages < 5 && (
-                <div className="relative w-28 h-28 shrink-0 flex flex-col items-center justify-center bg-fluent-card border-2 border-dashed border-white/20 rounded-xl hover:border-fluent-accent/70 hover:bg-fluent-accent/5 transition-all cursor-pointer group">
+                <div className="relative w-28 h-28 shrink-0 flex flex-col items-center justify-center bg-surface border-2 border-dashed border-borderline rounded-xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group shadow-sm">
                   <input type="file" multiple accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                  <div className="w-10 h-10 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-1 group-hover:scale-110 group-hover:text-fluent-accent transition-transform">
-                    <Plus className="w-6 h-6 text-text-muted group-hover:text-fluent-accent" />
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-1 group-hover:scale-110 group-hover:text-primary transition-transform">
+                    <Plus className="w-6 h-6 text-slate-400 group-hover:text-primary" />
                   </div>
-                  <p className="text-[10px] font-bold text-text-muted">Tambah Foto</p>
+                  <p className="text-[10px] font-bold text-slate-500 group-hover:text-primary transition-colors">Tambah Foto</p>
                 </div>
               )}
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full mt-8 bg-fluent-accent text-white font-bold py-3.5 rounded-xl flex justify-center items-center space-x-2 shadow-[0_4px_25px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50">
+          <button type="submit" disabled={loading} className="w-full mt-8 bg-primary text-white font-bold py-3.5 rounded-xl flex justify-center items-center space-x-2 shadow-[0_4px_20px_rgba(20,184,166,0.3)] hover:bg-primary-hover active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50 disabled:grayscale">
             {loading ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div> : <Save className="w-5 h-5" />}
             <span>{loading ? 'Menyimpan Perubahan...' : 'Simpan Perubahan'}</span>
           </button>

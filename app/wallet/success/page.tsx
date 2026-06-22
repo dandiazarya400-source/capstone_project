@@ -84,10 +84,10 @@ const SuccessPageContent = () => {
   ];
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+    <div className="h-[100dvh] w-full flex flex-col bg-background text-main overflow-hidden relative">
       
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
-        <button onClick={() => router.back()} className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors">
+      <header className="w-full bg-background/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-primary/10 shrink-0">
+        <button onClick={() => router.back()} className="p-2 -ml-2 bg-transparent rounded-full text-main hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
         <h1 className="text-xl font-bold ml-2">Status Pembayaran</h1>
@@ -95,21 +95,21 @@ const SuccessPageContent = () => {
 
       <main className="flex-1 overflow-y-auto px-5 pt-16 pb-10 scrollbar-hide flex flex-col items-center justify-center">
         {/* 🌟 FIX 2: Hapus overflow-hidden agar bintangnya tidak terpotong garis */}
-        <div className="bg-fluent-card w-full min-h-[380px] rounded-[32px] px-8 pb-8 pt-4 shadow-2xl border border-fluent-accent/10 relative flex flex-col items-center justify-center text-center mt-6">
+        <div className="bg-surface w-full min-h-[380px] rounded-[32px] px-8 pb-8 pt-4 shadow-2xl border border-primary/10 relative flex flex-col items-center justify-center text-center mt-6">
           
           {isLoading ? (
             <div className="flex flex-col items-center animate-in fade-in duration-300">
-              <div className="w-16 h-16 bg-fluent-accent/10 rounded-full flex items-center justify-center mb-5 relative">
-                <Loader2 className="w-8 h-8 text-fluent-accent animate-spin relative z-10" />
-                <div className="absolute inset-0 border-4 border-fluent-accent/20 border-t-fluent-accent rounded-full animate-spin-slow"></div>
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-5 relative">
+                <Loader2 className="w-8 h-8 text-primary animate-spin relative z-10" />
+                <div className="absolute inset-0 border-4 border-primary/20 border-t-primary rounded-full animate-spin-slow"></div>
               </div>
-              <h2 className="text-lg font-bold text-text-main mb-1.5">Memverifikasi...</h2>
-              <p className="text-xs text-text-muted">Mengambil data transaksi</p>
+              <h2 className="text-lg font-bold text-main mb-1.5">Memverifikasi...</h2>
+              <p className="text-xs text-muted">Mengambil data transaksi</p>
             </div>
           ) : (
             <div className="flex flex-col items-center w-full animate-in zoom-in-95 fade-in slide-in-from-bottom-4 duration-500">
               
-              <button className="absolute top-4 right-4 p-2 text-fluent-accent hover:bg-fluent-accent/10 rounded-full transition-colors">
+              <button className="absolute top-4 right-4 p-2 text-primary hover:bg-primary/10 rounded-full transition-colors">
                 <Download className="w-5 h-5" />
               </button>
 
@@ -122,26 +122,26 @@ const SuccessPageContent = () => {
                 <Sparkles className="absolute -top-2 -right-3 w-6 h-6 text-yellow-400 animate-spin-slow z-20" />
               </div>
 
-              <h2 className="text-xl font-bold text-text-main mb-3">Transaksi Berhasil</h2>
-              <div className="w-12 h-1 bg-fluent-accent rounded-full mb-5"></div>
+              <h2 className="text-xl font-bold text-main mb-3">Transaksi Berhasil</h2>
+              <div className="w-12 h-1 bg-primary rounded-full mb-5"></div>
 
-              <h3 className="text-3xl font-black text-text-main tracking-tight mb-2">
+              <h3 className="text-3xl font-black text-main tracking-tight mb-2">
                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)}
               </h3>
               
-              <div className="flex items-center gap-1.5 text-xs font-bold text-fluent-accent mb-1 bg-fluent-accent/10 px-3 py-1.5 rounded-full">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-primary mb-1 bg-primary/10 px-3 py-1.5 rounded-full">
                 <Building className="w-3.5 h-3.5" />
                 {paymentChannel}
               </div>
               
               {/* 🌟 FIX 4: Margin bottom (mb) diperkecil dari mb-8 jadi mb-5 */}
-              <p className="text-[11px] font-medium text-text-muted mb-5 uppercase tracking-wider">
+              <p className="text-[11px] font-medium text-muted mb-5 uppercase tracking-wider">
                 ID: {txId?.split('-').pop() || 'TIDAK-DIKETAHUI'}
               </p>
 
               {/* 🌟 FIX 5: Padding top (pt) diperkecil dari pt-8 jadi pt-5 */}
               <div className="w-full pt-5 border-t border-white/10 mt-1">
-                <p className="text-[11px] font-bold text-text-main mb-4">Bagaimana pengalamanmu menyewa di aplikasi ini?</p>
+                <p className="text-[11px] font-bold text-main mb-4">Bagaimana pengalamanmu menyewa di aplikasi ini?</p>
                 <div className="flex justify-center gap-3">
                   {feedbackOptions.map((item) => {
                     const Icon = item.icon;
@@ -164,8 +164,8 @@ const SuccessPageContent = () => {
         </div>
       </main>
 
-      <div className="w-full bg-fluent-card/95 backdrop-blur-xl p-5 md:pb-8 pb-5 rounded-t-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] border-t border-white/10 z-50 shrink-0">
-        <button onClick={() => router.push('/')} className="w-full bg-transparent border-2 border-fluent-accent text-fluent-accent font-bold py-3.5 rounded-2xl flex justify-center items-center space-x-2 hover:bg-fluent-accent/10 transition-colors">
+      <div className="w-full bg-surface/95 backdrop-blur-xl p-5 md:pb-8 pb-5 rounded-t-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] border-t border-white/10 z-50 shrink-0">
+        <button onClick={() => router.push('/')} className="w-full bg-transparent border-2 border-primary text-primary font-bold py-3.5 rounded-2xl flex justify-center items-center space-x-2 hover:bg-primary/10 transition-colors">
           <Home className="w-5 h-5" />
           <span className="text-sm">Kembali ke menu utama</span>
         </button>
@@ -177,7 +177,7 @@ const SuccessPageContent = () => {
 
 export default function SuccessPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-fluent-bg text-text-main">Memuat...</div>}>
+    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-background text-main">Memuat...</div>}>
       <SuccessPageContent />
     </Suspense>
   );

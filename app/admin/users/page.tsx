@@ -212,8 +212,8 @@ export default function AdminUsersPage() {
   // =========================================================================
   if (selectedUser) {
     return (
-      // 1. Hapus h-full, overflow, dan bg-fluent-bg
-      <div className="w-full flex flex-col text-text-main">
+      // 1. Hapus h-full, overflow, dan bg-background
+      <div className="w-full flex flex-col text-main">
         
         {/* TOAST NOTIFICATION */}
         <div className="fixed top-24 left-0 w-full flex justify-center z-[100] pointer-events-none px-4">
@@ -234,33 +234,33 @@ export default function AdminUsersPage() {
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => !isSubmitting && setActionModal(null)} />
             
-            <div className="relative w-full max-w-sm bg-fluent-card border border-white/10 rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="relative w-full max-w-sm bg-surface border border-white/10 rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-200">
               <div className="flex justify-between items-start mb-2">
-                <h3 className={`font-bold text-lg ${actionModal.type === 'report' ? 'text-rose-400' : actionModal.type === 'blacklist' ? 'text-orange-400' : 'text-fluent-accent'}`}>
+                <h3 className={`font-bold text-lg ${actionModal.type === 'report' ? 'text-rose-400' : actionModal.type === 'blacklist' ? 'text-orange-400' : 'text-primary'}`}>
                   {actionModal.title}
                 </h3>
                 <button onClick={() => setActionModal(null)} disabled={isSubmitting} className="p-1 text-white/40 hover:text-white transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-[11px] text-text-muted leading-relaxed mb-4">{actionModal.description}</p>
+              <p className="text-[11px] text-muted leading-relaxed mb-4">{actionModal.description}</p>
               
               <textarea 
                 value={actionModal.value}
                 onChange={(e) => setActionModal({ ...actionModal, value: e.target.value })}
                 placeholder={actionModal.placeholder}
                 rows={4}
-                className="w-full bg-fluent-bg border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-fluent-accent/50 resize-none shadow-inner mb-4"
+                className="w-full bg-background border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 resize-none shadow-inner mb-4"
               />
               
               <div className="flex gap-3">
-                <button onClick={() => setActionModal(null)} disabled={isSubmitting} className="flex-1 py-3 rounded-xl text-xs font-bold text-text-muted bg-fluent-accent/5 hover:bg-white/10 transition-colors">
+                <button onClick={() => setActionModal(null)} disabled={isSubmitting} className="flex-1 py-3 rounded-xl text-xs font-bold text-muted bg-primary/5 hover:bg-white/10 transition-colors">
                   Batal
                 </button>
                 <button onClick={handleModalSubmit} disabled={isSubmitting} className={`flex-1 py-3 rounded-xl text-xs font-bold text-white transition-colors flex justify-center items-center gap-2 shadow-lg ${
                   actionModal.type === 'report' ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30' : 
                   actionModal.type === 'blacklist' ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/30' : 
-                  'bg-fluent-accent hover:bg-[#b58eff] shadow-fluent-accent/30'
+                  'bg-primary hover:bg-[#b58eff] shadow-primary/30'
                 }`}>
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                   {isSubmitting ? 'Memproses...' : 'Simpan'}
@@ -274,26 +274,26 @@ export default function AdminUsersPage() {
         <main className="w-full px-5 pt-4 pb-24 space-y-6">
           
           {/* HEADER CARD DALAM (Aman dari tabrakan) */}
-          <div className="flex items-center gap-3 bg-fluent-card p-3 rounded-2xl border border-fluent-accent/10 shadow-lg">
-            <button onClick={() => setSelectedUser(null)} className="p-2 bg-fluent-accent/5 rounded-full hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-3 bg-surface p-3 rounded-2xl border border-primary/10 shadow-lg">
+            <button onClick={() => setSelectedUser(null)} className="p-2 bg-primary/5 rounded-full hover:bg-white/10 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-text-main leading-tight">Detail Profil</h1>
-              <p className="text-[10px] text-text-muted line-clamp-1">{selectedUser.full_name || 'Data Pengguna'}</p>
+              <h1 className="text-base font-bold text-main leading-tight">Detail Profil</h1>
+              <p className="text-[10px] text-muted line-clamp-1">{selectedUser.full_name || 'Data Pengguna'}</p>
             </div>
           </div>
 
           {/* KARTU PROFIL UTAMA */}
-          <div className="bg-fluent-card p-5 rounded-2xl border border-fluent-accent/10 shadow-lg flex items-center gap-4">
-            <img src={selectedUser.avatar_url || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'} alt="Avatar" className="w-16 h-16 rounded-full object-cover ring-2 ring-fluent-accent" />
+          <div className="bg-surface p-5 rounded-2xl border border-primary/10 shadow-lg flex items-center gap-4">
+            <img src={selectedUser.avatar_url || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'} alt="Avatar" className="w-16 h-16 rounded-full object-cover ring-2 ring-primary" />
             <div className="flex-1">
               <h2 className="font-bold text-lg leading-tight mb-1">{selectedUser.full_name || 'Tanpa Nama'}</h2>
-              <div className="flex items-center gap-1.5 text-text-muted text-xs mb-1">
+              <div className="flex items-center gap-1.5 text-muted text-xs mb-1">
                 <Phone className="w-3 h-3" />
                 <span>{selectedUser.phone_number || 'Belum ada nomor'}</span>
               </div>
-              <div className="flex items-start gap-1.5 text-text-muted text-xs">
+              <div className="flex items-start gap-1.5 text-muted text-xs">
                 <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
                 <span className="line-clamp-2">{selectedUser.address || 'Alamat belum diisi'}</span>
               </div>
@@ -302,18 +302,18 @@ export default function AdminUsersPage() {
 
           {/* KARTU STATISTIK SEWA */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-fluent-accent/10 border border-fluent-accent/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-              <span className="text-2xl font-black text-fluent-accent">{userStats.totalRent}</span>
-              <span className="text-[10px] uppercase font-bold text-text-muted mt-1">Total Sewa</span>
+            <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+              <span className="text-2xl font-black text-primary">{userStats.totalRent}</span>
+              <span className="text-[10px] uppercase font-bold text-muted mt-1">Total Sewa</span>
             </div>
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
               <span className="text-2xl font-black text-emerald-400">{userStats.activeRent}</span>
-              <span className="text-[10px] uppercase font-bold text-text-muted mt-1">Sewa Aktif</span>
+              <span className="text-[10px] uppercase font-bold text-muted mt-1">Sewa Aktif</span>
             </div>
           </div>
 
           {/* KARTU VERIFIKASI IDENTITAS */}
-          <div className="bg-fluent-card p-5 rounded-2xl border border-fluent-accent/10 shadow-lg space-y-4">
+          <div className="bg-surface p-5 rounded-2xl border border-primary/10 shadow-lg space-y-4">
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-bold text-sm uppercase tracking-wider">Status Identitas</h3>
               {selectedUser.verification_status === 'verified' && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><ShieldCheck className="w-3 h-3"/> Terverifikasi</span>}
@@ -323,8 +323,8 @@ export default function AdminUsersPage() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Foto Verifikasi Wajah (Selfie)</p>
-              <div className="w-full bg-fluent-bg rounded-xl border border-white/10 overflow-hidden flex items-center justify-center p-2">
+              <p className="text-[10px] text-muted font-bold uppercase tracking-wider">Foto Verifikasi Wajah (Selfie)</p>
+              <div className="w-full bg-background rounded-xl border border-white/10 overflow-hidden flex items-center justify-center p-2">
                 {selectedUser.selfie_url ? (
                   <img src={selectedUser.selfie_url} className="w-full max-h-48 object-contain rounded-lg" alt="Selfie Penyewa" />
                 ) : (
@@ -334,7 +334,7 @@ export default function AdminUsersPage() {
                   </div>
                 )}
               </div>
-              <p className="text-[9px] text-text-muted mt-1 leading-relaxed">
+              <p className="text-[9px] text-muted mt-1 leading-relaxed">
                 * KTP asli disimpan dan dienkripsi oleh sistem pusat demi privasi. Cocokkan wajah ini saat penyewa mengambil barang.
               </p>
             </div>
@@ -342,28 +342,28 @@ export default function AdminUsersPage() {
 
           {/* MENU TINDAKAN KEAMANAN ADMIN */}
           <div className="space-y-2">
-            <h3 className="font-bold text-[10px] text-text-muted uppercase tracking-wider ml-1 mb-2">Tindakan Keamanan</h3>
+            <h3 className="font-bold text-[10px] text-muted uppercase tracking-wider ml-1 mb-2">Tindakan Keamanan</h3>
             
-            <button onClick={() => openModal('note')} className="w-full flex items-center justify-between p-4 bg-fluent-card border border-fluent-accent/10 rounded-2xl hover:bg-fluent-accent/5 transition-colors text-left">
+            <button onClick={() => openModal('note')} className="w-full flex items-center justify-between p-4 bg-surface border border-primary/10 rounded-2xl hover:bg-primary/5 transition-colors text-left">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 shrink-0 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400"><FileText className="w-4 h-4" /></div>
                 <div>
-                  <p className="text-sm font-bold text-text-main">Catatan Internal</p>
-                  <p className="text-[10px] text-text-muted line-clamp-1">{existingNote ? 'Telah ditambahkan catatan' : 'Beri catatan khusus untuk admin'}</p>
+                  <p className="text-sm font-bold text-main">Catatan Internal</p>
+                  <p className="text-[10px] text-muted line-clamp-1">{existingNote ? 'Telah ditambahkan catatan' : 'Beri catatan khusus untuk admin'}</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
+              <ChevronRight className="w-4 h-4 text-muted shrink-0" />
             </button>
 
-            <button onClick={() => openModal('blacklist')} className="w-full flex items-center justify-between p-4 bg-fluent-card border border-fluent-accent/10 rounded-2xl hover:bg-fluent-accent/5 transition-colors text-left">
+            <button onClick={() => openModal('blacklist')} className="w-full flex items-center justify-between p-4 bg-surface border border-primary/10 rounded-2xl hover:bg-primary/5 transition-colors text-left">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 shrink-0 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400"><Ban className="w-4 h-4" /></div>
                 <div>
-                  <p className="text-sm font-bold text-text-main">Blacklist dari Toko</p>
-                  <p className="text-[10px] text-text-muted">User tidak bisa menyewa di tokomu</p>
+                  <p className="text-sm font-bold text-main">Blacklist dari Toko</p>
+                  <p className="text-[10px] text-muted">User tidak bisa menyewa di tokomu</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
+              <ChevronRight className="w-4 h-4 text-muted shrink-0" />
             </button>
 
             <button onClick={() => openModal('report')} className="w-full flex items-center justify-between p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl hover:bg-rose-500/20 transition-colors text-left">
@@ -386,35 +386,35 @@ export default function AdminUsersPage() {
   // VIEW UTAMA: DAFTAR SEMUA USER
   // =========================================================================
   return (
-    <div className="w-full flex flex-col text-text-main relative">
+    <div className="w-full flex flex-col text-main relative">
       <main className="w-full px-5 pt-4 pb-24">
         
         
         
         {/* PENCARIAN */}
         <div className="relative w-full mb-6">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-fluent-accent" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-primary" />
           <input 
             type="text" 
             placeholder="Cari nama atau nomor HP..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-fluent-card border border-fluent-accent/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-fluent-accent/50 transition-all shadow-inner text-text-main placeholder:text-text-muted/50"
+            className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-all shadow-inner text-main placeholder:text-muted/50"
           />
         </div>
 
         {/* DAFTAR USER (Sisanya biarkan sama persis) */}
         {loading ? (
-          <div className="flex justify-center mt-10"><Loader2 className="w-8 h-8 animate-spin text-fluent-accent" /></div>
+          <div className="flex justify-center mt-10"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : filteredUsers.length === 0 ? (
-          <div className="text-center mt-10 text-text-muted text-sm">Tidak ada pengguna ditemukan.</div>
+          <div className="text-center mt-10 text-muted text-sm">Tidak ada pengguna ditemukan.</div>
         ) : (
           <div className="space-y-3">
             {filteredUsers.map((user) => (
               <button 
                 key={user.id} 
                 onClick={() => handleSelectUser(user)}
-                className="w-full bg-fluent-card border border-fluent-accent/10 p-4 rounded-2xl flex items-center justify-between hover:bg-fluent-accent/5 transition-all text-left shadow-sm group"
+                className="w-full bg-surface border border-primary/10 p-4 rounded-2xl flex items-center justify-between hover:bg-primary/5 transition-all text-left shadow-sm group"
               >
                 <div className="flex items-center gap-4">
                   <div className="relative">
@@ -431,11 +431,11 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-text-main line-clamp-1">{user.full_name || 'Tanpa Nama'}</h3>
-                    <p className="text-[10px] text-text-muted mt-0.5 font-medium">{user.phone_number || 'Tidak ada nomor HP'}</p>
+                    <h3 className="font-bold text-sm text-main line-clamp-1">{user.full_name || 'Tanpa Nama'}</h3>
+                    <p className="text-[10px] text-muted mt-0.5 font-medium">{user.phone_number || 'Tidak ada nomor HP'}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-fluent-accent transition-colors shrink-0" />
+                <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-primary transition-colors shrink-0" />
               </button>
             ))}
           </div>

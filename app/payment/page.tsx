@@ -104,10 +104,10 @@ const PaymentContent = () => {
   ];
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+    <div className="h-[100dvh] w-full flex flex-col bg-background text-main overflow-hidden relative">
       
       {/* ================= HEADER ================= */}
-      <header className="w-full bg-fluent-bg/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-fluent-accent/10 shrink-0">
+      <header className="w-full bg-background/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-primary/10 shrink-0">
         <button 
           onClick={() => {
              const startParam = searchParams.get('start');
@@ -116,12 +116,12 @@ const PaymentContent = () => {
              // GANTI KATA push MENJADI replace
              router.replace(`/booking?delivery=${deliveryType}&start=${startParam}&end=${endParam}&qty=${qtyParam}`);
           }} 
-          className="p-2 -ml-2 bg-transparent rounded-full text-text-main hover:bg-white/10 transition-colors"
+          className="p-2 -ml-2 bg-transparent rounded-full text-main hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <h1 className="text-xl font-bold ml-2 flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-fluent-accent" />
+          <ShieldCheck className="w-5 h-5 text-primary" />
           Pembayaran
         </h1>
       </header>
@@ -132,26 +132,26 @@ const PaymentContent = () => {
         {/* 1. KARTU ALAMAT PENGIRIMAN / PENGAMBILAN */}
         <section>
           {/* Judul akan berubah otomatis */}
-          <h2 className="text-sm font-bold text-text-muted mb-3 uppercase tracking-wider ml-1">
+          <h2 className="text-sm font-bold text-muted mb-3 uppercase tracking-wider ml-1">
             {isPickUp ? 'Alamat Pengambilan (Toko)' : 'Alamat Pengiriman'}
           </h2>
           
-          <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10 relative overflow-hidden group cursor-pointer hover:border-fluent-accent/50 transition-colors">
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-fluent-accent to-[#ff7e67]"></div>
+          <div className="bg-surface rounded-[24px] p-5 shadow-lg border border-primary/10 relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-colors">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary to-[#ff7e67]"></div>
             
             <div className="flex gap-4 relative z-10">
               {/* Ikon berubah otomatis */}
               {isPickUp ? (
-                <Store className="w-6 h-6 text-fluent-accent shrink-0 mt-0.5" />
+                <Store className="w-6 h-6 text-primary shrink-0 mt-0.5" />
               ) : (
-                <MapPin className="w-6 h-6 text-fluent-accent shrink-0 mt-0.5" />
+                <MapPin className="w-6 h-6 text-primary shrink-0 mt-0.5" />
               )}
               
               <div>
-                <h3 className="font-bold text-text-main flex items-center gap-2">
-                  {displayData.name} <span className="text-xs font-normal text-text-muted">{displayData.phone}</span>
+                <h3 className="font-bold text-main flex items-center gap-2">
+                  {displayData.name} <span className="text-xs font-normal text-muted">{displayData.phone}</span>
                 </h3>
-                <p className="text-xs text-text-muted mt-1.5 leading-relaxed">
+                <p className="text-xs text-muted mt-1.5 leading-relaxed">
                   {loading ? 'Memuat alamat...' : displayData.address}
                 </p>
               </div>
@@ -161,8 +161,8 @@ const PaymentContent = () => {
 
         {/* 2. KARTU METODE PEMBAYARAN */}
         <section>
-          <h2 className="text-sm font-bold text-text-muted mb-3 uppercase tracking-wider ml-1">Metode Pembayaran</h2>
-          <div className="bg-fluent-card rounded-[24px] p-2 shadow-lg border border-fluent-accent/10 flex flex-col gap-1">
+          <h2 className="text-sm font-bold text-muted mb-3 uppercase tracking-wider ml-1">Metode Pembayaran</h2>
+          <div className="bg-surface rounded-[24px] p-2 shadow-lg border border-primary/10 flex flex-col gap-1">
             {paymentMethods.map((method) => {
               const Icon = method.icon;
               const isSelected = selectedPayment === method.id;
@@ -173,29 +173,29 @@ const PaymentContent = () => {
                   onClick={() => setSelectedPayment(method.id)}
                   className={`flex items-center justify-between p-3 rounded-2xl transition-all duration-200 ${
                     isSelected 
-                      ? 'bg-fluent-accent/15 border border-fluent-accent/30' 
-                      : 'bg-transparent border border-transparent hover:bg-fluent-accent/5'
+                      ? 'bg-primary/15 border border-primary/30' 
+                      : 'bg-transparent border border-transparent hover:bg-primary/5'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-inner ${
-                      isSelected ? 'bg-fluent-accent text-white' : 'bg-fluent-bg text-text-muted'
+                      isSelected ? 'bg-primary text-white' : 'bg-background text-muted'
                     }`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                      <h3 className={`text-sm font-bold ${isSelected ? 'text-text-main' : 'text-text-main/90'}`}>
+                      <h3 className={`text-sm font-bold ${isSelected ? 'text-main' : 'text-main/90'}`}>
                         {method.title}
                       </h3>
-                      <p className="text-xs text-text-muted">{method.desc}</p>
+                      <p className="text-xs text-muted">{method.desc}</p>
                     </div>
                   </div>
                   
                   <div>
                     {isSelected ? (
-                      <CheckCircle2 className="w-6 h-6 text-fluent-accent drop-shadow-[0_0_8px_rgba(163,116,255,0.6)]" />
+                      <CheckCircle2 className="w-6 h-6 text-primary drop-shadow-[0_0_8px_rgba(163,116,255,0.6)]" />
                     ) : (
-                      <Circle className="w-6 h-6 text-text-muted/30" />
+                      <Circle className="w-6 h-6 text-muted/30" />
                     )}
                   </div>
                 </button>
@@ -206,51 +206,51 @@ const PaymentContent = () => {
 
         {/* 3. KARTU RINCIAN PESANAN & PEMBAYARAN */}
         <section>
-          <h2 className="text-sm font-bold text-text-muted mb-3 uppercase tracking-wider ml-1">Rincian Pembayaran</h2>
-          <div className="bg-fluent-card rounded-[24px] p-5 shadow-lg border border-fluent-accent/10">
+          <h2 className="text-sm font-bold text-muted mb-3 uppercase tracking-wider ml-1">Rincian Pembayaran</h2>
+          <div className="bg-surface rounded-[24px] p-5 shadow-lg border border-primary/10">
             
             <div className="flex justify-between items-center pb-4 border-b border-white/10 mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-fluent-bg rounded-full flex items-center justify-center border border-fluent-accent/30 overflow-hidden shadow-inner">
-                  <span className="text-text-main font-black text-lg tracking-tighter">A<span className="text-fluent-accent">L</span></span>
+                <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center border border-primary/30 overflow-hidden shadow-inner">
+                  <span className="text-main font-black text-lg tracking-tighter">A<span className="text-primary">L</span></span>
                 </div>
                 <div>
                   <div className="flex items-center">
-                    <h3 className="font-bold text-text-main text-sm">Asoka Lensa</h3>
-                    <BadgeCheck className="w-4 h-4 text-fluent-accent ml-1" />
+                    <h3 className="font-bold text-main text-sm">Asoka Lensa</h3>
+                    <BadgeCheck className="w-4 h-4 text-primary ml-1" />
                   </div>
-                  <p className="text-[10px] text-text-muted">Kota Singkawang</p>
+                  <p className="text-[10px] text-muted">Kota Singkawang</p>
                 </div>
               </div>
-              <button className="px-3 py-1 rounded-full border border-fluent-accent text-fluent-accent text-[11px] font-bold hover:bg-fluent-accent/10 transition-colors">
+              <button className="px-3 py-1 rounded-full border border-primary text-primary text-[11px] font-bold hover:bg-primary/10 transition-colors">
                 Ikuti
               </button>
             </div>
 
-            <div className="flex items-center gap-4 text-[11px] text-text-muted pb-4 border-b border-white/10 mb-4">
+            <div className="flex items-center gap-4 text-[11px] text-muted pb-4 border-b border-white/10 mb-4">
               <div className="flex items-center">
-                <Star className="w-3.5 h-3.5 text-fluent-accent mr-1" />
-                <span className="text-text-main font-medium mr-1">5.0</span> (58.125 ulasan)
+                <Star className="w-3.5 h-3.5 text-primary mr-1" />
+                <span className="text-main font-medium mr-1">5.0</span> (58.125 ulasan)
               </div>
               <div className="flex items-center">
-                <Clock className="w-3.5 h-3.5 text-fluent-accent mr-1" />
+                <Clock className="w-3.5 h-3.5 text-primary mr-1" />
                 ± 3 jam proses
               </div>
             </div>
 
             <div className="space-y-2.5 text-sm">
-              <div className="flex justify-between text-text-muted">
+              <div className="flex justify-between text-muted">
                 <span className="flex flex-col">
                   Subtotal Pesanan
-                  <span className="text-[10px] text-text-muted/60">({duration} hari x {qty} unit)</span>
+                  <span className="text-[10px] text-muted/60">({duration} hari x {qty} unit)</span>
                 </span>
-                <span className="text-text-main">{formatRupiah(subtotal)}</span>
+                <span className="text-main">{formatRupiah(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-text-muted">
+              <div className="flex justify-between text-muted">
                 <span>Biaya Layanan</span>
-                <span className="text-text-main">{formatRupiah(serviceFee)}</span>
+                <span className="text-main">{formatRupiah(serviceFee)}</span>
               </div>
-              <div className="flex justify-between text-fluent-accent font-medium">
+              <div className="flex justify-between text-primary font-medium">
                 <span>Voucher Diskon</span>
                 <span>- {formatRupiah(discount)}</span>
               </div>
@@ -262,12 +262,12 @@ const PaymentContent = () => {
       </main>
 
       {/* ================= BOTTOM SHEET (NAVIGASI CHECKOUT) ================= */}
-      <div className="w-full bg-fluent-card/95 backdrop-blur-xl p-5 md:pb-8 pb-5 rounded-t-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] border-t border-white/10 z-50 shrink-0">
+      <div className="w-full bg-surface/95 backdrop-blur-xl p-5 md:pb-8 pb-5 rounded-t-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] border-t border-white/10 z-50 shrink-0">
         <div className="flex justify-between items-center">
           
           <div className="flex flex-col">
-            <span className="text-xs font-medium text-text-muted mb-0.5">Total Pembayaran</span>
-            <span className="text-xl font-black text-fluent-accent drop-shadow-[0_0_10px_rgba(163,116,255,0.3)]">
+            <span className="text-xs font-medium text-muted mb-0.5">Total Pembayaran</span>
+            <span className="text-xl font-black text-primary drop-shadow-[0_0_10px_rgba(163,116,255,0.3)]">
               {formatRupiah(totalPayment)}
             </span>
           </div>
@@ -276,7 +276,7 @@ const PaymentContent = () => {
             disabled={!selectedPayment}
             // Tambahkan variabel totalPayment ke dalam URL
             onClick={() => router.push(`/payment/checkout?total=${totalPayment}`)}
-            className="bg-fluent-accent text-white font-bold px-8 py-3.5 rounded-2xl flex justify-center items-center shadow-[0_4px_20px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition-all disabled:opacity-50 disabled:grayscale active:scale-95"
+            className="bg-primary text-white font-bold px-8 py-3.5 rounded-2xl flex justify-center items-center shadow-[0_4px_20px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition-all disabled:opacity-50 disabled:grayscale active:scale-95"
           >
             Checkout
           </button>
@@ -289,7 +289,7 @@ const PaymentContent = () => {
 
 export default function PaymentPage() {
   return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-fluent-bg text-text-muted">Memuat pembayaran...</div>}>
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-background text-muted">Memuat pembayaran...</div>}>
       <PaymentContent />
     </Suspense>
   );

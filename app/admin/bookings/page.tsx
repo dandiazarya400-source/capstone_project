@@ -109,7 +109,7 @@ const AdminBookingsPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-fluent-bg text-text-main overflow-hidden relative">
+    <div className="h-full w-full flex flex-col bg-background text-main overflow-hidden relative">
       
       {/* Toast Notification */}
       {toast.show && (
@@ -124,13 +124,13 @@ const AdminBookingsPage = () => {
       )}
 
       {/* BLOK ATAS */}
-      <div className="w-full relative z-10 bg-fluent-bg/95 backdrop-blur-md shrink-0 border-b border-fluent-accent/10">
+      <div className="w-full relative z-10 bg-background/95 backdrop-blur-md shrink-0 border-b border-primary/10">
         <header className="w-full px-5 py-4 flex items-center space-x-3">
-          {/* <button onClick={() => router.back()} className="text-text-main hover:text-fluent-accent transition-colors cursor-pointer p-1 -ml-1">
+          {/* <button onClick={() => router.back()} className="text-main hover:text-primary transition-colors cursor-pointer p-1 -ml-1">
             <ArrowLeft className="w-6 h-6" />
           </button> */}
           <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
-            <Package className="w-5 h-5 text-fluent-accent" />
+            <Package className="w-5 h-5 text-primary" />
             Daftar Pesanan
           </h1>
         </header>
@@ -143,8 +143,8 @@ const AdminBookingsPage = () => {
               onClick={() => setActiveTab(tab)}
               className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-200 border ${
                 activeTab === tab
-                  ? 'bg-fluent-accent/20 text-fluent-accent border-fluent-accent/50 shadow-lg'
-                  : 'bg-transparent text-text-muted border-white/10 hover:bg-fluent-accent/5'
+                  ? 'bg-primary/20 text-primary border-primary/50 shadow-lg'
+                  : 'bg-transparent text-muted border-white/10 hover:bg-primary/5'
               }`}
             >
               {tab}
@@ -157,30 +157,30 @@ const AdminBookingsPage = () => {
       <main className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide pt-4">
         {loading ? (
           <div className="flex justify-center items-center py-20">
-            <div className="animate-spin h-6 w-6 border-b-2 border-fluent-accent rounded-full"></div>
+            <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
           </div>
         ) : filteredBookings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-text-muted animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-fluent-accent/5 rounded-full flex items-center justify-center mb-4">
+          <div className="flex flex-col items-center justify-center py-20 text-muted animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
               <Search className="w-8 h-8 opacity-50" />
             </div>
-            <p className="text-sm font-bold text-text-main">Belum ada pesanan</p>
+            <p className="text-sm font-bold text-main">Belum ada pesanan</p>
             <p className="text-xs mt-1 text-center max-w-[200px]">Pesanan dengan status ini masih kosong.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-fluent-card border border-fluent-accent/10 rounded-2xl p-4 shadow-lg flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4">
+              <div key={booking.id} className="bg-surface border border-primary/10 rounded-2xl p-4 shadow-lg flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4">
                 
                 {/* Bagian Atas: Profil User & Status */}
-                <div className="flex justify-between items-start border-b border-fluent-accent/10 pb-3">
+                <div className="flex justify-between items-start border-b border-primary/10 pb-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-fluent-accent/20 rounded-full flex items-center justify-center text-fluent-accent font-bold text-xs">
+                    <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">
                       {booking.profiles?.full_name?.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-text-main leading-tight">{booking.profiles?.full_name || 'User Tidak Dikenal'}</h3>
-                      <p className="text-[10px] text-text-muted mt-0.5">ID: {booking.id.substring(0, 8)}</p>
+                      <h3 className="text-sm font-bold text-main leading-tight">{booking.profiles?.full_name || 'User Tidak Dikenal'}</h3>
+                      <p className="text-[10px] text-muted mt-0.5">ID: {booking.id.substring(0, 8)}</p>
                     </div>
                   </div>
                   
@@ -201,16 +201,16 @@ const AdminBookingsPage = () => {
 
                 {/* Bagian Tengah: Info Barang & Tanggal */}
                 <div className="flex gap-3">
-                  <div className="w-16 h-16 bg-fluent-bg rounded-xl overflow-hidden shrink-0 border border-fluent-accent/10">
+                  <div className="w-16 h-16 bg-background rounded-xl overflow-hidden shrink-0 border border-primary/10">
                     <img src={booking.items?.image_urls?.[0] || 'https://via.placeholder.com/150'} alt="Item" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 flex flex-col justify-center">
-                    <h4 className="text-sm font-medium text-text-main line-clamp-1">{booking.items?.name || 'Barang Dihapus'}</h4>
-                    <div className="flex items-center gap-1.5 mt-1 text-xs text-text-muted">
-                      <CalendarClock className="w-3.5 h-3.5 text-fluent-accent" />
+                    <h4 className="text-sm font-medium text-main line-clamp-1">{booking.items?.name || 'Barang Dihapus'}</h4>
+                    <div className="flex items-center gap-1.5 mt-1 text-xs text-muted">
+                      <CalendarClock className="w-3.5 h-3.5 text-primary" />
                       <span>{formatDate(booking.start_date)} - {formatDate(booking.end_date)}</span>
                     </div>
-                    <p className="text-xs font-bold text-fluent-accent mt-1.5">
+                    <p className="text-xs font-bold text-primary mt-1.5">
                       Rp {booking.total_price.toLocaleString('id-ID')}
                     </p>
                   </div>
@@ -231,7 +231,7 @@ const AdminBookingsPage = () => {
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Diserahkan')}
                         disabled={processingId === booking.id}
-                        className="flex-[2] py-2.5 bg-fluent-accent text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-[#b58eff] transition-colors shadow-lg"
+                        className="flex-[2] py-2.5 bg-primary text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-[#b58eff] transition-colors shadow-lg"
                       >
                         <PackageCheck className="w-4 h-4" /> Serahkan Barang
                       </button>
@@ -243,7 +243,7 @@ const AdminBookingsPage = () => {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Menunggu Konfirmasi')}
-                        className="flex-1 py-2.5 bg-fluent-accent/5 text-text-muted text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border border-fluent-accent/10"
+                        className="flex-1 py-2.5 bg-primary/5 text-muted text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border border-primary/10"
                       >
                         <Undo2 className="w-4 h-4" /> Batal Serahkan
                       </button>
@@ -260,7 +260,7 @@ const AdminBookingsPage = () => {
                   {booking.status === 'Selesai' && (
                     <button 
                       onClick={() => handleUpdateStatus(booking.id, 'Diserahkan')}
-                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-fluent-accent/5"
+                      className="w-full py-2 bg-transparent text-muted hover:text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-primary/5"
                     >
                       <Undo2 className="w-3.5 h-3.5" /> Batal Selesai (Barang belum kembali)
                     </button>
@@ -270,7 +270,7 @@ const AdminBookingsPage = () => {
                   {booking.status === 'Dibatalkan' && (
                     <button 
                       onClick={() => handleUpdateStatus(booking.id, 'Menunggu Konfirmasi')}
-                      className="w-full py-2 bg-transparent text-text-muted hover:text-text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-fluent-accent/5"
+                      className="w-full py-2 bg-transparent text-muted hover:text-main text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-dashed border-white/10 hover:bg-primary/5"
                     >
                       <Undo2 className="w-3.5 h-3.5" /> Pulihkan Pesanan (Batal Tolak)
                     </button>

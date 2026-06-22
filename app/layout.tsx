@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
         <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
 
-        {/* 🌟 4. Ubah bg-fluent-bg menjadi bg-slate-50 agar temanya jadi putih bersih */}
+        {/* 🌟 4. Ubah bg-background menjadi bg-slate-50 agar temanya jadi putih bersih */}
         <div className="relative w-full h-full md:w-[390px] md:h-[90vh] md:max-h-[850px] 
                         md:rounded-[3rem] md:border-[12px] md:border-[#1E1E2E] 
                         md:shadow-[0_0_60px_-10px_rgba(163,116,255,0.25)] bg-slate-50 overflow-hidden">
