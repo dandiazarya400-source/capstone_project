@@ -62,6 +62,7 @@ export default function ProfilePage() {
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [recommendations, setRecommendations] = useState<ProductProps[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -109,6 +110,26 @@ export default function ProfilePage() {
           
           setProfile(freshData);
           localStorage.setItem('user_profile_cache', JSON.stringify(freshData));
+        }
+        // 🌟 TARIK DATA PRODUK ASLI UNTUK REKOMENDASI
+        const { data: recData } = await supabase
+          .from('items')
+          .select('*, profiles!owner_id(full_name)')
+          .eq('is_available', true)
+          .limit(4); // Ambil 4 produk terbaru
+
+        if (recData) {
+          const formattedRecs = recData.map((item: any) => ({
+            id: item.id,
+            title: item.name,
+            price: `Rp ${item.price_per_day?.toLocaleString('id-ID') || 0}`,
+            rating: "5.0", 
+            sold: "0", 
+            owner: item.profiles?.full_name || "Toko",
+            image: item.image_urls?.[0] || "https://via.placeholder.com/150",
+            isVerified: true
+          }));
+          setRecommendations(formattedRecs);
         }
 
       } catch (fatalError) {
@@ -160,10 +181,7 @@ export default function ProfilePage() {
     }
   };
 
-  const recommendations: ProductProps[] = [
-    { id: "2", title: "Samyang AF 35mm f/1.8 Sony", price: "Rp. 250.000", rating: "5.0", sold: "20", owner: "Asoka Maju", image: "https://via.placeholder.com/150", isVerified: true },
-    { id: "5", title: "Setelan Jas Formal", price: "Rp. 100.000", rating: "4.8", sold: "198", owner: "Asoka Maju", image: "https://via.placeholder.com/150", isVerified: true },
-  ];
+
 
   const getInitials = (name: string) => {
     if (!name) return 'U'; 
@@ -177,11 +195,11 @@ export default function ProfilePage() {
   else if (profile?.role === 'admin') roleLabel = 'Admin Toko';
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 pb-32 scrollbar-hide animate-in fade-in duration-300">
-      
+      <div className="h-[100dvh] w-full flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden relative animate-in fade-in duration-300">      
       {/* ================= HEADER PROFIL ================= */}
-      <div className="relative pt-16 pb-10 px-6 shadow-[0_10px_30px_rgba(20,184,166,0.2)] rounded-b-[40px] border-b border-teal-300/30">
-        
+      <div className="flex-1 overflow-y-auto scrollbar-hide pb-32">  
+        <div className="relative pt-16 pb-10 px-6 shadow-[0_10px_30px_rgba(20,184,166,0.2)] rounded-b-[40px] border-b border-teal-300/30"> 
+
         {/* 🌟 LAYER 1: Background & Glow (Dibungkus terpisah agar overflow-hidden tidak memotong konten) */}
         <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-teal-400 rounded-b-[40px] overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
@@ -328,16 +346,27 @@ export default function ProfilePage() {
         
         {/* ================= TRANSAKSI ================= */}
         <section className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm">
-          <h2 className="font-bold text-slate-800 mb-4 text-[15px]">Transaksi</h2>
+          <div className="flex justify-between items-end mb-4">
+            <h2 className="font-bold text-slate-800 text-[15px]">Transaksi</h2>
+            <Link href="/history" className="text-[11px] font-bold text-teal-600 hover:underline">
+              Lihat Riwayat
+            </Link>
+          </div>
           <div className="flex justify-between items-center px-1">
-            {[ { icon: Wallet, label: 'Bayar' }, { icon: Box, label: 'Diproses' }, { icon: Truck, label: 'Dikirim' }, { icon: CheckCircle2, label: 'Tiba', alert: true }, { icon: Star, label: 'Ulasan' } ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center space-y-2">
-                <div className="w-11 h-11 rounded-full bg-slate-50 flex items-center justify-center relative border border-slate-100">
-                  <item.icon className="w-5 h-5 text-teal-600" />
-                  {item.alert && <span className="absolute 0top-0 right-0 w-3 h-3 bg-rose-500 rounded-full border-2 border-white"></span>}
+            {[ 
+              { icon: Wallet, label: 'Bayar', tab: 'Berlangsung' }, 
+              { icon: Box, label: 'Diproses', tab: 'Berlangsung' }, 
+              { icon: Truck, label: 'Dikirim', tab: 'Berlangsung' }, 
+              { icon: CheckCircle2, label: 'Tiba', tab: 'Selesai', alert: true }, 
+              { icon: Star, label: 'Ulasan', tab: 'Selesai' } 
+            ].map((item, idx) => (
+              <Link href="/history" key={idx} className="flex flex-col items-center space-y-2 group">
+                <div className="w-11 h-11 rounded-full bg-slate-50 flex items-center justify-center relative border border-slate-100 group-hover:bg-teal-50 group-hover:border-teal-200 transition-colors">
+                  <item.icon className="w-5 h-5 text-teal-600 group-hover:scale-110 transition-transform" />
+                  {item.alert && <span className="absolute top-0 right-0 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>}
                 </div>
-                <span className="text-[10px] font-medium text-slate-500">{item.label}</span>
-              </div>
+                <span className="text-[10px] font-medium text-slate-500 group-hover:text-teal-600 transition-colors">{item.label}</span>
+              </Link>
             ))}
           </div>
         </section>
@@ -379,6 +408,8 @@ export default function ProfilePage() {
         </section>
 
       </main>
+
+      </div>
 
       {/* ================= MODAL TOPUP ================= */}
       {showTopupModal && (

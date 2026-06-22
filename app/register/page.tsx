@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, Briefcase, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-// IMPORT SUPABASE-NYA DI SINI
 import { supabase } from '@/lib/supabase';
 
 const RegisterPage = () => {
   const router = useRouter();
   
-  // State form & UI
+  // State form & UI (LOGIKA ASLI)
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,16 +17,17 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  // === FUNGSI MENGHILANGKAN NOTIFIKASI OTOMATIS ===
+  // === FUNGSI MENGHILANGKAN NOTIFIKASI OTOMATIS (LOGIKA ASLI) ===
   useEffect(() => {
     if (message.text) {
       const timer = setTimeout(() => {
         setMessage({ text: '', type: '' });
-      }, 4000); // Pesan hilang setelah 4 detik
+      }, 4000); 
       return () => clearTimeout(timer);
     }
   }, [message]);
 
+  // === FUNGSI REGISTER SUPABASE (LOGIKA ASLI) ===
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -48,7 +48,6 @@ const RegisterPage = () => {
 
     } catch (error: any) {
       console.error('Error saat register:', error);
-      // Terjemahkan error umum agar lebih ramah user
       let errorMessage = error.message;
       if (errorMessage.includes("invalid format")) errorMessage = "Format email tidak valid.";
       if (errorMessage.includes("weak_password")) errorMessage = "Password terlalu lemah (min 6 karakter).";
@@ -61,90 +60,117 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-fluent-bg px-4 relative overflow-hidden">
+    <div className="h-[100dvh] w-full flex flex-col bg-teal-500 overflow-hidden relative font-sans">
       
-      {/* Background Glow */}
-      <div className="absolute top-0 w-full h-1/2 bg-gradient-to-b from-fluent-accent/5 to-transparent"></div>
+      {/* ================= DEKORASI BACKGROUND ================= */}
+      <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-teal-400 rounded-full blur-2xl opacity-60"></div>
+      <div className="absolute top-[10%] left-[-20px] w-32 h-32 bg-teal-600 rounded-full blur-xl opacity-50"></div>
       
-      {/* ================= CONTAINER UTAMA ================= */}
-      {/* max-h-[90dvh] dan overflow-y-auto memastikan konten bisa di-scroll jika layar HP sangat kecil */}
-      <div className="w-full max-w-[320px] bg-fluent-card/70 backdrop-blur-sm border border-fluent-accent/10 rounded-[28px] p-5 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto scrollbar-hide">
-        
-        {/* Logo Area */}
-        <div className="flex flex-col items-center mb-4">
-          <div className="w-12 h-12 bg-fluent-bg/80 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner border border-fluent-accent/10 mb-2">
-            <Briefcase className="w-6 h-6 text-fluent-accent" />
-          </div>
-          <h1 className="text-lg font-bold text-text-main">Buat Akun</h1>
-          <p className="text-[10px] text-text-muted mt-0.5">Daftar untuk mulai menyewa</p>
-        </div>
+      {/* Ornamen Abstrak Mirip Daun di Kanan Atas */}
+      <div className="absolute top-12 right-6 opacity-20 pointer-events-none">
+        <svg width="100" height="120" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 0C77.6142 0 100 22.3858 100 50C100 77.6142 50 120 50 120C50 120 0 77.6142 0 50C0 22.3858 22.3858 0 50 0Z" fill="white"/>
+        </svg>
+      </div>
 
-        {/* Notifikasi Dinamis (Absolute positioning agar tidak mendorong konten lain) */}
-        <div className="relative h-10 mb-2 w-full">
+      {/* ================= HEADER TEKS ================= */}
+      <div className="pt-16 px-8 relative z-10 shrink-0">
+        <h1 className="text-[36px] font-bold text-white leading-none tracking-tight mb-2">Create Account</h1>
+        <p className="text-[14px] font-medium text-teal-50 opacity-90">Bergabunglah bersama kami</p>
+      </div>
+
+      {/* ================= BOTTOM SHEET CONTAINER ================= */}
+      <div className="flex-1 bg-white mt-8 rounded-t-[40px] px-8 pt-8 pb-6 flex flex-col relative z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] overflow-y-auto scrollbar-hide">
+        
+        {/* Tombol Back ala Referensi Gambar */}
+        <button 
+          onClick={() => router.push('/login')} 
+          className="flex items-center text-slate-400 hover:text-teal-500 transition-colors mb-4 w-fit"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          <span className="text-[13px] font-bold">Back to login</span>
+        </button>
+
+        <h2 className="text-[28px] font-bold text-slate-800 mb-6">Sign Up</h2>
+
+        {/* Notifikasi Melayang */}
+        <div className="relative w-full h-0">
           {message.text && (
-            <div className={`absolute inset-0 flex items-center justify-center px-3 rounded-lg text-[10px] font-bold border animate-in slide-in-from-top-2 fade-in duration-200 ${
+            <div className={`absolute -top-4 left-0 w-full flex items-center justify-center px-4 py-2.5 rounded-xl text-[12px] font-bold border animate-in slide-in-from-top-2 fade-in duration-200 z-50 shadow-sm ${
               message.type === 'success' 
-                ? 'bg-green-500/10 text-green-400 border-green-500/20' 
-                : 'bg-red-500/10 text-red-400 border-red-500/20'
+                ? 'bg-green-50 text-green-600 border-green-200' 
+                : 'bg-red-50 text-red-500 border-red-100'
             }`}>
               {message.text}
             </div>
           )}
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-3">
+        <form onSubmit={handleRegister} className="space-y-4">
           
-          {/* Input Nama */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-bold text-text-muted uppercase tracking-wider pl-1">Nama Lengkap</label>
-            <div className="relative flex items-center">
-              <User className="absolute left-3 w-4 h-4 text-text-muted/60" />
-              <input 
-                type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Contoh: Jecky"
-                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
-              />
-            </div>
+          {/* Input Nama Lengkap */}
+          <div className="relative flex items-center">
+            <User className="absolute left-5 w-5 h-5 text-slate-400" />
+            <input 
+              type="text" 
+              required 
+              value={fullName} 
+              onChange={(e) => setFullName(e.target.value)} 
+              placeholder="Nama Lengkap"
+              className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-12 pr-5 text-[14px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-all placeholder:text-slate-400"
+            />
           </div>
 
           {/* Input Email */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-bold text-text-muted uppercase tracking-wider pl-1">Email</label>
-            <div className="relative flex items-center">
-              <Mail className="absolute left-3 w-4 h-4 text-text-muted/60" />
-              <input 
-                type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com"
-                autoComplete="off"
-                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
-              />
-            </div>
+          <div className="relative flex items-center">
+            <Mail className="absolute left-5 w-5 h-5 text-slate-400" />
+            <input 
+              type="email" 
+              required 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              placeholder="Email"
+              autoComplete="off"
+              className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-12 pr-5 text-[14px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-all placeholder:text-slate-400"
+            />
           </div>
 
           {/* Input Password */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-bold text-text-muted uppercase tracking-wider pl-1">Password</label>
-            <div className="relative flex items-center">
-              <Lock className="absolute left-3 w-4 h-4 text-text-muted/60" />
-              <input 
-                type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 karakter"
-                autoComplete="new-password"
-                className="w-full bg-fluent-bg border border-fluent-accent/10 rounded-xl py-2.5 pl-9 pr-9 text-xs text-text-main focus:border-fluent-accent/50 transition-all shadow-inner"
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 text-text-muted/60 hover:text-text-main">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
+          <div className="relative flex items-center">
+            <Lock className="absolute left-5 w-5 h-5 text-slate-400" />
+            <input 
+              type={showPassword ? "text" : "password"} 
+              required 
+              minLength={6} 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              placeholder="Password (Min 6 karakter)"
+              autoComplete="new-password"
+              className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-12 pr-12 text-[14px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-all placeholder:text-slate-400"
+            />
+            <button 
+              type="button" 
+              onClick={() => setShowPassword(!showPassword)} 
+              className="absolute right-5 text-slate-400 hover:text-teal-500 transition-colors"
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
           </div>
 
-          {/* Button */}
-          <button type="submit" disabled={loading} className="w-full mt-4 bg-fluent-accent text-white text-xs font-bold py-3 rounded-xl shadow-lg shadow-fluent-accent/20 hover:bg-[#b58eff] transition-all disabled:opacity-50 flex justify-center items-center">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Daftar Sekarang'}
+          {/* Register Button */}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full mt-6 bg-teal-500 text-white text-[15px] font-bold py-4 rounded-full shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-all disabled:opacity-50 flex justify-center items-center active:scale-[0.98]"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign Up'}
           </button>
         </form>
 
-        {/* Footer */}
-        <div className="text-center mt-4">
-          <p className="text-[10px] text-text-muted">
-            Sudah punya akun? <Link href="/login" className="text-fluent-accent font-bold hover:underline">Masuk</Link>
+        {/* Footer Daftar (Sebagai opsional/pelengkap) */}
+        <div className="mt-auto pt-8 text-center pb-4">
+          <p className="text-[13px] font-medium text-slate-500">
+            Sudah punya akun? <Link href="/login" className="text-teal-600 font-bold hover:underline">Masuk</Link>
           </p>
         </div>
 

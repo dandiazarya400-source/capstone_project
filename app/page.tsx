@@ -575,11 +575,31 @@ const HomePage = () => {
             </div>
           )}
 
-          {/* 🌟 SPINNER LOADING HANYA MUNCUL JIKA MEMANG KOSONG */}
+          {/* 🌟 UPGRADE: SKELETON LOADING (PREMIUM FEEL) */}
           {loading && products.length === 0 ? (
-            <div className="flex justify-center items-center py-10">
-              <div className="animate-spin h-6 w-6 border-b-2 border-teal-500 rounded-full"></div>
-            </div>
+            <section className="grid grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((n) => (
+                <div key={n} className="bg-white rounded-[20px] shadow-sm border border-slate-50 overflow-hidden flex flex-col h-full">
+                  {/* Kotak Gambar */}
+                  <div className="w-full aspect-square bg-slate-200 animate-pulse"></div>
+                  <div className="p-3.5 flex flex-col flex-1 gap-2">
+                    {/* Baris Teks Judul */}
+                    <div className="w-full h-3 bg-slate-200 rounded-full animate-pulse mt-1"></div>
+                    <div className="w-2/3 h-3 bg-slate-200 rounded-full animate-pulse"></div>
+                    {/* Baris Harga */}
+                    <div className="w-1/2 h-4 bg-teal-100 rounded-full animate-pulse mt-3"></div>
+                    <div className="mt-auto pt-2">
+                      <div className="w-full h-px bg-slate-100 mb-2"></div>
+                      {/* Baris Nama Toko */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-3.5 h-3.5 bg-slate-200 rounded-full animate-pulse"></div>
+                        <div className="w-1/2 h-2.5 bg-slate-200 rounded-full animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </section>
           ) : filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-slate-400">
               <Search className="w-8 h-8 opacity-50 mb-3" />

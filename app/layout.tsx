@@ -1,5 +1,14 @@
 import type { Metadata } from "next";
+// 🌟 1. Import font elegan dari Google Fonts
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+
+// 🌟 2. Konfigurasi Font
+const jakarta = Plus_Jakarta_Sans({ 
+  subsets: ["latin"],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-jakarta',
+});
 
 export const metadata: Metadata = {
   title: "Marketplace Rental Alat",
@@ -9,18 +18,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
-      <body className="bg-[#0B0416] flex justify-center items-center h-[100dvh] w-screen overflow-hidden">
+      {/* 🌟 3. Sisipkan jakarta.className dan antialiased ke dalam body tanpa menghapus class aslimu */}
+      <body className={`${jakarta.className} antialiased bg-[#0B0416] flex justify-center items-center h-[100dvh] w-screen overflow-hidden`}>
         
         {/* Pindahkan script ke sini agar valid secara HTML */}
         <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
         <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
 
-        {/* Wrapper ini kita buat flex-1 agar dia mengisi ruang yang tersedia 
-            dengan aman di mobile.
-        */}
+        {/* 🌟 4. Ubah bg-fluent-bg menjadi bg-slate-50 agar temanya jadi putih bersih */}
         <div className="relative w-full h-full md:w-[390px] md:h-[90vh] md:max-h-[850px] 
                         md:rounded-[3rem] md:border-[12px] md:border-[#1E1E2E] 
-                        md:shadow-[0_0_60px_-10px_rgba(163,116,255,0.25)] bg-fluent-bg overflow-hidden">
+                        md:shadow-[0_0_60px_-10px_rgba(163,116,255,0.25)] bg-slate-50 overflow-hidden">
           
           {/* Poni Kamera */}
           <div className="hidden md:flex absolute top-2 inset-x-0 justify-center z-50 pointer-events-none">
@@ -32,9 +40,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </div>
 
-          {/* Garis Home Bawah */}
+          {/* Garis Home Bawah (Diubah warnanya jadi abu-abu agar kelihatan di background putih) */}
           <div className="hidden md:flex absolute bottom-2 inset-x-0 justify-center z-50 pointer-events-none">
-            <div className="w-1/3 h-1.5 bg-white/20 rounded-full"></div>
+            <div className="w-1/3 h-1.5 bg-slate-300 rounded-full"></div>
           </div>
 
         </div>
