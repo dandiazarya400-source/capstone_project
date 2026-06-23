@@ -406,8 +406,21 @@ const BookingContent = () => {
                   Ambil Sendiri
                 </button>
               )}
-
             </div>
+
+            {/* 🌟 TEKS KECIL INFORMATIF JIKA OPSI DIBATASI ADMIN */}
+            {allowedDelivery === 'pickup_only' && (
+              <p className="text-[10px] text-orange-500 font-medium italic -mt-1 leading-tight">
+                *Pemilik barang hanya melayani pengambilan langsung di toko (Ambil Sendiri).
+              </p>
+            )}
+            
+            {allowedDelivery === 'delivery_only' && (
+              <p className="text-[10px] text-orange-500 font-medium italic -mt-1 leading-tight">
+                *Pemilik barang hanya menyediakan layanan antar langsung ke lokasi Anda.
+              </p>
+            )}
+            
           </div>
         </div>
       </main>

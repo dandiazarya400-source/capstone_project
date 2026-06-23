@@ -3,36 +3,36 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
-  ArrowLeft, Copy, Timer, Landmark, 
-  Info, CheckCircle2, Loader2 
+  ArrowLeft, Landmark, Info, Loader2 
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase'; // PASTIKAN IMPORT SUPABASE
+import { supabase } from '@/lib/supabase';
 
 const CheckoutInstructionContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // 1. TANGKAP SEMUA DATA DARI URL (Tanpa mengambil 'total'!)
+  // 1. TANGKAP SEMUA DATA DARI URL
   const itemId = searchParams.get('id');
   const startDay = searchParams.get('start');
   const endDay = searchParams.get('end');
   const deliveryParam = searchParams.get('delivery');
-  const qtyParam = searchParams.get('qty'); // Tangkap jumlah barang dari URL
+  const qtyParam = searchParams.get('qty'); 
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
   
-  // [FIX KEAMANAN CHECKOUT] State untuk menyimpan harga yang dihitung di server
+  // State Harga & Detail
   const [totalPayment, setTotalPayment] = useState(0);
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
+  const [duration, setDuration] = useState(1);
 
-  // 2. FETCH HARGA ASLI DARI DATABASE & HITUNG TOTAL
+  // 2. FETCH HARGA ASLI & HITUNG TOTAL
   useEffect(() => {
     const fetchAndCalculatePrice = async () => {
       if (!itemId || !startDay || !endDay) return;
       
       try {
         setIsLoadingPrice(true);
-        // Tarik harga asli per hari dari database
         const { data, error } = await supabase
           .from('items')
           .select('price_per_day')
@@ -43,14 +43,14 @@ const CheckoutInstructionContent = () => {
 
         if (data && data.price_per_day) {
           const qty = qtyParam ? parseInt(qtyParam) : 1;
-          const start = parseInt(startDay);
-          const end = parseInt(endDay);
+          // Memecah format string "15-7-2026" untuk mendapatkan tanggal
+          const start = parseInt(startDay.split('-')[0]);
+          const end = parseInt(endDay.split('-')[0]);
           
-          // Hitung durasi (jika hari yang sama = 1 hari)
-          const duration = (end >= start) ? (end - start + 1) : 1;
+          const calcDuration = (end >= start) ? (end - start + 1) : 1;
+          setDuration(calcDuration);
           
-          // Hitung Total = Harga Asli * Durasi * Jumlah Barang
-          const calculatedTotal = data.price_per_day * duration * qty;
+          const calculatedTotal = data.price_per_day * calcDuration * qty;
           setTotalPayment(calculatedTotal);
         }
       } catch (error) {
@@ -63,31 +63,12 @@ const CheckoutInstructionContent = () => {
     fetchAndCalculatePrice();
   }, [itemId, startDay, endDay, qtyParam]);
 
-  // Fungsi Format Rupiah
   const formatRupiah = (angka: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
   };
 
-  // State untuk timer (Hitung mundur 24 jam)
-  const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 59 });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59, hours: prev.hours };
-        return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('Tersalin ke papan klip!');
-  };
-
-  const handlePaymentConfirm = async () => {
+  // 3. FUNGSI LANJUT KE XENDIT
+  const handleProceedToPayment = async () => {
     if (!itemId || !startDay || !endDay || totalPayment <= 0) {
       alert("Data pesanan tidak valid.");
       return;
@@ -99,11 +80,15 @@ const CheckoutInstructionContent = () => {
       const { data: authData } = await supabase.auth.getUser();
       if (!authData?.user) throw new Error("Silakan login kembali.");
 
-      const formattedStart = `2025-04-${startDay.padStart(2, '0')}`;
-      const formattedEnd = `2025-04-${endDay.padStart(2, '0')}`;
+      // Format ulang ke YYYY-MM-DD untuk backend API kita
+      const [sDay, sMonth, sYear] = startDay.split('-');
+      const [eDay, eMonth, eYear] = endDay.split('-');
+      const formattedStart = `${sYear}-${sMonth.padStart(2, '0')}-${sDay.padStart(2, '0')}`;
+      const formattedEnd = `${eYear}-${eMonth.padStart(2, '0')}-${eDay.padStart(2, '0')}`;
+      
       const methodStr = deliveryParam === 'self' ? 'self' : 'owner';
 
-      // 🌟 TEMBAK API BACKEND KITA!
+      // TEMBAK API BACKEND KITA (Yang memanggil Xendit)
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,8 +107,8 @@ const CheckoutInstructionContent = () => {
 
       if (!response.ok) throw new Error(result.message);
 
-      // 🌟 AJAIB! Lempar user ke halaman UI Pembayaran Xendit!
-      window.location.href = result.invoiceUrl;
+      // 🌟 TAMPILKAN DI DALAM APLIKASI (Ganti window.location.href jadi setInvoiceUrl)
+      setInvoiceUrl(result.invoiceUrl);
 
     } catch (error: any) {
       console.error("Gagal checkout:", error);
@@ -132,6 +117,31 @@ const CheckoutInstructionContent = () => {
       setIsProcessing(false);
     }
   };
+
+  // 🌟 JIKA INVOICE URL SUDAH ADA, TAMPILKAN XENDIT DI DALAM IFRAME!
+  if (invoiceUrl) {
+    return (
+      <div className="h-[100dvh] w-full flex flex-col bg-white overflow-hidden relative z-[100]">
+        {/* Header Custom Untuk Iframe */}
+        <header className="w-full bg-white px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-slate-200 shrink-0 shadow-sm">
+          <button 
+            onClick={() => setInvoiceUrl(null)} // Tombol batal bayar
+            className="p-2 -ml-2 bg-transparent rounded-full text-slate-800 hover:bg-slate-100 transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-base font-bold ml-2 text-slate-800">Selesaikan Pembayaran</h1>
+        </header>
+
+        {/* Jendela Ajaib Xendit */}
+        <iframe 
+          src={invoiceUrl} 
+          className="flex-1 w-full border-none bg-slate-50"
+          allow="payment" // Mengizinkan proses pembayaran di dalam iframe
+        />
+      </div>
+    );
+  }
   
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-background text-main overflow-hidden relative">
@@ -143,93 +153,42 @@ const CheckoutInstructionContent = () => {
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-xl font-bold ml-2">Intruksi Pembayaran</h1>
+        <h1 className="text-xl font-bold ml-2">Ringkasan Pesanan</h1>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 pt-6 pb-10 scrollbar-hide space-y-6">
+      <main className="flex-1 overflow-y-auto px-5 pt-6 pb-10 scrollbar-hide space-y-6">
         
-        <div className="bg-gradient-to-r from-primary/20 to-transparent border border-primary/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-3">
-            <Timer className="w-6 h-6 text-primary animate-pulse" />
-            <div>
-              <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Batas Waktu Bayar</p>
-              <p className="text-lg font-black text-main">
-                {String(timeLeft.hours).padStart(2, '0')}:
-                {String(timeLeft.minutes).padStart(2, '0')}:
-                {String(timeLeft.seconds).padStart(2, '0')}
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold text-muted">Jatuh Tempo</p>
-            <p className="text-xs font-bold text-main">Besok, 14:20 WIB</p>
-          </div>
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+          <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <p className="text-xs text-main font-medium leading-relaxed">
+            Silakan periksa kembali detail pesanan Anda sebelum melanjutkan ke halaman pembayaran.
+          </p>
         </div>
 
-        <div className="bg-surface rounded-[32px] p-6 shadow-xl border border-primary/10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg">
-              <Landmark className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <h3 className="font-bold text-main">Transfer Bank BCA</h3>
-              <p className="text-xs text-muted">Dicek Otomatis • Asoka Lensa</p>
-            </div>
+        <div className="bg-surface rounded-[24px] p-6 shadow-lg border border-primary/10 space-y-4">
+          <div className="flex justify-between items-center border-b border-primary/10 pb-4">
+            <span className="text-sm font-medium text-muted">Durasi Sewa</span>
+            <span className="text-sm font-bold text-main">{duration} Hari</span>
+          </div>
+          
+          <div className="flex justify-between items-center border-b border-primary/10 pb-4">
+            <span className="text-sm font-medium text-muted">Jumlah Barang</span>
+            <span className="text-sm font-bold text-main">{qtyParam || 1} Unit</span>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-background rounded-2xl p-4 border border-primary/10">
-              <p className="text-[10px] font-bold text-muted uppercase mb-1">Nomor Rekening / Virtual Account</p>
-              <div className="flex justify-between items-center">
-                <span className="text-xl font-black text-primary tracking-wider">125 0895 1679 9498</span>
-                <button 
-                  onClick={() => handleCopy('125089516799498')}
-                  className="flex items-center gap-1.5 text-xs font-bold text-main hover:text-primary transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
-                  Salin
-                </button>
-              </div>
-            </div>
+          <div className="flex justify-between items-center border-b border-primary/10 pb-4">
+            <span className="text-sm font-medium text-muted">Metode Pengiriman</span>
+            <span className="text-sm font-bold text-main capitalize">
+              {deliveryParam === 'self' ? 'Ambil Sendiri' : 'Diantar Pemilik'}
+            </span>
+          </div>
 
-        <div className="bg-background rounded-2xl p-4 border border-primary/10">
-          <p className="text-[10px] font-bold text-muted uppercase mb-1">Total Pembayaran</p>
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-black text-main flex items-center gap-2">
+          <div className="flex justify-between items-center pt-2">
+            <span className="text-sm font-bold text-main">Total Pembayaran</span>
+            <span className="text-xl font-black text-primary flex items-center gap-2">
               {isLoadingPrice ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : formatRupiah(totalPayment)}
             </span>
-            <button 
-              onClick={() => handleCopy(totalPayment.toString())}
-              className="flex items-center gap-1.5 text-xs font-bold text-main hover:text-primary transition-colors"
-            >
-              <Copy className="w-4 h-4" />
-              Salin
-            </button>
           </div>
-        </div>
-          </div>
-        </div>
-
-        <div className="px-2">
-          <h4 className="text-sm font-bold text-main mb-4 flex items-center gap-2">
-            <Info className="w-4 h-4 text-primary" />
-            Cara Pembayaran
-          </h4>
-          <ul className="space-y-4">
-            {[
-              "Pilih menu Transfer ke Rekening Virtual Account.",
-              "Masukkan nomor Virtual Account yang tertera di atas.",
-              "Pastikan nominal bayar sesuai hingga 3 digit terakhir.",
-              "Simpan bukti transfer hingga status transaksi berubah."
-            ].map((step, i) => (
-              <li key={i} className="flex gap-4 items-start">
-                <span className="w-5 h-5 rounded-full bg-primary/5 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5 border border-white/10">
-                  {i + 1}
-                </span>
-                <p className="text-xs text-muted leading-relaxed">{step}</p>
-              </li>
-            ))}
-          </ul>
         </div>
 
       </main>
@@ -237,19 +196,12 @@ const CheckoutInstructionContent = () => {
       <div className="w-full bg-surface/95 backdrop-blur-xl p-5 md:pb-8 pb-5 rounded-t-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] border-t border-white/10 z-50 shrink-0">
         <div className="flex flex-col gap-3">
           <button 
-            disabled={isProcessing}
-            onClick={handlePaymentConfirm} // PANGGIL FUNGSI DATABASE DI SINI
-            className="w-full bg-primary text-white font-bold py-4 rounded-2xl flex justify-center items-center space-x-2 shadow-lg shadow-primary/30 hover:bg-[#b58eff] transition-all disabled:opacity-50 disabled:cursor-wait"
+            disabled={isProcessing || isLoadingPrice}
+            onClick={handleProceedToPayment} 
+            className="w-full bg-primary text-white font-bold py-4 rounded-2xl flex justify-center items-center space-x-2 shadow-lg shadow-primary/30 hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-wait"
           >
-            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-            <span>{isProcessing ? 'Memverifikasi...' : 'Saya Sudah Bayar'}</span>
-          </button>
-          
-          <button 
-            onClick={() => router.push('/')}
-            className="w-full bg-transparent text-muted text-xs font-bold py-2 hover:text-main transition-colors"
-          >
-            Nanti saja, Kembali ke Beranda
+            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Landmark className="w-5 h-5" />}
+            <span>{isProcessing ? 'Memproses ke Xendit...' : 'Lanjut ke Pembayaran'}</span>
           </button>
         </div>
       </div>
