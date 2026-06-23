@@ -9,6 +9,11 @@ export async function POST(request: Request) {
 
     const orderId = randomUUID();
 
+    // 🌟 DETEKSI DOMAIN OTOMATIS (Bisa Localhost, bisa Vercel)
+    const origin = request.headers.get('origin') || 'https://pinjamdong.vercel.app';
+
+
+
     // 🌟 BIKIN KLIEN SUPER ADMIN (Pegang Kunci Master untuk Tembus RLS)
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,8 +35,10 @@ export async function POST(request: Request) {
         amount: totalPayment,
         description: `Sewa Alat - Transaksi ${orderId.split('-')[0]}`,
         invoice_duration: 86400, 
-        success_redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/success?order_id=${orderId}`,
-        failure_redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/failed`,
+        
+        // 🌟 GUNAKAN DOMAIN OTOMATIS YANG SUDAH DITANGKAP
+        success_redirect_url: `${origin}/payment/success?order_id=${orderId}`,
+        failure_redirect_url: `${origin}/payment/failed`,
       })
     });
 
