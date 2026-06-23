@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 // 🌟 1. Import font elegan dari Google Fonts
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import Script from 'next/script';
 
 // 🌟 2. Konfigurasi Font
 const jakarta = Plus_Jakarta_Sans({ 
@@ -21,9 +22,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       {/* 🌟 3. Sisipkan jakarta.className dan antialiased ke dalam body tanpa menghapus class aslimu */}
       <body className={`${jakarta.className} antialiased bg-[#0B0416] flex justify-center items-center h-[100dvh] w-screen overflow-hidden`}>
         
-        {/* Pindahkan script ke sini agar valid secara HTML */}
-        <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-        <script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
+        {/* Script Eruda menggunakan standar Next.js */}
+        <Script src="https://cdn.jsdelivr.net/npm/eruda" strategy="beforeInteractive" />
+        <Script id="eruda-init" strategy="lazyOnload">
+          {`eruda.init();`}
+        </Script>
 
         {/* 🌟 4. Ubah bg-background menjadi bg-slate-50 agar temanya jadi putih bersih */}
         <div className="relative w-full h-full md:w-[390px] md:h-[90vh] md:max-h-[850px] 

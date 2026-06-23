@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Search, Loader2, Clock, Check, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Send, Search, Loader2, BadgeCheck, Clock, Check, CheckCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ChatContact {
@@ -14,7 +14,7 @@ interface ChatContact {
   timestamp: number;
 }
 
-export default function UniversalInboxPage() {
+export default function AdminInboxPage() {
   const router = useRouter();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -39,10 +39,11 @@ export default function UniversalInboxPage() {
   useEffect(() => {
     let isMounted = true; 
     let messageChannel: any;
+    let presenceChannel: any;
 
     const fetchInbox = async () => {
       try {
-        // Tangkap user yang sedang login
+        // 🌟 JURUS 1: Tangkap user dengan 2 jaring (Session & GetUser) agar tidak lolos
         const { data: { session } } = await supabase.auth.getSession();
         let user: any = session?.user;
 
@@ -51,28 +52,62 @@ export default function UniversalInboxPage() {
           user = userData?.user;
         }
 
-        if (!user || !isMounted) {
+        // 🛑 PERBAIKAN FATAL BUG: Pisahkan isMounted agar tidak menendang user saat loading
+        if (!isMounted) return; // Kalau komponen kedip, diam saja (jangan eksekusi router)
+        
+        if (!user) {
+          console.log("Sesi kosong, mengalihkan ke halaman login...");
           router.push('/login');
           return;
         }
 
-        // Kita ubah namanya dari currentAdminId jadi currentUserId agar universal
-        const currentUserId = user.id;
-        setMyId(currentUserId);
+        const currentAdminId = user.id;
 
-        // Tarik semua pesan yang melibatkan user ini (baik sebagai pengirim atau penerima)
+        // 🌟 JURUS 2: Ambil Role Asli dari Database
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentAdminId)
+          .single();
+
+        const userRole = profileData?.role?.trim().toLowerCase() || 'user';
+
+        // 🌟 JURUS 3: Pengecekan Role dengan Pemberitahuan (Alert)
+        if (userRole !== 'superadmin' && userRole !== 'admin') {
+          alert(`Akses Ditolak! Akunmu terdeteksi sebagai "${userRole}". Bukan admin!`);
+          router.push('/profile'); // Kita lempar ke profil saja, jangan ke login
+          return;
+        }
+
+        if (!isMounted) return;
+        setMyId(currentAdminId);
+
+        const presenceChannelName = 'admin-status';
+        supabase.removeChannel(supabase.channel(presenceChannelName));
+
+        presenceChannel = supabase.channel(presenceChannelName);
+        presenceChannel.subscribe(async (status: string) => {
+          if (status === 'SUBSCRIBED' && isMounted) {
+            await presenceChannel.track({
+              user_id: currentAdminId,
+              status: 'online'
+            });
+          }
+        });
+
+        // 🚀 OPTIMASI: Hanya ambil kolom penting & batasi 500 pesan terakhir
         const { data: allMessages } = await supabase
           .from('messages')
-          .select('*')
-          .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-          .order('created_at', { ascending: false });
+          .select('sender_id, receiver_id, content, created_at') // Jangan pakai bintang (*)
+          .or(`sender_id.eq.${currentAdminId},receiver_id.eq.${currentAdminId}`)
+          .order('created_at', { ascending: false })
+          .limit(500); // 🌟 Kunci kecepatannya ada di sini!
 
         if (allMessages && allMessages.length > 0 && isMounted) {
           const contactMap = new Map();
           
-          // Kelompokkan pesan berdasarkan Lawan Bicara
           allMessages.forEach(msg => {
-            const contactId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
+            const contactId = msg.sender_id === currentAdminId ? msg.receiver_id : msg.sender_id;
             
             if (!contactMap.has(contactId)) {
               contactMap.set(contactId, {
@@ -111,22 +146,26 @@ export default function UniversalInboxPage() {
         
         if (isMounted) setLoadingList(false);
 
-        // Realtime Subscription untuk pesan baru
-        const uniqueChannelName = `inbox_${Date.now()}`;
+        const uniqueChannelName = `admin_inbox_${Date.now()}`;
         messageChannel = supabase
           .channel(uniqueChannelName)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
             const newMsg = payload.new as any;
-            const isFromOther = newMsg.sender_id !== currentUserId;
+            const isFromUser = newMsg.sender_id !== currentAdminId;
             
             setChatList((prevList) => {
-              const contactId = isFromOther ? newMsg.sender_id : newMsg.receiver_id;
+              const contactId = isFromUser ? newMsg.sender_id : newMsg.receiver_id;
               const existingContact = prevList.find(c => c.id === contactId);
               
               if (existingContact) {
                 const updatedList = prevList.map(c => 
                   c.id === contactId 
-                    ? { ...c, last_message: newMsg.content, last_time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), timestamp: new Date(newMsg.created_at).getTime() }
+                    ? { 
+                        ...c, 
+                        last_message: newMsg.content, 
+                        last_time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), 
+                        timestamp: new Date(newMsg.created_at).getTime() 
+                      }
                     : c
                 );
                 return updatedList.sort((a, b) => b.timestamp - a.timestamp);
@@ -135,13 +174,21 @@ export default function UniversalInboxPage() {
             });
 
             setActiveUser((currentActiveUser) => {
-              if (currentActiveUser && newMsg.sender_id === currentActiveUser.id && newMsg.receiver_id === currentUserId) {
+              if (
+                currentActiveUser && 
+                newMsg.sender_id === currentActiveUser.id && 
+                newMsg.receiver_id === currentAdminId
+              ) {
                 supabase.from('messages').update({ is_read: true }).eq('id', newMsg.id).then();
+
                 setMessages(prev => {
                   if (prev.find(m => m.id === newMsg.id)) return prev;
                   return [...prev, {
-                    id: newMsg.id, text: newMsg.content, sender: 'user', 
-                    time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), is_read: true 
+                    id: newMsg.id,
+                    text: newMsg.content,
+                    sender: 'user', 
+                    time: new Date(newMsg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                    is_read: true 
                   }];
                 });
               }
@@ -150,7 +197,11 @@ export default function UniversalInboxPage() {
           })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
             const updatedMsg = payload.new as any;
-            setMessages(prev => prev.map(msg => msg.id === updatedMsg.id ? { ...msg, is_read: updatedMsg.is_read } : msg));
+            setMessages(prev => prev.map(msg => 
+              msg.id === updatedMsg.id 
+                ? { ...msg, is_read: updatedMsg.is_read } 
+                : msg
+            ));
           })
           .subscribe();
 
@@ -165,6 +216,7 @@ export default function UniversalInboxPage() {
     return () => {
       isMounted = false;
       if (messageChannel) supabase.removeChannel(messageChannel);
+      if (presenceChannel) supabase.removeChannel(presenceChannel); 
     };
   }, [router]);
 
@@ -209,9 +261,12 @@ export default function UniversalInboxPage() {
     
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage = {
-      id: tempId, text: textToSend, sender: 'me',
+      id: tempId,
+      text: textToSend,
+      sender: 'me',
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      isSending: true, is_read: false
+      isSending: true,
+      is_read: false
     };
 
     setMessages(prev => [...prev, optimisticMessage]);
@@ -220,13 +275,24 @@ export default function UniversalInboxPage() {
     try {
       const { data: insertedMsg, error } = await supabase
         .from('messages')
-        .insert([{ sender_id: myId, receiver_id: activeUser.id, content: textToSend, is_read: false }])
-        .select().single(); 
+        .insert([{
+          sender_id: myId,
+          receiver_id: activeUser.id,
+          content: textToSend,
+          is_read: false
+        }])
+        .select()
+        .single(); 
 
       if (error) throw error;
-      setMessages(prev => prev.map(msg => msg.id === tempId ? { ...msg, id: insertedMsg.id, isSending: false } : msg));
+
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempId 
+          ? { ...msg, id: insertedMsg.id, isSending: false } 
+          : msg
+      ));
     } catch (error) {
-      console.error("Gagal mengirim pesan:", error);
+      console.error("Gagal mengirim balasan:", error);
       setMessages(prev => prev.filter(msg => msg.id !== tempId));
       alert("Koneksi terputus. Pesan gagal dikirim.");
     } finally {
@@ -234,9 +300,10 @@ export default function UniversalInboxPage() {
     }
   };
 
-  // ================== TAMPILAN LIST ==================
+  // ================== TAMPILAN LIST (KOTAK MASUK) ==================
   if (view === 'list') {
     return (
+      // 🌟 PERBAIKAN BUG SCROLL: Tambah max-w-[100vw] dan overflow-x-hidden
       <div className="h-[100dvh] w-full max-w-[100vw] flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden overflow-x-hidden relative">
         <header className="w-full bg-white/95 backdrop-blur-md z-40 px-5 py-4 flex flex-col border-b border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] shrink-0">
           <div className="flex items-center space-x-3 mb-4 mt-2">
@@ -247,10 +314,9 @@ export default function UniversalInboxPage() {
           </div>
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            {/* Wording diganti jadi obrolan agar universal */}
             <input 
               type="text" 
-              placeholder="Cari obrolan..." 
+              placeholder="Cari pelanggan..." 
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-[13px] font-medium focus:outline-none focus:border-teal-400 focus:bg-white transition-all placeholder:text-slate-400 text-slate-700 shadow-sm"
             />
           </div>
@@ -267,8 +333,8 @@ export default function UniversalInboxPage() {
               <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mb-3 shadow-sm border border-teal-100">
                 <Clock className="w-7 h-7 text-teal-600" />
               </div>
-              <p className="text-[14px] font-bold text-slate-700">Belum ada obrolan.</p>
-              <p className="text-[12px] font-medium text-slate-500 mt-1">Mulai chat dengan toko atau pengguna lain!</p>
+              <p className="text-[14px] font-bold text-slate-700">Belum ada pesan masuk.</p>
+              <p className="text-[12px] font-medium text-slate-500 mt-1">Pesan dari pelanggan akan muncul di sini.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 px-2 py-2">
@@ -296,6 +362,7 @@ export default function UniversalInboxPage() {
 
   // ================== TAMPILAN RUANG CHAT ==================
   return (
+    // 🌟 PERBAIKAN BUG SCROLL: Tambah max-w-[100vw] dan overflow-x-hidden
     <div className="h-[100dvh] w-full max-w-[100vw] flex flex-col bg-[#F2FDFB] text-slate-800 overflow-hidden overflow-x-hidden relative animate-in slide-in-from-right-4 duration-300">
       <header className="w-full bg-white/95 backdrop-blur-md z-40 px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0 shadow-sm">
         <div className="flex items-center space-x-3 mt-2">
@@ -312,7 +379,7 @@ export default function UniversalInboxPage() {
               <h1 className="text-[15px] font-bold text-slate-800 leading-tight">{activeUser?.full_name}</h1>
               <div className="flex items-center mt-0.5">
                 <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                  Obrolan Aktif {/* Wording universal */}
+                  Pelanggan Toko
                 </span>
               </div>
             </div>
@@ -320,7 +387,8 @@ export default function UniversalInboxPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-hide space-y-4">
+      {/* 🌟 PERBAIKAN BUG SCROLL: Tambah overflow-x-hidden di kontainer pesan */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-hide space-y-4 pb-20">
         <div className="flex justify-center mb-6 mt-2">
           <span className="bg-teal-50 border border-teal-100 text-teal-700 text-[10px] font-bold px-4 py-1.5 rounded-full tracking-widest uppercase shadow-sm">
             Riwayat Pesan
@@ -332,6 +400,8 @@ export default function UniversalInboxPage() {
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
               <div className="max-w-[85%] sm:max-w-[75%] flex flex-col">
+                
+                {/* 🌟 PERBAIKAN BUG SCROLL: Tambah break-words whitespace-pre-wrap agar teks panjang tidak menembus layar */}
                 <div className={`px-4 py-2.5 text-[13px] font-medium shadow-sm relative transition-all duration-300 break-words whitespace-pre-wrap ${
                   msg.isSending ? 'opacity-70 scale-95' : 'opacity-100 scale-100'
                 } ${
@@ -357,23 +427,28 @@ export default function UniversalInboxPage() {
                     )
                   )}
                 </div>
+
               </div>
             </div>
           );
         })}
-        <div ref={chatEndRef} className="h-6 w-full shrink-0" />
+        <div ref={chatEndRef} />
       </main>
 
       <div className="w-full bg-white/95 backdrop-blur-xl px-4 py-4 md:pb-8 pb-6 border-t border-slate-100 shrink-0 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
         <form onSubmit={handleSendReply} className="flex items-center space-x-2">
+          
+          {/* 🌟 PERBAIKAN BUG KEYBOARD: Hapus disabled={isSending} dari input! */}
           <input 
             type="text"
             ref={inputRef} 
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={`Ketik pesan...`}
+            placeholder={`Balas ${activeUser?.full_name.split(' ')[0]}...`}
             className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-5 py-3.5 text-[13px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-colors shadow-inner placeholder:text-slate-400"
           />
+          
+          {/* 🌟 PERBAIKAN BUG KEYBOARD: Tambah onTouchStart biar fokus tidak dicolong saat disentuh jari */}
           <button 
             type="submit" 
             onMouseDown={(e) => e.preventDefault()}

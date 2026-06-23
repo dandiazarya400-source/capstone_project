@@ -219,16 +219,21 @@ const AdminStoreSettings = () => {
 
       <main className="w-full px-5 pt-2 pb-24">
 
-        {/* HEADER PENGATURAN TOKO (Model Card Dalam)
-        <div className="flex items-center gap-3 mb-6 bg-surface p-3 rounded-2xl border border-primary/10 shadow-lg">
-          <button type="button" onClick={() => router.back()} className="p-2 bg-primary/5 rounded-full hover:bg-white/10 transition-colors">
+        {/* ================= HEADER PENGATURAN TOKO ================= */}
+        <div className="flex items-center gap-3 mb-6 bg-surface p-3 rounded-2xl border border-primary/10 shadow-sm">
+          {/* 🌟 TOMBOL PINTAR: Akan membawa Admin pulang persis ke tempat dia berasal */}
+          <button 
+            type="button" 
+            onClick={() => router.back()} 
+            className="p-2 bg-primary/5 rounded-full hover:bg-primary/10 text-primary transition-colors cursor-pointer"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-base font-bold text-main leading-tight">Pengaturan Toko</h1>
-            <p className="text-[10px] text-muted">Kelola identitas dan jadwal operasional</p>
+            <h1 className="text-[16px] font-bold text-main leading-tight">Pengaturan Toko</h1>
+            <p className="text-[11px] text-muted font-medium mt-0.5">Kelola identitas dan jadwal operasional</p>
           </div>
-        </div> */}
+        </div>
 
         {/* Banner Info */}
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-8 flex items-center gap-3 shadow-sm">

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Package, CalendarCheck, TrendingUp, MessageSquare, ChevronRight } from 'lucide-react';
+import { Users, Package, CalendarCheck, TrendingUp, MessageSquare, ChevronRight, ArrowLeft, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -25,7 +25,13 @@ const AdminDashboard = () => {
     return 'Admin';
   });
 
-  const [adminRole, setAdminRole] = useState<string | null>(null);
+  // 🌟 GHOST CACHE UNTUK ROLE: Biar tombol Kotak Masuk langsung muncul 0 detik!
+  const [adminRole, setAdminRole] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('admin_dashboard_role');
+    }
+    return null;
+  });
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -115,13 +121,29 @@ const AdminDashboard = () => {
   return (
     <div className="p-5 w-full mx-auto pb-20 animate-in fade-in duration-300">
       
-      <div className="mb-6">
-        <h1 className="text-xl font-black text-slate-800 capitalize tracking-tight">Selamat Datang, {adminName}!</h1>
-        <p className="text-slate-500 text-[12px] mt-0.5 font-medium">Ringkasan performa tokomu hari ini.</p>
+      {/* ================= GREETING & SWITCH KE PROFIL PRIBADI ================= */}
+      <div className="flex items-center justify-between mb-7 mt-2">
+        <div>
+          <h1 className="text-xl font-black text-slate-800 capitalize tracking-tight leading-tight">
+            Selamat Datang, {adminName}!
+          </h1>
+          <p className="text-slate-500 text-[12px] mt-1 font-medium">
+            Ringkasan performa tokomu hari ini.
+          </p>
+        </div>
+        
+        {/* 🌟 TOMBOL PENYEBERANGAN KE MODE PEMBELI/PROFIL */}
+        <Link 
+          href="/profile" 
+          title="Beralih ke Profil Pembeli"
+          className="p-2.5 bg-white rounded-full text-slate-500 hover:text-teal-600 hover:bg-teal-50 transition-all shadow-[0_4px_10px_rgba(0,0,0,0.03)] border border-slate-100 shrink-0 cursor-pointer active:scale-95"
+        >
+          <User className="w-5 h-5" />
+        </Link>
       </div>
 
-      {/* ================= TOMBOL EKSKLUSIF SUPERADMIN ================= */}
-      {adminRole === 'superadmin' && (
+      {/* ================= TOMBOL INBOX UNTUK ADMIN & SUPERADMIN ================= */}
+      {(adminRole === 'superadmin' || adminRole === 'admin') && (
         <Link href="/admin/inbox" className="block mb-6">
           <div className="bg-gradient-to-r from-teal-500 to-emerald-400 p-4 rounded-[20px] shadow-[0_8px_20px_rgba(20,184,166,0.25)] flex items-center justify-between hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer relative overflow-hidden border border-teal-400/50">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
@@ -129,10 +151,19 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-inner border border-white/30">
                 <MessageSquare className="w-6 h-6 text-white" />
               </div>
+              
+              {/* 🌟 AREA BUNGLON BERADA DI SINI */}
               <div>
-                <h2 className="text-white font-bold text-[15px] drop-shadow-sm">Kotak Masuk Pusat</h2>
-                <p className="text-teal-50 text-[11px] mt-0.5 font-medium drop-shadow-sm">Pantau keluhan & pertanyaan pelanggan</p>
+                <h2 className="text-white font-bold text-[16px] drop-shadow-sm tracking-wide">
+                  {adminRole === 'superadmin' ? 'Kotak Masuk Pusat' : 'Chat Pelanggan'}
+                </h2>
+                <p className="text-teal-50 text-[11px] mt-0.5 font-medium drop-shadow-sm">
+                  {adminRole === 'superadmin' 
+                    ? 'Pantau seluruh percakapan sistem' 
+                    : 'Pesan dari penyewa alatmu'}
+                </p>
               </div>
+
             </div>
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center relative z-10 backdrop-blur-sm">
               <ChevronRight className="w-4 h-4 text-white" />

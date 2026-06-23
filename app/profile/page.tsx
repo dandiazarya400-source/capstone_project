@@ -209,7 +209,16 @@ export default function ProfilePage() {
         {/* 🌟 LAYER 2: Konten Utama (Aman dari potongan) */}
         <div className="flex items-center justify-between relative z-10">
           
-          <Link href="/profile/edit" className="flex items-center space-x-4 group cursor-pointer">
+          {/* 🌟 LINK DINAMIS: Otomatis membelokkan arah sesuai kasta/role */}
+          <Link 
+            href={
+              profile?.role === 'superadmin' ? '/superadmin/settings' : 
+              profile?.role === 'admin' ? '/admin/settings' : 
+              '/profile/edit'
+            } 
+            className="flex items-center space-x-4 group cursor-pointer"
+          >
+            {/* ... (kode avatar biarkan persis seperti aslimu) ... */}
             <div className="w-20 h-20 rounded-full bg-white p-1 ring-4 ring-white/30 shadow-xl shrink-0 flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
               {profile?.avatar_url && profile.avatar_url.startsWith('http') ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -226,19 +235,24 @@ export default function ProfilePage() {
               <p className="text-teal-50 text-[13px] font-medium mb-1 drop-shadow-sm">{roleLabel}</p>
               
               <span className="flex items-center gap-1.5 text-[10px] font-medium text-white/80 group-hover:text-white transition-colors mt-1.5">
-                <Edit3 className="w-3 h-3" /> Ubah Profil
+                <Edit3 className="w-3 h-3" /> 
+                {/* 🌟 TEKS DINAMIS: Biar admin melihat tulisan Pengaturan Toko */}
+                {profile?.role === 'user' ? 'Ubah Profil' : 'Pengaturan Toko'}
               </span>
             </div>
           </Link>
           
-          <div className="flex flex-col space-y-3">
-            <button onClick={() => router.push('/chat')} className="p-2.5 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm">
-              <Headphones className="w-5 h-5 text-white" />
-            </button>
-            <button onClick={() => setShowLogoutModal(true)} className="p-2.5 bg-white/20 hover:bg-rose-500 hover:border-rose-500 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm cursor-pointer group">
-              <LogOut className="w-5 h-5 text-white" />
-            </button> 
-          </div>
+          {/* 🌟 HANYA MUNCUL JIKA STATUSNYA ADALAH USER BIASA */}
+          {profile?.role === 'user' && (
+            <div className="flex flex-col space-y-3">
+              <button onClick={() => router.push('/chat')} className="p-2.5 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm">
+                <Headphones className="w-5 h-5 text-white" />
+              </button>
+              <button onClick={() => setShowLogoutModal(true)} className="p-2.5 bg-white/20 hover:bg-rose-500 hover:border-rose-500 rounded-full backdrop-blur-md transition-all border border-white/30 shadow-sm cursor-pointer group">
+                <LogOut className="w-5 h-5 text-white" />
+              </button> 
+            </div>
+          )}
         </div>
       </div>
       
@@ -321,6 +335,7 @@ export default function ProfilePage() {
         )}
 
         {/* ================= KOTAK MASUK ================= */}
+        {profile?.role === 'user' && (
         <section>
           <Link href="/inbox"> 
             <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center justify-between hover:border-blue-200 transition-all duration-300 group cursor-pointer">
@@ -343,6 +358,7 @@ export default function ProfilePage() {
             </div>
           </Link>
         </section>
+        )}
         
         {/* ================= TRANSAKSI ================= */}
         <section className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm">
@@ -380,7 +396,8 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p className="text-[11px] font-medium text-slate-500 mb-0.5">Saldo Aktif</p>
-                <h3 className="font-black text-slate-800 text-[22px] tracking-tight">
+                {/* Tambahkan class "truncate" agar teks yang kepanjangan dipotong rapi */}
+                <h3 className="font-black text-slate-800 text-[22px] tracking-tight truncate pr-2">
                   {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(profile?.balance || 0)}
                 </h3>
               </div>
