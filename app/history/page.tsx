@@ -117,7 +117,9 @@ const HistoryPage = () => {
   // 🌟 JURUS 3: Detektor Status (Warna & Ikon Otomatis)
   const getStatusUI = (status: string) => {
     const s = status.toLowerCase();
-    if (s.includes('selesai') || s.includes('berhasil')) {
+    
+    // Tambahkan kata 'lunas' dan 'dibayar' agar langsung hijau!
+    if (s.includes('selesai') || s.includes('berhasil') || s.includes('lunas') || s.includes('dibayar')) {
       return { color: 'text-emerald-500', icon: CheckCircle2 };
     }
     if (s.includes('batal') || s.includes('gagal') || s.includes('tolak')) {
