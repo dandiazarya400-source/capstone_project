@@ -366,7 +366,7 @@ const AdminStoreSettings = () => {
           {/* ========================================================================= */}
 
           {/* 🌟 Jarak tombol simpan diperlebar (mt-8) agar tidak dempet dengan hari Minggu */}
-          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-8 bg-primary text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-primary/30 hover:bg-[#b58eff] transition-all disabled:opacity-50 cursor-pointer">
+          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-8 bg-primary text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-primary/30 hover:bg-primary-hover transition-all disabled:opacity-50 cursor-pointer">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {loading ? 'Menyimpan...' : 'Simpan Pengaturan Toko'}
           </button>
@@ -388,7 +388,7 @@ const AdminStoreSettings = () => {
           
           {/* Wadah dengan tinggi absolut (h-72) agar tidak menghilang di Mobile Frame */}
           <div className="relative w-full h-72 bg-neutral-900 rounded-2xl border border-primary/10 overflow-hidden mb-4 shrink-0 shadow-inner">
-            <Cropper image={imageToCrop} crop={crop} zoom={zoom} aspect={1} cropShape="round" showGrid={true} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} classes={{ containerClassName: "bg-transparent", cropAreaClassName: "border-2 border-primary shadow-[0_0_20px_rgba(163,116,255,0.6)]" }} />
+            <Cropper image={imageToCrop} crop={crop} zoom={zoom} aspect={1} cropShape="round" showGrid={true} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} classes={{ containerClassName: "bg-transparent", cropAreaClassName: "border-2 border-primary shadow-[0_0_20px_rgba(20,184,166,0.4)]" }} />
           </div>
           
           <div className="bg-surface p-5 rounded-2xl border border-primary/10 space-y-4 shadow-xl">
@@ -396,7 +396,7 @@ const AdminStoreSettings = () => {
               <label className="text-[9px] font-bold text-muted uppercase tracking-widest pl-1">Perbesar / Perkecil</label>
               <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="w-full h-1.5 bg-background rounded-full appearance-none cursor-pointer accent-primary" />
             </div>
-            <button type="button" onClick={handleCropSaveAndUpload} disabled={uploadingImage} className="w-full bg-primary text-white text-sm font-bold py-3.5 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:bg-[#b58eff] transition-all disabled:opacity-50">
+            <button type="button" onClick={handleCropSaveAndUpload} disabled={uploadingImage} className="w-full bg-primary text-white text-sm font-bold py-3.5 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:bg-primary-hover transition-all disabled:opacity-50">
               <BadgeCheck className="w-5 h-5" /> Terapkan Logo
             </button>
           </div>

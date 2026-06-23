@@ -27,59 +27,184 @@ const BookingContent = () => {
   const [price, setPrice] = useState(0);
   const [ownerId, setOwnerId] = useState<string | null>(null);
 
-  // Ambil harga asli dari database (Anti-hack URL)
+  // / Ambil data produk & jadwal toko dari database (Anti-hack URL)
   useEffect(() => {
-    const fetchProductPrice = async () => {
+    const fetchProductDetails = async () => {
       if (!itemId) return;
       setLoadingPrice(true);
       try {
         const { data, error } = await supabase
           .from('items') 
-          // 🌟 PERBAIKAN 1: Tambahkan delivery_option di sini!
-          .select('price_per_day, owner_id, delivery_option')
+          // 🌟 PERBAIKAN SINKRONISASI: Tarik juga operational_schedule dari tabel profiles!
+          .select(`
+            price_per_day, 
+            owner_id, 
+            delivery_option,
+            profiles ( operational_schedule )
+          `)
           .eq('id', itemId)
           .single();
 
         if (error) {
-          console.error("CCTV Database Error:", error.message, " | Hint:", error.hint);
+          console.error("CCTV Database Error:", error.message);
         }
           
         if (data) {
           if (data.price_per_day) setPrice(data.price_per_day);
           if (data.owner_id) setOwnerId(data.owner_id);
           
-          // 🌟 PERBAIKAN 2: Simpan batasannya dan auto-select!
           if (data.delivery_option) {
             setAllowedDelivery(data.delivery_option);
+            if (data.delivery_option === 'pickup_only') setDeliveryMethod('self');
+            else if (data.delivery_option === 'delivery_only') setDeliveryMethod('owner');
+          }
+
+          // 🌟 MAGIC: TERJEMAHKAN JADWAL ADMIN KE KALENDER BOOKING!
+          // (0 = Minggu, 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat, 6 = Sabtu)
+          // Di database Admin: [0] Senin, [1] Selasa, ... [6] Minggu
+          if (data.profiles && (data.profiles as any).operational_schedule) {
+            const schedule = (data.profiles as any).operational_schedule;
+            const dynamicallyClosedDays: number[] = [];
             
-            // Kalau cuma bisa ambil sendiri, otomatis ter-klik "self"
-            if (data.delivery_option === 'pickup_only') {
-              setDeliveryMethod('self');
-            } 
-            // Kalau cuma bisa diantar, otomatis ter-klik "owner"
-            else if (data.delivery_option === 'delivery_only') {
-              setDeliveryMethod('owner');
-            }
+            if (schedule[0]?.isClosed) dynamicallyClosedDays.push(1); // Senin
+            if (schedule[1]?.isClosed) dynamicallyClosedDays.push(2); // Selasa
+            if (schedule[2]?.isClosed) dynamicallyClosedDays.push(3); // Rabu
+            if (schedule[3]?.isClosed) dynamicallyClosedDays.push(4); // Kamis
+            if (schedule[4]?.isClosed) dynamicallyClosedDays.push(5); // Jumat
+            if (schedule[5]?.isClosed) dynamicallyClosedDays.push(6); // Sabtu
+            if (schedule[6]?.isClosed) dynamicallyClosedDays.push(0); // Minggu
+            
+            // Update state kalender dengan hari libur admin!
+            setClosedDays(dynamicallyClosedDays);
           }
         }
       } catch (error) {
-        console.error("Gagal mengambil harga:", error);
+        console.error("Gagal mengambil data:", error);
       } finally {
         setLoadingPrice(false);
       }
     };
-    fetchProductPrice();
+    fetchProductDetails();
   }, [itemId]);
 
-  // DATA MOCKUP (April 2025)
-  const bookedDates = [13, 14, 15, 16, 17, 29, 30]; 
-  const totalDays = 30;
-  const startDayOffset = 2; // Mulai hari Selasa
-  const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  // 🌟 TANGGAL DINAMIS & NAVIGASI BULAN
+  const [activeDate, setActiveDate] = useState(new Date()); 
+  const currentYear = activeDate.getFullYear();
+  const currentMonth = activeDate.getMonth(); // 0-11
+  
+  // Deteksi Hari Ini yang Sebenarnya (Untuk mengunci hari yang lewat)
+  const realToday = new Date();
+  const isCurrentMonth = currentYear === realToday.getFullYear() && currentMonth === realToday.getMonth();
+  const todayDate = realToday.getDate(); 
 
-  // LOGIKA KLIK TANGGAL
+  // Hitung total hari bulan ini & offset
+  const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const startDayOffset = new Date(currentYear, currentMonth, 1).getDay();
+  const daysOfWeek = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
+
+  const monthName = activeDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+
+  // 🌟 FUNGSI GANTI BULAN
+  const handlePrevMonth = () => {
+    if (!isCurrentMonth) {
+      setActiveDate(new Date(currentYear, currentMonth - 1, 1));
+      setStartDate(null); // Reset pilihan agar tidak error lintas bulan
+      setEndDate(null);
+    }
+  };
+
+  const handleNextMonth = () => {
+    setActiveDate(new Date(currentYear, currentMonth + 1, 1));
+    setStartDate(null);
+    setEndDate(null);
+  };
+
+  // 🌟 STATE UNTUK JADWAL BOOKING ASLI DARI DATABASE
+  const [bookedDates, setBookedDates] = useState<number[]>([]); 
+
+  // 🌟 TARIK DATA TRANSAKSI ASLI SETIAP KALI GANTI BULAN!
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!itemId) return;
+
+      try {
+        // Tarik semua transaksi barang ini yang TIDAK batal/selesai
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('start_date, end_date, status')
+          .eq('item_id', itemId)
+          .neq('status', 'Dibatalkan')
+          .neq('status', 'Selesai'); 
+
+        if (error) throw error;
+
+        if (data) {
+          let bookedDaysArray: number[] = [];
+
+          // Rentang waktu bulan yang sedang dilihat di layar
+          const calendarMonthStart = new Date(currentYear, currentMonth, 1);
+          const calendarMonthEnd = new Date(currentYear, currentMonth + 1, 0);
+
+          data.forEach((tx) => {
+            const start = new Date(tx.start_date);
+            const end = new Date(tx.end_date);
+
+            // Jika transaksi bersinggungan dengan bulan yang sedang dilihat
+            if (start <= calendarMonthEnd && end >= calendarMonthStart) {
+              let currDate = new Date(start);
+              
+              // Loop dari tanggal mulai sampai tanggal selesai
+              while (currDate <= end) {
+                // Jika tanggal tersebut jatuh di bulan dan tahun yang sedang dilihat, catat angkanya!
+                if (currDate.getMonth() === currentMonth && currDate.getFullYear() === currentYear) {
+                  bookedDaysArray.push(currDate.getDate());
+                }
+                currDate.setDate(currDate.getDate() + 1); // Tambah 1 hari
+              }
+            }
+          });
+
+          // Hilangkan angka duplikat dan simpan ke kalender
+          setBookedDates([...new Set(bookedDaysArray)]);
+        }
+      } catch (error) {
+        console.error("Gagal menarik jadwal transaksi:", error);
+      }
+    };
+
+    fetchBookings();
+  }, [itemId, currentMonth, currentYear]); // 👈 Akan jalan ulang kalau ganti bulan!
+  
+  // 🌟 STATE BARU UNTUK HARI LIBUR ADMIN (Misal: 0 = Minggu libur/tutup)
+  // (Nanti akan kita isi otomatis dari database admin)
+  const [closedDays, setClosedDays] = useState<number[]>([0]); 
+
+  // 🌟 LOGIKA STATUS TANGGAL (Dilengkapi proteksi lintas bulan)
+  const getStatus = (day: number) => {
+    // 1. Coret hari yang sudah lewat HANYA jika sedang di bulan ini
+    if (isCurrentMonth && day < todayDate) return 'past';
+    
+    // Jika user memaksa mundur ke bulan lalu (proteksi ekstra)
+    if (currentYear < realToday.getFullYear() || (currentYear === realToday.getFullYear() && currentMonth < realToday.getMonth())) return 'past';
+    
+    // 2. Cek apakah hari ini adalah hari libur admin
+    const dayOfWeekIndex = (startDayOffset + day - 1) % 7;
+    if (closedDays.includes(dayOfWeekIndex)) return 'closed';
+
+    // 3. Cek apakah sudah dibooking
+    if (bookedDates.includes(day)) return 'booked';
+
+    // 4. Logika Pilihan User
+    if (day === startDate || day === endDate) return 'endpoint';
+    if (startDate && endDate && day > startDate && day < endDate) return 'in-range';
+    
+    return 'available';
+  };
+
+  // 🌟 LOGIKA KLIK TANGGAL (Pencegah tembus hari libur)
   const handleDateClick = (day: number) => {
-    if (bookedDates.includes(day)) return; 
+    const status = getStatus(day);
+    if (status === 'booked' || status === 'past' || status === 'closed') return; 
 
     if (!startDate || (startDate && endDate)) {
       setStartDate(day);
@@ -89,21 +214,23 @@ const BookingContent = () => {
     } else if (day === startDate) {
       setStartDate(null);
     } else {
-      const hasBookedInRange = bookedDates.some(bd => bd > startDate && bd < day);
-      if (hasBookedInRange) {
-        alert("Maaf, di antara tanggal tersebut ada hari yang sudah dibooking orang lain. Silakan pilih range yang berbeda.");
+      // Cek apakah ada hari booking/lewat/libur di antara rentang pilihan
+      let hasInvalidDayInRange = false;
+      for (let d = startDate + 1; d < day; d++) {
+         const s = getStatus(d);
+         if (s === 'booked' || s === 'closed') {
+           hasInvalidDayInRange = true;
+           break;
+         }
+      }
+      
+      if (hasInvalidDayInRange) {
+        alert("Maaf, rentang tanggal yang Anda pilih melewati hari libur toko atau hari yang sudah dibooking. Silakan pilih rentang yang kosong.");
         setStartDate(day);
         return;
       }
       setEndDate(day);
     }
-  };
-
-  const getStatus = (day: number) => {
-    if (bookedDates.includes(day)) return 'booked';
-    if (day === startDate || day === endDate) return 'endpoint';
-    if (startDate && endDate && day > startDate && day < endDate) return 'in-range';
-    return 'available';
   };
 
   const duration = startDate && endDate ? (endDate - startDate) + 1 : (startDate ? 1 : 0);
@@ -135,25 +262,44 @@ const BookingContent = () => {
               <span className="text-[11px] font-medium text-main whitespace-nowrap">Sudah dibooking</span>
             </div>
             <div className="flex-shrink-0 flex items-center bg-surface border border-primary/10 px-2 py-1 rounded-full shadow-sm">
-              <div className="w-2 h-2 rounded-full bg-primary mr-1.5 shadow-[0_0_8px_rgba(163,116,255,0.5)]"></div>
-              <span className="text-[11px] font-medium text-main whitespace-nowrap">Pilihanmu</span>
-            </div>
-            <div className="flex-shrink-0 flex items-center bg-surface border border-primary/10 px-2 py-1 rounded-full shadow-sm">
-              <div className="w-2 h-2 rounded-full bg-white/30 mr-1.5"></div>
+              <div className="w-2 h-2 rounded-full bg-white border border-slate-300 mr-1.5"></div>
               <span className="text-[11px] font-medium text-main whitespace-nowrap">Tersedia</span>
             </div>
+            
+            {/* 🌟 TAMBAHAN STATUS LIBUR */}
+            <div className="flex-shrink-0 flex items-center bg-surface border border-primary/10 px-2 py-1 rounded-full shadow-sm">
+              <div className="w-2 h-2 rounded-full bg-orange-400 mr-1.5 shadow-[0_0_8px_rgba(251,146,60,0.5)]"></div>
+              <span className="text-[11px] font-medium text-main whitespace-nowrap">Libur/Tutup</span>
+            </div>
+
+            <div className="flex-shrink-0 flex items-center bg-surface border border-primary/10 px-2 py-1 rounded-full shadow-sm">
+              <div className="w-2 h-2 rounded-full bg-primary mr-1.5 shadow-[0_0_8px_rgba(20,184,166,0.5)]"></div>
+              <span className="text-[11px] font-medium text-main whitespace-nowrap">Pilihanmu</span>
+            </div>
+            
           </div>
         </div>
 
         {/* KALENDER INTERAKTIF */}
         <div className="bg-surface rounded-[24px] p-5 shadow-lg border border-primary/10 mb-6">
           <div className="flex justify-between items-center mb-5">
-            <h2 className="text-lg font-bold text-main flex items-center cursor-pointer hover:text-primary transition-colors">
-              April 2025 <ChevronRight className="w-5 h-5 ml-1 text-primary" />
+            <h2 className="text-lg font-bold text-main flex items-center">
+              {monthName}
             </h2>
             <div className="flex space-x-3 text-primary">
-              <ChevronLeft className="w-6 h-6 opacity-30 cursor-not-allowed" />
-              <ChevronRight className="w-6 h-6 opacity-30 cursor-not-allowed" />
+              <button 
+                onClick={handlePrevMonth} 
+                disabled={isCurrentMonth}
+                className={`p-1.5 rounded-full transition-all ${isCurrentMonth ? 'opacity-30 cursor-not-allowed' : 'hover:bg-primary/10 cursor-pointer'}`}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={handleNextMonth}
+                className="p-1.5 rounded-full hover:bg-primary/10 transition-all cursor-pointer"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
             </div>
           </div>
 
@@ -164,28 +310,32 @@ const BookingContent = () => {
           </div>
 
           <div className="grid grid-cols-7 gap-y-2 text-center">
-            {[...Array(startDayOffset)].map((_, i) => <div key={`empty-${i}`} className="h-10"></div>)}
+            {/* 🌟 Tambahkan currentMonth pada key agar hari kosong langsung ter-reset */}
+            {[...Array(startDayOffset)].map((_, i) => <div key={`empty-${currentMonth}-${i}`} className="h-10"></div>)}
             
             {[...Array(totalDays)].map((_, i) => {
               const day = i + 1;
               const status = getStatus(day);
               
               return (
-                <div key={day} className="flex justify-center items-center h-10 relative group">
+                // Ganti key menjadi kombinasi Tahun-Bulan-Tanggal agar tidak ada animasi nyasar saat ganti bulan
+                <div key={`${currentYear}-${currentMonth}-${day}`} className="flex justify-center items-center h-10 relative group">
                   {status === 'in-range' && <div className="absolute w-full h-9 bg-primary/10"></div>}
                   {status === 'endpoint' && endDate && startDate !== endDate && (
-                     <div className={`absolute w-1/2 h-9 bg-primary/10 ${day === startDate ? 'right-0' : 'left-0'}`}></div>
+                      <div className={`absolute w-1/2 h-9 bg-primary/10 ${day === startDate ? 'right-0' : 'left-0'}`}></div>
                   )}
 
                   <button 
                     onClick={() => handleDateClick(day)}
                     className={`w-9 h-9 flex justify-center items-center rounded-xl text-sm font-semibold transition-all duration-150 z-10
-                      ${status === 'endpoint' ? 'bg-primary text-white shadow-[0_2px_10px_rgba(163,116,255,0.4)]' : ''}
+                      ${status === 'endpoint' ? 'bg-primary text-white shadow-[0_2px_10px_rgba(20,184,166,0.4)]' : ''}
                       ${status === 'in-range' ? 'text-primary font-bold' : ''}
-                      ${status === 'booked' ? 'text-red-400 opacity-25 cursor-not-allowed' : 'text-main'}
-                      ${status === 'available' ? 'hover:bg-primary/10 hover:text-primary' : ''}
+                      ${status === 'booked' ? 'text-red-400 opacity-25 cursor-not-allowed' : ''}
+                      ${status === 'past' ? 'text-slate-300 opacity-30 cursor-not-allowed' : ''}
+                      ${status === 'closed' ? 'text-orange-400 bg-orange-50 cursor-not-allowed opacity-50 line-through' : ''}
+                      ${status === 'available' || status === 'in-range' || status === 'endpoint' ? 'text-main hover:bg-primary/10 hover:text-primary cursor-pointer' : ''}
                     `}
-                    disabled={status === 'booked'}
+                    disabled={status === 'booked' || status === 'past' || status === 'closed'}
                   >
                     {day}
                   </button>
@@ -215,7 +365,7 @@ const BookingContent = () => {
               <span className="text-base font-bold text-main w-4 text-center">{quantity}</span>
               <button 
                 onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
-                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shadow-md hover:bg-[#b58eff] transition-colors"
+                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shadow-md hover:bg-primary-hover transition-colors"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -283,7 +433,7 @@ const BookingContent = () => {
           <button 
             disabled={!startDate || price === 0 || loadingPrice}
             onClick={() => setShowConfirmModal(true)}
-            className="flex-1 bg-primary text-white font-bold py-3.5 rounded-2xl flex justify-center items-center space-x-2 shadow-[0_4px_20px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition-colors disabled:opacity-30 disabled:grayscale disabled:shadow-none"
+            className="flex-1 bg-primary text-white font-bold py-3.5 rounded-2xl flex justify-center items-center space-x-2 shadow-[0_4px_20px_rgba(20,184,166,0.3)] hover:bg-primary-hover transition-colors disabled:opacity-30 disabled:grayscale disabled:shadow-none"
           >
             <CheckCircle2 className="w-5 h-5" />
             <span className="text-sm whitespace-nowrap">
@@ -306,7 +456,7 @@ const BookingContent = () => {
             
             <p className="text-xs text-muted mb-6 leading-relaxed">
               Memproses booking tanggal <span className="font-bold text-primary">
-                {startDate}{endDate && endDate !== startDate ? ` - ${endDate}` : ''} April 2025
+                {startDate}{endDate && endDate !== startDate ? ` - ${endDate}` : ''} {monthName}
               </span> (<span className="font-bold text-primary">{duration} hari</span>)?
             </p>
             
@@ -321,11 +471,13 @@ const BookingContent = () => {
                 onClick={() => {
                   setShowConfirmModal(false);
                   
-                  // [FIX KEAMANAN CHECKOUT] Kita TIDAK LAGI melempar total harga lewat URL. 
-                  // Kita lempar 'quantity' (jumlah barang) dan biarkan halaman Checkout yang mengalikan dengan harga asli dari DB!
-                  router.push(`/payment/checkout?id=${itemId}&qty=${quantity}&start=${startDate}&end=${endDate || startDate}&delivery=${deliveryMethod}`);
+                  // Format: HH-BB-TTTT (Contoh: 15-7-2026)
+                  const startStr = `${startDate}-${currentMonth + 1}-${currentYear}`;
+                  const endStr = `${endDate || startDate}-${currentMonth + 1}-${currentYear}`;
+                  
+                  router.push(`/payment/checkout?id=${itemId}&qty=${quantity}&start=${startStr}&end=${endStr}&delivery=${deliveryMethod}`);
                 }}
-                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-white bg-primary shadow-[0_4px_20px_rgba(163,116,255,0.4)] hover:bg-[#b58eff] transition-colors"
+                className="flex-1 py-2.5 rounded-2xl text-xs font-bold text-white bg-primary shadow-[0_4px_20px_rgba(20,184,166,0.3)] hover:bg-primary-hover transition-colors"
               >
                 Ya, Lanjut
               </button>

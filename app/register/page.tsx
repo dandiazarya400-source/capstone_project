@@ -61,6 +61,8 @@ const RegisterPage = () => {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-teal-500 overflow-hidden relative font-sans">
+
+      
       
       {/* ================= DEKORASI BACKGROUND ================= */}
       <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-teal-400 rounded-full blur-2xl opacity-60"></div>
