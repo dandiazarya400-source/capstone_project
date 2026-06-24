@@ -10,6 +10,8 @@ import {
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/BottomNav';
+import { useUserStore } from '@/store/useUserStore';
+
 
 interface ProductProps {
   id: string;
@@ -76,6 +78,20 @@ const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, o
 );
 
 const HomePage = () => {
+  // =====================================================================
+  // 🌟 JURUS SINKRONISASI PROFIL (INI YANG KEMARIN KETINGGALAN!)
+  // 1. Tarik data profil dari global state
+  const { profile } = useUserStore();
+
+  // 2. Buat logika pengambil inisial huruf (jika user belum punya foto)
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name.trim().charAt(0).toUpperCase();
+  };
+  const userInitials = getInitials(profile?.full_name || '');
+  // =====================================================================
+
+
   // 🌟 JURUS 1: Ambil data produk & jumlah dari memori
   const [products, setProducts] = useState<ProductProps[]>(() => {
     if (typeof window !== 'undefined') {
@@ -468,10 +484,17 @@ const HomePage = () => {
                 </button>
               </Link>
               
+              {/* 🌟 WADAH AVATAR DINAMIS YANG SUDAH SINKRON */}
               <Link href="/profile">
-                <div className="w-10 h-10 rounded-full bg-white shadow-md hover:scale-105 transition-transform cursor-pointer border-[2px] border-white overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="https://ui-avatars.com/api/?name=US&background=00C6B5&color=fff" alt="Profile" className="w-full h-full object-cover" />
+                <div className="w-10 h-10 rounded-full bg-white shadow-md hover:scale-105 transition-transform cursor-pointer border-[2px] border-white overflow-hidden bg-teal-600 flex items-center justify-center">
+                  {profile?.avatar_url && profile.avatar_url.startsWith('http') ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white font-bold text-[14px]">
+                      {userInitials || 'U'}
+                    </span>
+                  )}
                 </div>
               </Link>
             </div>

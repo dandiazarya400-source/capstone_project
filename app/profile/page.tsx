@@ -313,7 +313,7 @@ export default function ProfilePage() {
         {/* ================= TOMBOL KHUSUS ADMIN & SUPERADMIN ================= */}
         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
           <section>
-            <Link href={profile?.role === 'superadmin' ? '/superadmin' : '/admin'}>
+            <Link href={profile?.role === 'superadmin' ? '/admin' : '/admin'}>
               <div className="bg-white border border-slate-100 p-4 rounded-[20px] flex items-center justify-between hover:border-teal-200 transition-all duration-300 shadow-sm group relative overflow-hidden">
                 <div className="flex items-center space-x-4 relative z-10">
                   <div className="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
