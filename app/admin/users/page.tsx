@@ -32,6 +32,9 @@ export default function AdminUsersPage() {
   const [userStats, setUserStats] = useState({ totalRent: 0, activeRent: 0 });
   const [existingNote, setExistingNote] = useState<string>('');
 
+  const [myStoreItemIds, setMyStoreItemIds] = useState<string[]>([]);
+  const [isBlacklisted, setIsBlacklisted] = useState(false);
+
   // State untuk Toast Notification (Sukses/Error)
   const [toast, setToast] = useState<{ show: boolean, message: string, type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
@@ -66,6 +69,7 @@ export default function AdminUsersPage() {
           setUsers([]); 
           return;
         }
+        setMyStoreItemIds(myItemIds);
 
         // [FIX PRIVASI: TAHAP 2] Cari ID user (tenant_id) yang pernah menyewa barang-barang tersebut
         const { data: txData } = await supabase.from('transactions').select('tenant_id').in('item_id', myItemIds);
@@ -82,7 +86,7 @@ export default function AdminUsersPage() {
           .from('profiles')
           .select('*')
           .in('id', uniqueTenantIds)
-          .eq('is_admin', false)
+          // .eq('is_admin', false)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
@@ -106,26 +110,34 @@ export default function AdminUsersPage() {
   // 2. KLIK DETAIL USER
   const handleSelectUser = async (user: UserProfile) => {
     setSelectedUser(user);
-    setExistingNote(''); // Reset note
+    setExistingNote(''); 
+    setIsBlacklisted(false); // Reset blacklist status
     
     try {
-      // Ambil Statistik Sewa
-      const { data: txData } = await supabase.from('transactions').select('status').eq('tenant_id', user.id);
+      // 🌟 FIX SINKRONISASI 1: Hitung statistik HANYA di toko admin ini!
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('status')
+        .eq('tenant_id', user.id)
+        .in('item_id', myStoreItemIds); // Kunci hanya untuk barang admin ini
+        
       if (txData) {
         const active = txData.filter(t => !['Selesai', 'Dibatalkan'].includes(t.status)).length;
         setUserStats({ totalRent: txData.length, activeRent: active });
       }
 
-      // Ambil Catatan Internal Jika Ada
       if (adminId) {
+        // Ambil Catatan Internal
         const { data: noteData } = await supabase
-          .from('internal_notes')
-          .select('note')
-          .eq('admin_id', adminId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
+          .from('internal_notes').select('note')
+          .eq('admin_id', adminId).eq('user_id', user.id).maybeSingle();
         if (noteData) setExistingNote(noteData.note);
+
+        // 🌟 FIX SINKRONISASI 2: Cek apakah user ini sudah di-blacklist
+        const { data: blacklistData } = await supabase
+          .from('blacklists').select('id')
+          .eq('admin_id', adminId).eq('user_id', user.id).maybeSingle();
+        if (blacklistData) setIsBlacklisted(true);
       }
     } catch (error) {
       console.log(error);
@@ -143,17 +155,11 @@ export default function AdminUsersPage() {
     setIsSubmitting(true);
     try {
       if (actionModal.type === 'note') {
-        // Logika UPSERT Catatan (Update jika ada, Insert jika baru)
-        const { error } = await supabase
-          .from('internal_notes')
-          .upsert({ admin_id: adminId, user_id: selectedUser.id, note: actionModal.value }, { onConflict: 'admin_id,user_id' }); // Pastikan ada UNIQUE constraint di DB, jika tidak pakai delete-insert. (Supabase upsert butuh unique).
-          
-        // Alternatif aman jika tidak ada constraint unique:
+        // 🌟 FIX LOGIKA SIMPAN: Hapus yang lama, masukkan yang baru (Aman dari error constraint)
         await supabase.from('internal_notes').delete().match({ admin_id: adminId, user_id: selectedUser.id });
         if (actionModal.value.trim()) {
             await supabase.from('internal_notes').insert({ admin_id: adminId, user_id: selectedUser.id, note: actionModal.value });
         }
-        
         setExistingNote(actionModal.value);
         showToast('Catatan internal berhasil disimpan.');
       } 
@@ -162,9 +168,11 @@ export default function AdminUsersPage() {
           admin_id: adminId, user_id: selectedUser.id, reason: actionModal.value
         });
         if (error) throw error;
+        setIsBlacklisted(true); // 🌟 SINKRON UI seketika
         showToast('User berhasil dimasukkan ke daftar Blacklist toko Anda.');
       } 
       else if (actionModal.type === 'report') {
+        // ... (Biarkan sama persis seperti kodemu) ...
         const { error } = await supabase.from('reports').insert({
           reporter_id: adminId, reported_user_id: selectedUser.id, reason: actionModal.value
         });
@@ -172,7 +180,7 @@ export default function AdminUsersPage() {
         showToast('Laporan berhasil dikirim ke Superadmin untuk ditindaklanjuti.');
       }
 
-      setActionModal(null); // Tutup modal
+      setActionModal(null);
     } catch (error: any) {
       console.error(error);
       showToast('Gagal memproses permintaan. Mungkin data sudah ada.', 'error');
@@ -202,10 +210,26 @@ export default function AdminUsersPage() {
     setActionModal(config);
   };
 
-  const filteredUsers = users.filter(u => 
-    u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.phone_number?.includes(searchQuery)
-  );
+  // 🌟 STATE BARU UNTUK FILTER (Tambahkan ini jika belum ada)
+  const [activeFilter, setActiveFilter] = useState('Semua');
+
+  // 🌟 LOGIKA FILTER & PENCARIAN GABUNGAN
+  const filteredUsers = users.filter(u => {
+    // 1. Cek Pencarian Teks
+    const matchSearch = u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        u.phone_number?.includes(searchQuery);
+    
+    // 2. Cek Filter Tab
+    if (activeFilter === 'Semua') return matchSearch;
+    if (activeFilter === 'Terverifikasi') return matchSearch && u.verification_status === 'verified';
+    if (activeFilter === 'Menunggu') return matchSearch && u.verification_status === 'pending';
+    
+    return matchSearch;
+  });
+
+  // 🌟 HITUNG STATISTIK CEPAT UNTUK HEADER
+  const totalUsers = users.length;
+  const pendingVerifCount = users.filter(u => u.verification_status === 'pending').length;
 
   // =========================================================================
   // VIEW: DETAIL USER
@@ -344,15 +368,30 @@ export default function AdminUsersPage() {
           <div className="space-y-2">
             <h3 className="font-bold text-[10px] text-muted uppercase tracking-wider ml-1 mb-2">Tindakan Keamanan</h3>
             
-            <button onClick={() => openModal('note')} className="w-full flex items-center justify-between p-4 bg-surface border border-primary/10 rounded-2xl hover:bg-primary/5 transition-colors text-left">
+            {/* 🌟 TOMBOL BLACKLIST SINKRON */}
+            <button 
+              onClick={() => !isBlacklisted && openModal('blacklist')} 
+              disabled={isBlacklisted}
+              className={`w-full flex items-center justify-between p-4 border rounded-2xl transition-colors text-left ${
+                isBlacklisted 
+                  ? 'bg-black/40 border-orange-500/50 cursor-not-allowed opacity-70' 
+                  : 'bg-surface border-primary/10 hover:bg-primary/5'
+              }`}
+            >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 shrink-0 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400"><FileText className="w-4 h-4" /></div>
+                <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${isBlacklisted ? 'bg-orange-500/50 text-white' : 'bg-orange-500/20 text-orange-400'}`}>
+                  <Ban className="w-4 h-4" />
+                </div>
                 <div>
-                  <p className="text-sm font-bold text-main">Catatan Internal</p>
-                  <p className="text-[10px] text-muted line-clamp-1">{existingNote ? 'Telah ditambahkan catatan' : 'Beri catatan khusus untuk admin'}</p>
+                  <p className={`text-sm font-bold ${isBlacklisted ? 'text-orange-400' : 'text-main'}`}>
+                    {isBlacklisted ? 'Telah Di-Blacklist' : 'Blacklist dari Toko'}
+                  </p>
+                  <p className="text-[10px] text-muted">
+                    {isBlacklisted ? 'User ini sudah diblokir dari tokomu' : 'User tidak bisa menyewa di tokomu'}
+                  </p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+              {!isBlacklisted && <ChevronRight className="w-4 h-4 text-muted shrink-0" />}
             </button>
 
             <button onClick={() => openModal('blacklist')} className="w-full flex items-center justify-between p-4 bg-surface border border-primary/10 rounded-2xl hover:bg-primary/5 transition-colors text-left">
@@ -389,53 +428,83 @@ export default function AdminUsersPage() {
     <div className="w-full flex flex-col text-main relative">
       <main className="w-full px-5 pt-4 pb-24">
         
-        
-        
+        {/* 🌟 UPGRADE 1: KARTU STATISTIK MINI DI ATAS */}
+        <div className="grid grid-cols-2 gap-3 mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col justify-center">
+            <span className="text-2xl font-black text-primary">{totalUsers}</span>
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider mt-1">Total Pelanggan</span>
+          </div>
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 flex flex-col justify-center">
+            <span className="text-2xl font-black text-yellow-600">{pendingVerifCount}</span>
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider mt-1">Perlu Verifikasi</span>
+          </div>
+        </div>
+
         {/* PENCARIAN */}
-        <div className="relative w-full mb-6">
+        <div className="relative w-full mb-4">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-primary" />
           <input 
             type="text" 
             placeholder="Cari nama atau nomor HP..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-all shadow-inner text-main placeholder:text-muted/50"
+            className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-all shadow-sm text-main placeholder:text-muted/50"
           />
         </div>
 
-        {/* DAFTAR USER (Sisanya biarkan sama persis) */}
+        {/* 🌟 UPGRADE 2: FILTER CHIPS (TOMBOL KATEGORI) */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-6 pb-1">
+          {['Semua', 'Terverifikasi', 'Menunggu'].map((f) => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={`px-4 py-2 rounded-full text-[11px] font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+                activeFilter === f
+                  ? 'bg-primary text-white shadow-md shadow-primary/20 border-primary'
+                  : 'bg-surface border border-primary/10 text-muted hover:bg-primary/5'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* DAFTAR USER */}
         {loading ? (
           <div className="flex justify-center mt-10"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : filteredUsers.length === 0 ? (
-          <div className="text-center mt-10 text-muted text-sm">Tidak ada pengguna ditemukan.</div>
+          <div className="text-center mt-12 flex flex-col items-center opacity-50">
+            <User className="w-12 h-12 mb-3 text-muted" />
+            <p className="text-muted text-sm font-bold">Tidak ada pengguna ditemukan.</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {filteredUsers.map((user) => (
               <button 
                 key={user.id} 
                 onClick={() => handleSelectUser(user)}
-                className="w-full bg-surface border border-primary/10 p-4 rounded-2xl flex items-center justify-between hover:bg-primary/5 transition-all text-left shadow-sm group"
+                className="w-full bg-surface border border-primary/10 p-3.5 rounded-2xl flex items-center justify-between hover:bg-primary/5 transition-all text-left shadow-sm group"
               >
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <img src={user.avatar_url || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'} alt="Avatar" className="w-12 h-12 rounded-full object-cover ring-2 ring-white/5" />
-                    {user.verification_status === 'verified' && (
-                      <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-0.5 border-2 border-fluent-card">
-                        <ShieldCheck className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                    {user.verification_status === 'pending' && (
-                      <div className="absolute -bottom-1 -right-1 bg-yellow-500 rounded-full p-0.5 border-2 border-fluent-card">
-                        <Clock className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-main line-clamp-1">{user.full_name || 'Tanpa Nama'}</h3>
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {/* Avatar User */}
+                  <img src={user.avatar_url || 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'} alt="Avatar" className="w-11 h-11 rounded-full object-cover ring-2 ring-primary/10 shrink-0" />
+                  
+                  {/* Nama dan Nomor */}
+                  <div className="min-w-0 pr-2">
+                    <h3 className="font-bold text-[13px] text-main truncate w-full">{user.full_name || 'Tanpa Nama'}</h3>
                     <p className="text-[10px] text-muted mt-0.5 font-medium">{user.phone_number || 'Tidak ada nomor HP'}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-primary transition-colors shrink-0" />
+
+                {/* 🌟 UPGRADE 3: BADGE STATUS YANG JELAS & ELEGAN */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {user.verification_status === 'verified' && <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-bold px-2 py-1 rounded-md">Terverifikasi</span>}
+                  {user.verification_status === 'pending' && <span className="bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 text-[9px] font-bold px-2 py-1 rounded-md">Menunggu</span>}
+                  {user.verification_status === 'rejected' && <span className="bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[9px] font-bold px-2 py-1 rounded-md">Ditolak</span>}
+                  {(!user.verification_status || user.verification_status === 'unverified') && <span className="bg-slate-500/10 text-slate-500 border border-slate-500/20 text-[9px] font-bold px-2 py-1 rounded-md">Belum Verif</span>}
+                  
+                  <ChevronRight className="w-4 h-4 text-muted/30 group-hover:text-primary transition-colors shrink-0 ml-1" />
+                </div>
               </button>
             ))}
           </div>

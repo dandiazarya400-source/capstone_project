@@ -6,15 +6,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, Package, PlusCircle, 
   CalendarCheck, Users, Settings, LogOut,
-  Menu, X, Home
+  Menu, X, Home, ShieldCheck, Flag
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  
-  const [isAdmin, setIsAdmin] = useState(false);
+
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   
@@ -54,12 +54,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           return;
         }
 
-        // 🌟 PERBAIKAN: Izinkan masuk jika role-nya admin ATAU superadmin
+        // 🌟 PERBAIKAN LOGIKA: Simpan role yang spesifik ke dalam state
         if (profile?.role === 'admin' || profile?.role === 'superadmin') {
-          setIsAdmin(true);
+          setUserRole(profile.role);
         } else {
-          console.warn("Akses Ditolak: Bukan Admin/Superadmin");
-          router.replace('/'); // Kalau user biasa, lempar ke beranda
+          router.replace('/'); 
         }
       } catch (err) {
         console.error("Error Sistem di Admin Layout:", err);
@@ -74,15 +73,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 
   if (loading) return <div className="h-[100dvh] w-full flex items-center justify-center bg-background text-primary">Memverifikasi Akses...</div>;
-  if (!isAdmin) return null; 
+  if (!userRole) return null;
 
+  // 🌟 MAGIC MENU: Kita tentukan siapa yang boleh melihat menu apa
   const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
-    { name: 'Manajemen Barang', icon: Package, path: '/admin/items' },
-    { name: 'Tambah Barang', icon: PlusCircle, path: '/admin/add' },
-    { name: 'Daftar Booking', icon: CalendarCheck, path: '/admin/bookings' },
-    { name: 'Data User', icon: Users, path: '/admin/users' },
-    { name: 'Pengaturan', icon: Settings, path: '/admin/settings' },
+    // --- MENU ADMIN TOKO ---
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/admin', roles: ['admin'] },
+    { name: 'Manajemen Barang', icon: Package, path: '/admin/items', roles: ['admin'] },
+    { name: 'Tambah Barang', icon: PlusCircle, path: '/admin/add', roles: ['admin'] },
+    { name: 'Daftar Booking', icon: CalendarCheck, path: '/admin/bookings', roles: ['admin'] },
+    { name: 'Data User', icon: Users, path: '/admin/users', roles: ['admin'] },
+    { name: 'Pengaturan Toko', icon: Settings, path: '/admin/settings', roles: ['admin'] },
+
+    // --- MENU SUPERADMIN (KOMANDAN PUSAT) ---
+    { name: 'Dashboard Pusat', icon: LayoutDashboard, path: '/superadmin', roles: ['superadmin'] },
+    { name: 'Verifikasi KTP', icon: ShieldCheck, path: '/superadmin/verification', roles: ['superadmin'] },
+    { name: 'Laporan Masalah', icon: Flag, path: '/superadmin/reports', roles: ['superadmin'] },
+    { name: 'Semua Toko', icon: Package, path: '/superadmin/stores', roles: ['superadmin'] },
+    { name: 'Pengaturan Sistem', icon: Settings, path: '/superadmin/settings', roles: ['superadmin'] },
   ];
 
   return (
@@ -104,21 +112,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       >
         <div className="p-6 border-b border-primary/10 flex justify-between items-center">
           <div>
+            {/* 🌟 JUDUL DINAMIS SESUAI ROLE */}
             <h2 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-teal-300">
-              Admin Panel
+              {userRole === 'superadmin' ? 'Superadmin' : 'Admin'} Panel
             </h2>
             <p className="text-[10px] text-muted mt-1 uppercase tracking-widest">Workspace</p>
           </div>
-          {/* Tombol Tutup Sidebar */}
           <button onClick={() => setIsSidebarOpen(false)} className="p-2 bg-primary/5 rounded-full text-muted hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
-          {menuItems.map((item) => {
+          {/* 🌟 FILTER MENU: Hanya tampilkan menu yang roles-nya cocok dengan userRole */}
+          {menuItems
+            .filter((item) => item.roles.includes(userRole))
+            .map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path || (item.path !== '/admin' && pathname.startsWith(item.path));
+            // Logika aktifnya juga disesuaikan agar tidak bentrok
+            const isActive = pathname === item.path || (item.path !== '/admin' && item.path !== '/superadmin' && pathname.startsWith(item.path));
             
             return (
               <Link 
@@ -172,7 +184,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-bold">Admin Workspace</h1>
+            {/* 🌟 HEADER DINAMIS SESUAI ROLE */}
+            <h1 className="text-lg font-bold">
+              {userRole === 'superadmin' ? 'Superadmin Workspace' : 'Admin Workspace'}
+            </h1>
           </header>
         )}
 

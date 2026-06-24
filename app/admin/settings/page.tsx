@@ -9,6 +9,14 @@ import {
 import { supabase } from '@/lib/supabase';
 import Cropper from 'react-easy-crop';
 
+import dynamic from 'next/dynamic';
+
+// 🌟 IMPORT DINAMIS: Wajib digunakan agar Next.js tidak error SSR saat memuat peta
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { 
+  ssr: false,
+  loading: () => <div className="w-full h-[250px] bg-primary/5 animate-pulse rounded-2xl flex items-center justify-center text-primary/50 text-xs font-bold border border-primary/10">Memuat Satelit Peta...</div>
+});
+
 // FUNGSI UTILITY CROP
 const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
   const image = new Image();
@@ -30,6 +38,13 @@ const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
   });
 };
 
+// 🌟 FUNGSI FORMATTER NOMOR TELEPON
+const formatPhoneNumber = (value: string) => {
+  if (!value) return '';
+  const rawValue = value.replace(/\D/g, ''); // Buang semua huruf/simbol
+  return rawValue.replace(/(\d{4})(?=\d)/g, '$1-'); // Beri strip tiap 4 angka
+};
+
 const AdminStoreSettings = () => {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +52,10 @@ const AdminStoreSettings = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [adminId, setAdminId] = useState<string | null>(null);
+
+  const [originalStoreName, setOriginalStoreName] = useState('');
+  const [canChangeName, setCanChangeName] = useState(true);
+  const [daysUntilChange, setDaysUntilChange] = useState(0);
 
   const [formData, setFormData] = useState({
     store_name: '',
@@ -91,7 +110,7 @@ const AdminStoreSettings = () => {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, phone_number, address, avatar_url, auto_greeting, role, operational_schedule')
+          .select('full_name, phone_number, address, avatar_url, auto_greeting, role, operational_schedule, last_name_changed_at')
           .eq('id', currentUserId)
           .maybeSingle();
 
@@ -111,13 +130,26 @@ const AdminStoreSettings = () => {
           const storeData = data as any;
           setFormData({
             store_name: storeData.full_name || '', 
-            phone_number: storeData.phone_number || '',
+            phone_number: formatPhoneNumber(storeData.phone_number || ''),
             address: storeData.address || '',
             avatar_url: storeData.avatar_url || '',
             auto_greeting: storeData.auto_greeting || 'Halo! 👋 Selamat datang. Ada yang bisa dibantu hari ini?'
           });
+
+          setOriginalStoreName(storeData.full_name || '');
           
-          // Sinkronisasi jadwal dari JSON database jika ada
+          if (storeData.last_name_changed_at) {
+            const lastChange = new Date(storeData.last_name_changed_at);
+            const now = new Date();
+            const diffTime = now.getTime() - lastChange.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 30) {
+              setCanChangeName(false); // Kunci gemboknya!
+              setDaysUntilChange(30 - diffDays); // Hitung sisa hari
+            }
+          }
+
           if (storeData.operational_schedule) {
             setSchedule(storeData.operational_schedule);
           }
@@ -180,19 +212,30 @@ const AdminStoreSettings = () => {
     setLoading(true);
 
     try {
+      // 🌟 Siapkan paket data yang mau diupdate
+      const updatePayload: any = {
+        full_name: formData.store_name, 
+        phone_number: formData.phone_number,
+        address: formData.address,
+        avatar_url: formData.avatar_url,
+        operational_schedule: schedule,
+        auto_greeting: formData.auto_greeting
+      };
+
+      // 🌟 Jika nama toko TERBUKTI diubah, catat tanggal hari ini ke database!
+      if (formData.store_name !== originalStoreName && canChangeName) {
+        updatePayload.last_name_changed_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          full_name: formData.store_name, 
-          phone_number: formData.phone_number,
-          address: formData.address,
-          avatar_url: formData.avatar_url,
-          operational_schedule: schedule,
-          auto_greeting: formData.auto_greeting
-        })
+        .update(updatePayload)
         .eq('id', adminId);
 
       if (error) throw error;
+
+      // Update state nama asli agar tidak terus-terusan dianggap ganti nama
+      setOriginalStoreName(formData.store_name);
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -266,27 +309,78 @@ const AdminStoreSettings = () => {
         {/* FORM DATA TOKO */}
         <form onSubmit={handleSave} className="flex flex-col gap-6">
           
-          <div className="space-y-2"> {/* 🌟 Jarak label ke input diperbesar */}
+          <div className="space-y-2"> 
             <label className="text-[10px] font-bold text-muted uppercase ml-1 tracking-wider">Nama Toko/Studio</label>
             <div className="relative">
-              <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-primary" />
-              <input type="text" required className="w-full bg-surface border border-primary/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary transition-all shadow-sm font-bold text-main" value={formData.store_name} onChange={(e) => setFormData({...formData, store_name: e.target.value})} />
+              <Store className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${canChangeName ? 'text-primary' : 'text-muted'}`} />
+              <input 
+                type="text" 
+                required 
+                disabled={!canChangeName} // 🌟 INPUT DIKUNCI DI SINI
+                className={`w-full border rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none transition-all shadow-sm font-bold ${
+                  canChangeName 
+                    ? 'bg-surface border-primary/20 focus:border-primary text-main' 
+                    : 'bg-primary/5 border-primary/10 text-muted cursor-not-allowed' // 🌟 GAYA VISUAL SAAT DIKUNCI
+                }`}
+                value={formData.store_name} 
+                onChange={(e) => setFormData({...formData, store_name: e.target.value})} 
+              />
             </div>
+            
+            {/* 🌟 PESAN PERINGATAN DINAMIS BISA DIGANTI/TIDAK */}
+            {!canChangeName ? (
+              <p className="text-[9px] font-bold text-rose-500 pl-1 mt-1 flex items-center gap-1">
+                🔒 Nama terkunci. Bisa diubah dalam {daysUntilChange} hari lagi.
+              </p>
+            ) : (
+              <p className="text-[9px] text-yellow-600 pl-1 mt-1 font-medium">
+                ⚠️ Peringatan: Nama toko hanya dapat diubah 1x dalam 30 hari.
+              </p>
+            )}
           </div>
+          
           
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-muted uppercase ml-1 tracking-wider">Telepon Admin</label>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-primary" />
-              <input type="tel" required className="w-full bg-surface border border-primary/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary transition-all shadow-sm text-main" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
+              <input 
+                type="tel" 
+                required 
+                className="w-full bg-surface border border-primary/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary transition-all shadow-sm text-main tracking-wide" 
+                value={formData.phone_number} 
+                onChange={(e) => {
+                  // 🌟 PANGGIL FUNGSI SIHIR DI SINI SAAT DIKETIK
+                  setFormData({...formData, phone_number: formatPhoneNumber(e.target.value)});
+                }} 
+                maxLength={16}
+                placeholder="0812-3456-7890"
+              />
             </div>
           </div>
+          
+          {/* ================= ALAMAT LENGKAP & PETA ================= */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-end ml-1">
+              <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Titik Lokasi Toko</label>
+              <span className="text-[9px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">Klik Peta ⬇️</span>
+            </div>
+            
+            {/* 🌟 RENDER PETA DI SINI */}
+            <MapPicker 
+              onLocationSelect={(address) => setFormData({...formData, address})} 
+            />
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-muted uppercase ml-1 tracking-wider">Alamat Lengkap Toko</label>
-            <div className="relative">
+            <div className="relative mt-2">
               <MapPin className="absolute left-4 top-3.5 w-4.5 h-4.5 text-primary" />
-              <textarea rows={3} required className="w-full bg-surface border border-primary/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary transition-all shadow-sm resize-none text-main" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
+              <textarea 
+                rows={3} 
+                required 
+                className="w-full bg-surface border border-primary/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary transition-all shadow-sm resize-none text-main leading-relaxed" 
+                value={formData.address} 
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                placeholder="Klik titik lokasimu di peta atas, atau ketik alamat manual di sini..."
+              ></textarea>
             </div>
           </div>
 
