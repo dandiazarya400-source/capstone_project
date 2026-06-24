@@ -98,9 +98,22 @@ const AdminBookingsPage = () => {
     }
   };
 
+  // 🌟 1. LOGIKA PENGHITUNG ANGKA NOTIFIKASI
+  const getTabCount = (tabName: string) => {
+    if (tabName === 'Semua') return bookings.length;
+    if (tabName === 'Menunggu Konfirmasi') {
+      return bookings.filter(b => b.status === 'Menunggu Konfirmasi' || b.status?.toUpperCase() === 'LUNAS').length;
+    }
+    return bookings.filter(b => b.status?.toLowerCase() === tabName.toLowerCase()).length;
+  };
+
+  // 🌟 2. LOGIKA FILTER (Mengenali LUNAS)
   const filteredBookings = bookings.filter(b => {
     if (activeTab === 'Semua') return true;
-    return b.status.toLowerCase() === activeTab.toLowerCase();
+    if (activeTab === 'Menunggu Konfirmasi') {
+      return b.status === 'Menunggu Konfirmasi' || b.status?.toUpperCase() === 'LUNAS';
+    }
+    return b.status?.toLowerCase() === activeTab.toLowerCase();
   });
 
   const formatDate = (dateString: string) => {
@@ -113,7 +126,7 @@ const AdminBookingsPage = () => {
       
       {/* Toast Notification */}
       {toast.show && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-5 fade-in duration-300 w-[90%] max-w-[320px]">
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-5 fade-in duration-300 w-[90%] max-w-[320px]">
           <div className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl ${
             toast.type === 'success' ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'
           }`}>
@@ -135,21 +148,36 @@ const AdminBookingsPage = () => {
           </h1>
         </header>
 
-        {/* [FIX BUG TAB STATUS] Sesuaikan dengan Default Database */}
+        {/* [FIX TAB & TAMBAH ANGKA NOTIFIKASI] */}
         <section className="w-full px-5 pb-4 flex items-center space-x-2.5 overflow-x-auto scrollbar-hide">
-          {['Semua', 'Menunggu Konfirmasi', 'Diserahkan', 'Selesai', 'Dibatalkan'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-200 border ${
-                activeTab === tab
-                  ? 'bg-primary/20 text-primary border-primary/50 shadow-lg'
-                  : 'bg-transparent text-muted border-white/10 hover:bg-primary/5'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {['Semua', 'Menunggu Konfirmasi', 'Diserahkan', 'Selesai', 'Dibatalkan'].map((tab) => {
+            const count = getTabCount(tab);
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-shrink-0 px-5 py-2 rounded-full text-[13px] font-medium transition-all duration-200 border flex items-center gap-2 ${
+                  activeTab === tab
+                    ? 'bg-primary/20 text-primary border-primary/50 shadow-lg'
+                    : 'bg-transparent text-muted border-white/10 hover:bg-primary/5'
+                }`}
+              >
+                {tab}
+                {/* 🌟 ANGKA NOTIFIKASI DENGAN WARNA DINAMIS */}
+                {count > 0 && tab !== 'Semua' && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold text-white ${
+                    activeTab === tab ? 'bg-primary' : 
+                    tab === 'Selesai' ? 'bg-emerald-500' : 
+                    tab === 'Diserahkan' ? 'bg-blue-400' : 
+                    tab === 'Menunggu Konfirmasi' ? 'bg-yellow-500' : 
+                    'bg-rose-500'
+                  }`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </section>
       </div>
 
@@ -173,25 +201,38 @@ const AdminBookingsPage = () => {
               <div key={booking.id} className="bg-surface border border-primary/10 rounded-2xl p-4 shadow-lg flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4">
                 
                 {/* Bagian Atas: Profil User & Status */}
-                <div className="flex justify-between items-start border-b border-primary/10 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">
+                <div className="flex justify-between items-start border-b border-primary/10 pb-3 gap-2">
+                  
+                  {/* Kiri: Avatar & Info User */}
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs shrink-0 mt-0.5">
                       {booking.profiles?.full_name?.charAt(0) || 'U'}
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-main leading-tight">{booking.profiles?.full_name || 'User Tidak Dikenal'}</h3>
-                      <p className="text-[10px] text-muted mt-0.5">ID: {booking.id.substring(0, 8)}</p>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <h3 className="text-sm font-bold text-main truncate w-full pr-2">
+                        {booking.profiles?.full_name || 'User Tidak Dikenal'}
+                      </h3>
+                      
+                      {/* 🌟 FIX TABRAKAN: Tambahkan flex-wrap agar otomatis turun jika sempit */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1 pr-1">
+                        <p className="text-[10px] text-muted shrink-0">ID: {booking.id.substring(0, 8)}</p>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-500 whitespace-nowrap">
+                          {booking.delivery_method === 'diantar' || booking.delivery_method === 'delivery' 
+                            ? '🛵 Diantar' 
+                            : '🏪 Ambil ke Toko'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   
-                  {/* Badge Status Diperbarui */}
-                  <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                    booking.status === 'Menunggu Konfirmasi' ? 'bg-yellow-500/20 text-yellow-400' :
+                  {/* Kanan: Badge Status (Diberi shrink-0 agar tidak gepeng) */}
+                  <div className={`shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5 ${
+                    booking.status === 'Menunggu Konfirmasi' || booking.status?.toUpperCase() === 'LUNAS' ? 'bg-yellow-500/20 text-yellow-500' :
                     booking.status === 'Diserahkan' ? 'bg-blue-500/20 text-blue-400' :
                     booking.status === 'Dibatalkan' ? 'bg-red-500/20 text-red-400' :
-                    'bg-green-500/20 text-green-400'
+                    'bg-green-500/20 text-green-500'
                   }`}>
-                    {booking.status === 'Menunggu Konfirmasi' && <Clock className="w-3 h-3" />}
+                    {(booking.status === 'Menunggu Konfirmasi' || booking.status?.toUpperCase() === 'LUNAS') && <Clock className="w-3 h-3" />}
                     {booking.status === 'Diserahkan' && <PackageOpen className="w-3 h-3" />}
                     {booking.status === 'Selesai' && <CheckCircle2 className="w-3 h-3" />}
                     {booking.status === 'Dibatalkan' && <XCircle className="w-3 h-3" />}
@@ -216,22 +257,22 @@ const AdminBookingsPage = () => {
                   </div>
                 </div>
 
-                {/* ================= UI TOMBOL AKSI LENGKAP & UNDO ================= */}
-                <div className="pt-2 flex flex-col gap-2">
+                {/* ================= UI TOMBOL AKSI LENGKAP ================= */}
+                <div className="pt-2 flex flex-col gap-2 mt-2 border-t border-primary/5 pt-3">
                   
-                  {/* Jika Status: MENUNGGU */}
-                  {booking.status === 'Menunggu Konfirmasi' && (
+                  {/* 🌟 JIKA STATUS: MENUNGGU ATAU LUNAS */}
+                  {(booking.status === 'Menunggu Konfirmasi' || booking.status?.toUpperCase() === 'LUNAS') && (
                     <div className="flex gap-2">
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Dibatalkan')}
-                        className="flex-1 py-2.5 bg-red-500/10 text-red-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-500/20 transition-colors border border-red-500/20"
+                        className="flex-1 py-2.5 bg-red-500/10 text-red-500 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-500/20 transition-colors border border-red-500/20"
                       >
-                        <XCircle className="w-4 h-4" /> Batal
+                        <XCircle className="w-4 h-4" /> Tolak
                       </button>
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Diserahkan')}
                         disabled={processingId === booking.id}
-                        className="flex-[2] py-2.5 bg-primary text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-[#b58eff] transition-colors shadow-lg"
+                        className="flex-[2] py-2.5 bg-primary text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90 transition-colors shadow-lg"
                       >
                         <PackageCheck className="w-4 h-4" /> Serahkan Barang
                       </button>
@@ -241,18 +282,23 @@ const AdminBookingsPage = () => {
                   {/* Jika Status: DISERAHKAN */}
                   {booking.status === 'Diserahkan' && (
                     <div className="flex gap-2">
+                      
+                      {/* 🌟 FIX: Buang ikon, jadikan murni teks rapi di tengah */}
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Menunggu Konfirmasi')}
-                        className="flex-1 py-2.5 bg-primary/5 text-muted text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/10 transition-colors border border-primary/10"
+                        className="flex-1 py-1.5 px-2 bg-primary/5 text-muted rounded-xl flex items-center justify-center hover:bg-primary/10 transition-colors border border-primary/10"
                       >
-                        <Undo2 className="w-4 h-4" /> Batal Serahkan
+                        <span className="text-[10px] font-bold leading-tight text-center">Batal<br/>Serahkan</span>
                       </button>
+
+                      {/* Tombol Utama: Barang Kembali */}
                       <button 
                         onClick={() => handleUpdateStatus(booking.id, 'Selesai')}
                         className="flex-[2] py-2.5 bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-emerald-400 transition-colors shadow-lg"
                       >
-                        <CheckCircle2 className="w-4 h-4" /> Barang Kembali
+                        <CheckCircle2 className="w-4 h-4 shrink-0" /> Barang Kembali
                       </button>
+                      
                     </div>
                   )}
 
