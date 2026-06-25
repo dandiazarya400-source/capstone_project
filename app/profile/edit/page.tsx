@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, User, Save, CheckCircle2, Camera, Loader2, Crop, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Cropper from 'react-easy-crop';
+import dynamic from 'next/dynamic';
+
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { 
+  ssr: false,
+  loading: () => <div className="w-full h-[250px] bg-primary/5 animate-pulse rounded-2xl flex items-center justify-center text-primary/50 text-xs font-bold border border-primary/10">Memuat Satelit Peta...</div>
+});
 
 // FUNGSI UTILITY: Mengubah Canvas menjadi File
 const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
@@ -239,14 +245,31 @@ const EditProfilePage = () => {
               <input type="tel" placeholder="0895..." required className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-primary/50 transition-all shadow-inner" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted uppercase ml-1 tracking-wider">Alamat Pengiriman</label>
-            <div className="relative">
+          {/* ================= ALAMAT PENGIRIMAN & PETA ================= */}
+          <div className="space-y-3 pt-2">
+            <div className="flex justify-between items-end ml-1">
+              <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Titik Lokasi Pengiriman</label>
+              <span className="text-[9px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">Klik Peta ⬇️</span>
+            </div>
+            
+            {/* 🌟 RENDER PETA DI SINI */}
+            <MapPicker 
+              onLocationSelect={(address) => setFormData({...formData, address})} 
+            />
+
+            <div className="relative mt-2">
               <MapPin className="absolute left-4 top-3.5 w-4.5 h-4.5 text-primary" />
-              <textarea rows={3} placeholder="Jalan, RT/RW, Kota..." required className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-primary/50 transition-all shadow-inner resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}></textarea>
+              <textarea 
+                rows={3} 
+                required 
+                className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-all shadow-inner resize-none text-main leading-relaxed" 
+                value={formData.address} 
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                placeholder="Klik titik lokasimu di peta atas, atau ketik alamat manual di sini..."
+              ></textarea>
             </div>
           </div>
-          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-2 bg-primary text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:bg-[#b58eff] disabled:opacity-50 transition-all">
+          <button type="submit" disabled={loading || uploadingImage} className="w-full mt-4 bg-primary text-white text-sm font-bold py-4 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 hover:scale-[0.99] disabled:opacity-50 transition-all">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {loading ? 'Menyimpan...' : 'Simpan Profil'}
           </button>
@@ -280,7 +303,7 @@ const EditProfilePage = () => {
               onCropComplete={onCropComplete}
               classes={{
                 containerClassName: "bg-transparent",
-                cropAreaClassName: "border-2 border-primary shadow-[0_0_20px_rgba(163,116,255,0.6)]" 
+                cropAreaClassName: "border-2 border-primary shadow-[0_0_20px_rgba(20,184,166,0.5)]"
               }}
             />
           </div>
@@ -302,7 +325,7 @@ const EditProfilePage = () => {
             <button 
               onClick={handleCropSaveAndUpload}
               disabled={uploadingImage}
-              className="w-full bg-primary text-white text-sm font-bold py-3.5 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:bg-[#b58eff] transition-all disabled:opacity-50"
+              className="w-full bg-primary text-white text-sm font-bold py-3.5 rounded-2xl flex justify-center items-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
             >
               <CheckCircle2 className="w-5 h-5" />
               Terapkan

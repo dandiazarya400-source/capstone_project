@@ -42,21 +42,27 @@ export default function UniversalInboxPage() {
 
     const fetchInbox = async () => {
       try {
-        // Tangkap user yang sedang login
-        const { data: { session } } = await supabase.auth.getSession();
-        let user: any = session?.user;
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        let user: any = authData?.user || null;
 
-        if (!user) {
-          const { data: userData } = await supabase.auth.getUser();
-          user = userData?.user;
+        if (authError || !user) {
+          // Tunggu sebentar (fallback delay)
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const { data: retryData } = await supabase.auth.getSession();
+          user = retryData?.session?.user || null;
         }
 
-        if (!user || !isMounted) {
-          router.push('/login');
+        // 🌟 PERBAIKAN KRUSIAL 1: Jangan usir user jika isMounted false!
+        // Jika komponen batal dirender (karena efek Strict Mode), cukup berhenti diam-diam.
+        if (!isMounted) return; 
+
+        // 🌟 PERBAIKAN KRUSIAL 2: Usir HANYA jika usernya benar-benar kosong
+        if (!user) {
+          console.error("CCTV Inbox: User benar-benar tidak ditemukan. Mengarahkan ke Login.");
+          router.replace('/login');
           return;
         }
 
-        // Kita ubah namanya dari currentAdminId jadi currentUserId agar universal
         const currentUserId = user.id;
         setMyId(currentUserId);
 

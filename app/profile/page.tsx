@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   Headphones, Wallet, Box, Truck, CheckCircle2, Star, 
   Banknote, Store, Link2, Ticket, Heart, MapPin, MessageSquare,
-  BadgeCheck, LogOut, Edit3, LayoutDashboard, ChevronRight, 
+  BadgeCheck, LogOut, Edit3, LayoutDashboard, ChevronRight, XCircle,
   Loader2, AlertCircle, Clock, ShieldCheck
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
@@ -62,7 +62,7 @@ export default function ProfilePage() {
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [recommendations, setRecommendations] = useState<ProductProps[]>([]);
+  
 
   useEffect(() => {
     setIsMounted(true);
@@ -90,7 +90,7 @@ export default function ProfilePage() {
 
       const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('id, full_name, role, balance, verification_status, avatar_url') 
+          .select('id, full_name, role, balance, verification_status, verification_note, avatar_url') 
           .eq('id', session.user.id)
           .maybeSingle(); 
 
@@ -105,32 +105,14 @@ export default function ProfilePage() {
             role: data.role || 'user', 
             balance: data.balance || 0,
             verification_status: data.verification_status || 'unverified',
+            verification_note: data.verification_note || '',
             avatar_url: data.avatar_url || ''
           };
           
           setProfile(freshData);
           localStorage.setItem('user_profile_cache', JSON.stringify(freshData));
         }
-        // 🌟 TARIK DATA PRODUK ASLI UNTUK REKOMENDASI
-        const { data: recData } = await supabase
-          .from('items')
-          .select('*, profiles!owner_id(full_name)')
-          .eq('is_available', true)
-          .limit(4); // Ambil 4 produk terbaru
-
-        if (recData) {
-          const formattedRecs = recData.map((item: any) => ({
-            id: item.id,
-            title: item.name,
-            price: `Rp ${item.price_per_day?.toLocaleString('id-ID') || 0}`,
-            rating: "5.0", 
-            sold: "0", 
-            owner: item.profiles?.full_name || "Toko",
-            image: item.image_urls?.[0] || "https://via.placeholder.com/150",
-            isVerified: true
-          }));
-          setRecommendations(formattedRecs);
-        }
+        
 
       } catch (fatalError) {
         console.error("Error Fatal Jaringan/Sistem:", fatalError);
@@ -295,6 +277,7 @@ export default function ProfilePage() {
             )}
 
             {profile.verification_status === 'verified' && (
+              
               <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-[20px] flex items-center justify-between shadow-sm">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-sm">
@@ -307,8 +290,39 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+            {/* 🌟 KARTU STATUS DITOLAK (REJECTED) */}
+            {profile.verification_status === 'rejected' && (
+              <Link href="/verify">
+                <div className="bg-rose-50 border border-rose-200 p-4 rounded-[20px] flex flex-col justify-between hover:bg-rose-100/50 transition-colors cursor-pointer shadow-sm relative overflow-hidden group">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-rose-500 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                      <XCircle className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div className="pr-2">
+                      <h2 className="font-bold text-slate-800 text-[14px]">Verifikasi Ditolak!</h2>
+                      <p className="text-[11px] text-slate-500 mt-0.5 mb-2">Mohon maaf, berkas Anda ditolak dengan alasan:</p>
+                      
+                      {/* Kotak Pesan dari Superadmin */}
+                      <div className="bg-white/60 border border-rose-100 p-2.5 rounded-xl shadow-inner mb-2">
+                        <p className="text-[11px] font-semibold text-rose-600 italic">
+                          "{profile.verification_note || 'Berkas tidak memenuhi syarat. Silakan coba lagi.'}"
+                        </p>
+                      </div>
+                      
+                      <div className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-500 uppercase tracking-wider group-hover:text-rose-600">
+                        <span>Upload Ulang KTP</span>
+                        <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            )}
+            
           </section>
         )}
+
+        
 
         {/* ================= TOMBOL KHUSUS ADMIN & SUPERADMIN ================= */}
         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
@@ -413,16 +427,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* ================= REKOMENDASI ================= */}
-        <section>
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="w-1 h-5 bg-teal-500 rounded-full"></div>
-            <h2 className="font-bold text-slate-800 text-[15px]">Rekomendasi untuk anda</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3 pb-8">
-            {recommendations.map((product) => <ProductCard key={product.id} {...product} />)}
-          </div>
-        </section>
+        
 
       </main>
 

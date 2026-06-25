@@ -6,6 +6,7 @@ interface UserProfile {
   role: string;
   balance: number;
   verification_status: string;
+  verification_note?: string | null;
   avatar_url: string;
 }
 
