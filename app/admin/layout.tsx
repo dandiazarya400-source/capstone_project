@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, Package, PlusCircle, 
   CalendarCheck, Users, Settings, LogOut,
-  Menu, X, Home, ShieldCheck, Flag
+  Menu, X, Home, ShieldCheck, Flag, Megaphone
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -90,6 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Verifikasi KTP', icon: ShieldCheck, path: '/superadmin/verification', roles: ['superadmin'] },
     { name: 'Laporan Masalah', icon: Flag, path: '/superadmin/reports', roles: ['superadmin'] },
     { name: 'Semua Toko', icon: Package, path: '/superadmin/stores', roles: ['superadmin'] },
+    { name: 'Manajemen Promo', icon: Megaphone, path: '/superadmin/promos', roles: ['superadmin'] },
     { name: 'Pengaturan Sistem', icon: Settings, path: '/superadmin/settings', roles: ['superadmin'] },
   ];
 

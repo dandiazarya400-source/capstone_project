@@ -293,28 +293,30 @@ export default function ProfilePage() {
             {/* 🌟 KARTU STATUS DITOLAK (REJECTED) */}
             {profile.verification_status === 'rejected' && (
               <Link href="/verify">
-                <div className="bg-rose-50 border border-rose-200 p-4 rounded-[20px] flex flex-col justify-between hover:bg-rose-100/50 transition-colors cursor-pointer shadow-sm relative overflow-hidden group">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-rose-500 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                      <XCircle className="w-6 h-6 animate-pulse" />
+                <div className="bg-rose-50 border border-rose-200 p-4 rounded-[20px] flex items-start hover:bg-rose-100/50 transition-colors cursor-pointer shadow-sm relative overflow-hidden group">
+                  
+                  {/* 🌟 PERBAIKAN: Ikon diperkecil (w-9 h-9) dan diberi jarak margin yang pas */}
+                  <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-rose-500 shrink-0 shadow-sm group-hover:scale-105 transition-transform mt-0.5 mr-3">
+                    <XCircle className="w-4.5 h-4.5 animate-pulse" />
+                  </div>
+                  
+                  <div className="flex-1 pr-1">
+                    <h2 className="font-bold text-slate-800 text-[14px]">Verifikasi Ditolak!</h2>
+                    <p className="text-[11px] text-slate-500 mt-0.5 mb-2.5">Mohon maaf, berkas Anda ditolak dengan alasan:</p>
+                    
+                    {/* Kotak Pesan dari Superadmin */}
+                    <div className="bg-white/60 border border-rose-100 p-2.5 rounded-xl shadow-inner mb-3">
+                      <p className="text-[11px] font-semibold text-rose-600 italic leading-relaxed">
+                        "{profile.verification_note || 'Berkas tidak memenuhi syarat. Silakan coba lagi.'}"
+                      </p>
                     </div>
-                    <div className="pr-2">
-                      <h2 className="font-bold text-slate-800 text-[14px]">Verifikasi Ditolak!</h2>
-                      <p className="text-[11px] text-slate-500 mt-0.5 mb-2">Mohon maaf, berkas Anda ditolak dengan alasan:</p>
-                      
-                      {/* Kotak Pesan dari Superadmin */}
-                      <div className="bg-white/60 border border-rose-100 p-2.5 rounded-xl shadow-inner mb-2">
-                        <p className="text-[11px] font-semibold text-rose-600 italic">
-                          "{profile.verification_note || 'Berkas tidak memenuhi syarat. Silakan coba lagi.'}"
-                        </p>
-                      </div>
-                      
-                      <div className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-500 uppercase tracking-wider group-hover:text-rose-600">
-                        <span>Upload Ulang KTP</span>
-                        <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                      </div>
+                    
+                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-500 uppercase tracking-wider group-hover:text-rose-600">
+                      <span>Upload Ulang KTP</span>
+                      <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
+
                 </div>
               </Link>
             )}
@@ -353,22 +355,27 @@ export default function ProfilePage() {
         <section>
           <Link href="/inbox"> 
             <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center justify-between hover:border-blue-200 transition-all duration-300 group cursor-pointer">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+              
+              {/* 🌟 PERBAIKAN: Tambah overflow-hidden agar teks panjang bisa dipotong otomatis */}
+              <div className="flex items-center space-x-3 overflow-hidden pr-2">
+                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                   <MessageSquare className="w-5 h-5 text-blue-500" />
                 </div>
-                <div>
-                  <h2 className="font-bold text-slate-800 text-[14px]">Kotak Masuk</h2>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Riwayat chat dengan toko & CS</p>
+                <div className="min-w-0">
+                  <h2 className="font-bold text-slate-800 text-[14px] truncate">Kotak Masuk</h2>
+                  {/* 🌟 PERBAIKAN: Teks dipersingkat dan diberi truncate */}
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate">Riwayat obrolan Anda</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-3">
+              {/* 🌟 PERBAIKAN: shrink-0 agar lencana merah dan panah tidak pernah terhimpit */}
+              <div className="flex items-center space-x-2 shrink-0">
                 <span className="bg-rose-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
                   BARU
                 </span>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
               </div>
+
             </div>
           </Link>
         </section>

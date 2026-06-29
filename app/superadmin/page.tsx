@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Users, Store, ShieldAlert, Flag, 
+  Users, Store, ShieldAlert, Flag, Clock,
   ArrowRight, Loader2, Crown, TrendingUp, 
-  Activity, CheckCircle, AlertCircle
+  Activity, CheckCircle, AlertCircle, Megaphone
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -114,10 +114,10 @@ export default function SuperadminDashboard() {
             </div>
 
             {/* Total Mitra Toko (Tanpa Panah) */}
-            <div 
-              onClick={() => router.push('/superadmin/users')}
-              className="bg-surface border border-primary/10 rounded-2xl p-4 shadow-sm flex flex-col justify-between h-28 cursor-pointer hover:bg-primary/5 active:scale-95 transition-all"
-            >
+              <div 
+                onClick={() => router.push('/superadmin/stores')} // ✅ INI BARU TEPAT SASARAN!
+                className="bg-surface border border-primary/10 rounded-2xl p-4 shadow-sm flex flex-col justify-between h-28 cursor-pointer hover:bg-primary/5 active:scale-95 transition-all"
+              >
               <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center"><Store className="w-4 h-4" /></div>
               <div>
                 <span className="text-xl font-black text-main block tracking-tight">{stats.totalStores}</span>
@@ -212,6 +212,24 @@ export default function SuperadminDashboard() {
               <div>
                 <p className="text-sm font-bold text-main">Kelola Seluruh Mitra Toko</p>
                 <p className="text-[10px] text-muted">Lihat performa toko terdaftar di platform</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+          </button>
+
+          {/* Menu 4: Manajemen Promo Utama */}
+          <button 
+            onClick={() => router.push('/superadmin/promos')}
+            className="w-full flex items-center justify-between p-4 bg-surface border border-primary/10 rounded-2xl hover:bg-primary/5 transition-all text-left shadow-sm group"
+          >
+            <div className="flex items-center gap-3.5">
+              {/* Menggunakan warna Orange agar menonjol sebagai fitur Marketing */}
+              <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+                <Megaphone className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-main">Manajemen Banner Promo</p>
+                <p className="text-[10px] text-muted">Atur banner promosi tayang di Beranda User</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-muted/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />

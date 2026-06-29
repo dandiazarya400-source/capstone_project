@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { 
-  Search, Bell, MapPin, BadgeCheck, 
-  MonitorPlay, Music, Shirt, Grid, 
+  Search, Bell, MapPin, BadgeCheck, Clock, Gift,
+  MonitorPlay, Music, Shirt, Grid, Loader2,
   ChevronRight, Sparkles, SlidersHorizontal, X, Check,
   Camera, Truck 
 } from 'lucide-react';
@@ -76,6 +76,37 @@ const ProductCard: React.FC<ProductProps> = ({ id, title, price, rating, sold, o
     </div>
   </Link>
 );
+
+// 🌟 SUB-KOMPONEN HITUNG MUNDUR KHUSUS BERANDA
+const HomeCountdown = ({ expiresAt }: { expiresAt: string }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const calculate = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft('BERAKHIR'); return; }
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    };
+    calculate();
+    const interval = setInterval(calculate, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  if (!timeLeft) return null;
+
+  // 🌟 DESAIN TIMER MELAYANG DI POJOK KANAN ATAS
+  return (
+    <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20 shadow-lg">
+      <Clock className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+      <span className="text-[11px] font-mono font-black text-white tracking-widest drop-shadow-md">{timeLeft}</span>
+    </div>
+  );
+};
+
 
 const HomePage = () => {
   // =====================================================================
@@ -187,11 +218,7 @@ const HomePage = () => {
   // 🌟 STATE BARU UNTUK MENAMPUNG KATEGORI DARI SUPABASE
   const [dbCategories, setDbCategories] = useState<any[]>([]);
 
-  const promos = [
-    { id: 1, tag: 'PROMO SPESIAL', title: 'Diskon 20% Untuk Sewa Pertamamu!', btn: 'Pesan Sekarang', bg: 'from-[#20D2EB] to-[#04E09E]', icon: Sparkles },
-    { id: 2, tag: 'CASHBACK', title: 'Cashback 50rb Sewa Kamera & Lensa', btn: 'Klaim Promo', bg: 'from-blue-400 to-indigo-500', icon: Camera },
-    { id: 3, tag: 'GRATIS ONGKIR', title: 'Bebas Biaya Antar Jemput Alat', btn: 'Cek Syarat', bg: 'from-purple-400 to-pink-500', icon: Truck },
-  ];
+  const [promos, setPromos] = useState<any[]>([]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -220,14 +247,30 @@ const HomePage = () => {
           setLoading(true);
         }
 
-        // 🌟 JURUS PARALEL: Tarik data barang DAN list kategori dari DB sekaligus!
-        const [itemsResponse, categoriesResponse] = await Promise.all([
+        // 🌟 TARIKAN DATA SUPER PARALEL
+        const [itemsResponse, categoriesResponse, promosResponse] = await Promise.all([
           supabase.from('items').select(`*, profiles!owner_id (full_name)`).eq('is_available', true),
-          supabase.from('categories').select('id, name')
+          supabase.from('categories').select('id, name'),
+          // Tarik semua promo yang is_active = true
+          supabase.from('promos').select('*').eq('is_active', true).order('created_at', { ascending: true }) 
         ]);
 
-        if (categoriesResponse.data) {
-          setDbCategories(categoriesResponse.data);
+        if (categoriesResponse.data) setDbCategories(categoriesResponse.data);
+        
+        // 🌟 FILTER BERLAPIS (ANTI-KEDALUWARSA): Cek langsung dari waktu HP Pengguna!
+        if (promosResponse.data) {
+          const currentTimeMs = Date.now(); // Ambil waktu mili-detik saat ini di HP user
+          
+          const validPromos = promosResponse.data.filter(promo => {
+            // Jika tidak ada batas waktu, tampilkan!
+            if (!promo.expires_at) return true; 
+            
+            // Jika ada batas waktu, pastikan waktu kedaluwarsa LEBIH BESAR dari waktu sekarang
+            const expiryTimeMs = new Date(promo.expires_at).getTime();
+            return expiryTimeMs > currentTimeMs;
+          });
+          
+          setPromos(validPromos); // Hanya simpan promo yang masih hidup!
         }
 
         if (itemsResponse.error) throw itemsResponse.error;
@@ -484,139 +527,155 @@ const HomePage = () => {
                 </button>
               </Link>
               
-              {/* 🌟 WADAH AVATAR DINAMIS YANG SUDAH SINKRON */}
+              {/* 🌟 WADAH AVATAR DINAMIS (VERSI FIX - ANTI MOGOK) */}
               <Link href="/profile">
-                <div className="w-10 h-10 rounded-full bg-white shadow-md hover:scale-105 transition-transform cursor-pointer border-[2px] border-white overflow-hidden bg-teal-600 flex items-center justify-center">
-                  {profile?.avatar_url && profile.avatar_url.startsWith('http') ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                <div className="w-10 h-10 rounded-full shadow-md hover:scale-105 transition-transform cursor-pointer border-[2px] border-white overflow-hidden bg-teal-600 relative flex items-center justify-center group">
+                  
+                  {/* 1. Jika state profile dari Zustand benar-benar belum siap sama sekali */}
+                  {profile === undefined ? (
+                    <Loader2 className="w-4 h-4 text-white/70 animate-spin" />
+                  ) : profile?.avatar_url && profile.avatar_url.startsWith('http') ? (
+                    <>
+                      {/* 2. Latar belakang warna teal yang berdenyut selama browser mengunduh gambar */}
+                      <div className="absolute inset-0 bg-teal-500/30 animate-pulse"></div>
+                      
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        src={profile.avatar_url} 
+                        alt="Profile" 
+                        // 🌟 Kita buang opacity-0 gaibnya agar gambar langsung tampil begitu sukses diunduh
+                        className="w-full h-full object-cover relative z-10" 
+                      />
+                    </>
                   ) : (
-                    <span className="text-white font-bold text-[14px]">
+                    // 3. Jika user tidak punya foto profil, tampilkan inisial huruf nama mereka
+                    <span className="text-white font-bold text-[14px] relative z-10">
                       {userInitials || 'U'}
                     </span>
                   )}
+                  
                 </div>
               </Link>
             </div>
           </div>
         </div>
 
-        <div className="px-5 -mt-8 relative z-20 flex gap-2">
-          <div className="flex-1 bg-white rounded-2xl p-2 shadow-[0_10px_40px_rgba(0,198,181,0.15)] flex items-center border border-slate-100 relative">
-            <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center shrink-0">
-              <Search className="w-5 h-5 text-teal-600" />
+        {/* =============================================================== */}
+        {/* ⚡ UPGRADE SEARCH BAR PREMIUM & MICRO-TAGS PENCARIAN POPULER ⚡ */}
+        {/* =============================================================== */}
+        <div className="px-5 -mt-8 relative z-20 space-y-3.5">
+          
+          {/* CONTAINER UTAMA SEARCH & FILTER */}
+          <div className="flex gap-2.5">
+            
+            {/* KOTAK INPUT (Dengan efek transisi border dan focus glow) */}
+            <div className="flex-1 bg-white rounded-2xl p-1.5 border border-slate-100 shadow-[0_10px_30px_rgba(0,198,181,0.08)] focus-within:border-teal-400 focus-within:shadow-[0_10px_30px_rgba(20,184,166,0.15)] flex items-center relative transition-all duration-300">
+              
+              <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center shrink-0">
+                <Search className="w-4.5 h-4.5 text-teal-600" />
+              </div>
+              
+              <input 
+                id="search-input"
+                type="text" 
+                placeholder="Cari alat studio, kamera, sound..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent px-3 py-2 text-[13px] font-bold text-slate-700 focus:outline-none placeholder:text-slate-400 placeholder:font-medium pr-10" 
+              />
+              
+              {isSearching && (
+                <button 
+                  onClick={() => setSearchQuery('')} 
+                  className="absolute right-3 p-1.5 bg-slate-100 rounded-full text-slate-400 hover:bg-rose-100 hover:text-rose-500 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
-            <input 
-              id="search-input"
-              type="text" 
-              placeholder="Cari alat untuk disewa..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent px-3 py-2 text-[13px] font-medium text-slate-700 focus:outline-none placeholder:text-slate-400 pr-10" 
-            />
-            {isSearching && (
-              <button 
-                onClick={() => setSearchQuery('')} 
-                className="absolute right-3 p-1.5 bg-slate-100 rounded-full text-slate-400 hover:bg-rose-100 hover:text-rose-500 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+
+            {/* TOMBOL FILTER */}
+            <button 
+              onClick={() => setIsFilterOpen(true)} 
+              className="w-[54px] h-[54px] bg-white rounded-2xl shadow-[0_10px_30px_rgba(0,198,181,0.08)] hover:shadow-[0_10px_30px_rgba(20,184,166,0.15)] flex items-center justify-center border border-slate-100 shrink-0 relative hover:bg-slate-50 active:scale-95 transition-all group"
+            >
+              <SlidersHorizontal className="w-4.5 h-4.5 text-teal-600 group-hover:rotate-90 transition-transform duration-300" />
+              {(sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMax !== '') && (
+                <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>
+              )}
+            </button>
           </div>
-          <button onClick={() => setIsFilterOpen(true)} className="w-[58px] h-[58px] bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,198,181,0.15)] flex items-center justify-center border border-slate-100 shrink-0 relative hover:bg-slate-50 transition-colors">
-            <SlidersHorizontal className="w-5 h-5 text-teal-600" />
-            {(sortBy !== 'terbaru' || filterCondition !== 'Semua' || priceMax !== '') && (
-              <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
-            )}
-          </button>
+
+          {/* 🌟 FITUR TAMBAHAN: PILLS PENCARIAN (Polos & Elegan) */}
+          {!isSearching && (
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 animate-in fade-in duration-500">
+              {/* Teks "Pencarian Teratas:" dihapus, Emoji dihapus, Font disesuaikan proporsional */}
+              {[
+                { label: 'Sony Alpha', query: 'Sony' },
+                { label: 'Proyektor', query: 'Epson' },
+                { label: 'Speaker JBL', query: 'JBL' },
+                { label: 'Wireless Mic', query: 'Mic' }
+              ].map((tag, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSearchQuery(tag.query)}
+                  className="px-4 py-1.5 bg-white border border-slate-100 hover:border-teal-200 hover:bg-teal-50 text-[12px] font-semibold text-slate-600 hover:text-teal-600 rounded-full shadow-sm active:scale-95 transition-all shrink-0"
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {(!isSearching && activeCategory === 'Semua' && !isFilterActive) && (
-          <div className="animate-in fade-in duration-500">
-            <div className="mt-8 relative w-full shrink-0">
-              <div ref={promoRef} onScroll={handlePromoScroll} className="flex w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
-                {promos.map((promo) => {
-                  const PromoIcon = promo.icon;
-                  return (
-                    <div key={promo.id} className="w-full shrink-0 snap-center px-5">
-                      <div className={`w-full bg-gradient-to-r ${promo.bg} rounded-[24px] p-6 text-white relative overflow-hidden shadow-lg shadow-teal-500/10`}>
-                        <div className="absolute right-0 top-0 w-32 h-32 bg-white/20 rounded-full blur-2xl translate-x-10 -translate-y-10"></div>
-                        <div className="relative z-10 w-[70%]">
-                          <span className="inline-block px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider uppercase mb-2">{promo.tag}</span>
-                          <h2 className="text-lg font-black leading-tight mb-3 drop-shadow-sm">{promo.title}</h2>
-                          <button className="bg-white text-slate-800 text-[11px] font-bold px-4 py-2 rounded-full shadow-md hover:scale-105 transition-transform">{promo.btn}</button>
-                        </div>
-                        <PromoIcon className="absolute bottom-4 right-4 w-16 h-16 text-white/30" strokeWidth={1} />
+        {/* ================= BANNER PROMO ================= */}
+        {(!isSearching && activeCategory === 'Semua' && !isFilterActive && promos.length > 0) && (
+          <div className="mt-5 relative w-full shrink-0 animate-in fade-in duration-500"> 
+            <div ref={promoRef} onScroll={handlePromoScroll} className="flex w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
+              {promos.map((promo) => {
+                const IconMap: { [key: string]: React.ComponentType<any> } = { Sparkles, Camera, Truck, Grid, Gift, MonitorPlay, Music, Shirt };
+                const PromoIcon = IconMap[promo.icon] || Sparkles; 
+                return (
+                  <div key={promo.id} className="w-full shrink-0 snap-center px-5">
+                    <div className={`w-full bg-gradient-to-r ${promo.bg} rounded-[24px] p-6 text-white relative overflow-hidden shadow-lg shadow-teal-500/10`}>
+                      
+                      {/* Efek Kilau */}
+                      <style>{`@keyframes hShimmer { 100% { transform: translateX(100%); } } .home-shimmer { animation: hShimmer 2.5s infinite; }`}</style>
+                      {promo.has_shimmer && (
+                        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent home-shimmer pointer-events-none z-0" />
+                      )}
+
+                      {/* 🌟 INI DIA! PEMANGGILAN TIMER DI POJOK KANAN ATAS */}
+                      {promo.expires_at && (
+                        <HomeCountdown expiresAt={promo.expires_at} />
+                      )}
+
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-white/20 rounded-full blur-2xl translate-x-10 -translate-y-10"></div>
+                      <div className="relative z-10 w-[70%]">
+                        <span className="inline-block px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider uppercase mb-2">{promo.tag}</span>
+                        <h2 className="text-lg font-black leading-tight mb-3 drop-shadow-sm">{promo.title}</h2>
+                        <button className="bg-white text-slate-800 text-[11px] font-bold px-4 py-2 rounded-full shadow-md hover:scale-105 transition-transform">{promo.btn}</button>
                       </div>
+                      <PromoIcon className="absolute bottom-4 right-4 w-16 h-16 text-white/30 z-0" strokeWidth={1} />
                     </div>
-                  );
-                })}
-              </div>
-              <div className="flex justify-center gap-1.5 mt-2">
-                {promos.map((_, idx) => (
-                  <div key={idx} className={`h-1.5 rounded-full transition-all duration-300 ${activePromo === idx ? 'w-5 bg-teal-500' : 'w-1.5 bg-slate-300'}`} />
-                ))}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="pl-5 mt-6 shrink-0">
-              <div className="pr-5 flex justify-between items-end mb-4">
-                <h3 className="text-[16px] font-bold text-slate-700">Kategori Alat</h3>
-                <span 
-                  onClick={() => document.getElementById('search-input')?.focus()}
-                  className="text-[11px] font-medium text-teal-500 flex items-center cursor-pointer hover:underline"
-                >
-                  Lihat Semua <ChevronRight className="w-3 h-3 ml-0.5" />
-                </span>
-              </div>
-          
-              <div className="flex overflow-x-auto scrollbar-hide gap-2.5 pb-2 pr-5">
-                {/* 1. TOMBOL STATIS KHUSUS UNTUK "SEMUA" */}
-                <button
-                  onClick={() => setActiveCategory('Semua')}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-300 shrink-0 ${
-                    activeCategory === 'Semua' 
-                      ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20' 
-                      : 'bg-white border-slate-100 hover:border-teal-200 hover:bg-teal-50/50'
-                  }`}
-                >
-                  <Grid className="w-4 h-4" />
-                  <span className={`text-[12px] tracking-wide ${activeCategory === 'Semua' ? 'font-bold' : 'font-medium text-slate-600'}`}>
-                    Semua
-                  </span>
-                </button>
-
-                {/* 2. MERENDER KATEGORI DINAMIS DARI SUPABASE BESERTA IKON PINTARNYA */}
-                {dbCategories.map((cat) => {
-                  const style = getCategoryStyle(cat.name);
-                  const Icon = style.icon;
-                  const isActive = activeCategory === cat.name;
-                  
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.name)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-300 shrink-0 ${
-                        isActive 
-                          ? 'bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-500/20' 
-                          : 'bg-white border-slate-100 hover:border-teal-200 hover:bg-teal-50/50'
-                      }`}
-                    >
-                      <div className={`${isActive ? 'text-white' : style.color}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <span className={`text-[12px] tracking-wide ${isActive ? 'font-bold' : 'font-medium text-slate-600'}`}>
-                        {cat.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            
+            {/* Indikator Titik Carousel */}
+            <div className="flex justify-center gap-1.5 mt-2">
+              {promos.map((_, idx) => (
+                <div key={idx} className={`h-1.5 rounded-full transition-all duration-300 ${activePromo === idx ? 'w-5 bg-teal-500' : 'w-1.5 bg-slate-300'}`} />
+              ))}
             </div>
           </div>
         )}
 
-        <div className={`px-5 ${(isSearching || activeCategory !== 'Semua' || isFilterActive) ? 'mt-8' : 'mt-10'} shrink-0`}>
+
+        {/* ================= REKOMENDASI / HASIL PENCARIAN ================= */}
+        {/* 🌟 GAP DIRAPATKAN MENJADI mt-6 (atau mt-8 jika dari atas) */}
+        <div className={`px-5 ${(!isSearching && promos.length > 0) ? 'mt-6' : 'mt-8'} shrink-0`}>
           {!isSearching && (
             <div className="flex justify-between items-end mb-4">
               <h3 className="text-[16px] font-bold text-slate-700">
@@ -624,7 +683,7 @@ const HomePage = () => {
                   ? `Kategori: ${activeCategory}` 
                   : isFilterActive 
                     ? 'Hasil Filter' 
-                    : 'Alat Terpopuler'}
+                    : 'Rekomendasi untuk Anda'}
               </h3>
               
               {(isFilterActive || activeCategory !== 'Semua') && (
