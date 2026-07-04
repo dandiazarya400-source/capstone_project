@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowLeft, AlertCircle, CheckCircle, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -15,6 +15,28 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [passwordError, setPasswordError] = useState('');
+
+  const handleGeneratePassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let generated = "";
+    for (let i = 0; i < 12; i++) {
+      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassword(generated);
+    setShowPassword(true);
+    setPasswordError(''); 
+  };
+
+  const checkPasswordStrength = (pass: string) => {
+    if (!pass) return "Password tidak boleh kosong.";
+    if (pass.length < 8) return "Minimal 8 karakter.";
+    if (!/[A-Z]/.test(pass)) return "Harus mengandung huruf besar (A-Z).";
+    if (!/[a-z]/.test(pass)) return "Harus mengandung huruf kecil (a-z).";
+    if (!/[0-9]/.test(pass)) return "Harus mengandung angka (0-9).";
+    if (!/[!@#$%^&*]/.test(pass)) return "Harus mengandung simbol (!@#$%^&*).";
+    return ""; 
+  };
 
   // === FUNGSI MENGHILANGKAN NOTIFIKASI OTOMATIS ===
   useEffect(() => {
@@ -41,6 +63,13 @@ const RegisterPage = () => {
       setMessage({ text: 'Pendaftaran hanya mengizinkan akun @gmail.com', type: 'error' });
       setLoading(false);
       return;
+    }
+
+    const errorMsg = checkPasswordStrength(password);
+    if (errorMsg) {
+      setPasswordError(errorMsg);
+      setLoading(false);
+      return; // Hentikan pendaftaran!
     }
 
     try {
@@ -150,26 +179,51 @@ const RegisterPage = () => {
             />
           </div>
 
-          {/* Input Password */}
-          <div className="relative flex items-center">
-            <Lock className="absolute left-5 w-5 h-5 text-slate-400" />
-            <input 
-              type={showPassword ? "text" : "password"} 
-              required 
-              minLength={6} 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Password (Min 6 karakter)"
-              autoComplete="new-password"
-              className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-12 pr-12 text-[14px] font-medium text-slate-800 focus:outline-none focus:border-teal-400 focus:bg-white transition-all placeholder:text-slate-400"
-            />
-            <button 
-              type="button" 
-              onClick={() => setShowPassword(!showPassword)} 
-              className="absolute right-5 text-slate-400 hover:text-teal-500 transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
+          {/* Input Password dengan Validator & Generator */}
+          <div className="space-y-2">
+            <div className="relative flex items-center">
+              <Lock className="absolute left-5 w-5 h-5 text-slate-400" />
+              <input 
+                type={showPassword ? "text" : "password"} 
+                required 
+                value={password} 
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError(''); // Hilangkan merah saat mengetik ulang
+                }} 
+                placeholder="Password (Min 8 Karakter, Simbol, Angka)"
+                autoComplete="new-password"
+                className={`w-full bg-slate-50 border rounded-full py-4 pl-12 pr-20 text-[14px] font-medium text-slate-800 focus:outline-none transition-all placeholder:text-slate-400 ${
+                  passwordError ? 'border-rose-400 focus:border-rose-500 bg-rose-50' : 'border-slate-200 focus:border-teal-400 focus:bg-white'
+                }`}
+              />
+              
+              <div className="absolute right-4 flex items-center gap-2">
+                <button 
+                  type="button" 
+                  onClick={handleGeneratePassword}
+                  title="Generate Password Kuat"
+                  className="text-teal-500 hover:text-teal-600 transition-colors p-1 bg-teal-50 rounded-full"
+                >
+                  <Wand2 className="w-4 h-4" />
+                </button>
+                <div className="w-px h-4 bg-slate-200"></div>
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="text-slate-400 hover:text-teal-500 transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Teks Error Password Melayang di Bawah Kotak */}
+            {passwordError && (
+              <p className="text-[11px] font-bold text-rose-500 px-4 animate-in slide-in-from-top-1 fade-in">
+                * {passwordError}
+              </p>
+            )}
           </div>
 
           {/* 🌟 2. ANTI-SPAM BUTTON (Disabled jika loading ATAU jika notifikasi masih tampil di layar) */}
