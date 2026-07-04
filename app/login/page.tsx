@@ -74,6 +74,32 @@ const LoginPage = () => {
     }
   };
 
+  // === FUNGSI SOCIAL LOGIN SUPABASE OAUTH (TAMBAHAN BARU) ===
+  const handleSocialLogin = async (provider: 'google' | 'facebook' | 'github') => {
+    // Anti-spam guard: jika sedang loading atau notif sedang muncul, kunci tombol
+    if (loading || message.text) return;
+
+    setLoading(true);
+    setMessage({ text: '', type: '' });
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          // Mengarahkan kembali ke domain aplikasi setelah verifikasi pihak ketiga sukses
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error(`Error saat login via ${provider}:`, error);
+      setMessage({ text: `Gagal menghubungkan ke layanan ${provider}.`, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-teal-500 overflow-hidden relative font-sans">
 
@@ -170,8 +196,8 @@ const LoginPage = () => {
             
             {/* Lupa Password */}
             <div className="flex justify-end px-2">
-              <Link href="#" className="text-[12px] font-bold text-slate-400 hover:text-teal-500 transition-colors">
-                Forgot Password
+              <Link href="/forgot-password" className="text-[12px] font-bold text-slate-400 hover:text-teal-500 transition-colors">
+                Forgot Password?
               </Link>
             </div>
           </div>
@@ -193,23 +219,15 @@ const LoginPage = () => {
           <div className="h-px flex-1 bg-slate-200"></div>
         </div>
 
-        {/* Tombol Sosial Media (Bentuk Lingkaran - FIXED PERFECT CENTER) */}
+        {/* Tombol Sosial Media (Google & Facebook) */}
         <div className="flex justify-center gap-5">
-          
-          {/* Tombol Facebook */}
-          <button 
-            type="button" 
-            className="w-12 h-12 grid place-items-center rounded-full bg-white border border-slate-200 hover:border-[#1877F2]/30 hover:bg-blue-50 transition-all shadow-sm group shrink-0"
-          >
-            <svg className="w-[18px] h-[18px] text-slate-400 group-hover:text-[#1877F2] transition-colors" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
-            </svg>
-          </button>
 
-          {/* Tombol Google */}
+          {/* 🌟 TOMBOL GOOGLE */}
           <button 
             type="button" 
-            className="w-12 h-12 grid place-items-center rounded-full bg-white border border-slate-200 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm group shrink-0"
+            disabled={loading || !!message.text}
+            onClick={() => handleSocialLogin('google')}
+            className="w-12 h-12 grid place-items-center rounded-full bg-white border border-slate-200 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm group shrink-0 disabled:opacity-40 cursor-pointer"
           >
             <svg className="w-5 h-5 grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24">
               <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"/>
@@ -218,16 +236,20 @@ const LoginPage = () => {
               <path fill="#FBBC05" d="M5.277 14.268A7.12 7.12 0 014.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 000 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"/>
             </svg>
           </button>
-
-          {/* Tombol Apple */}
+          
+          {/* 🌟 TOMBOL FACEBOOK */}
           <button 
             type="button" 
-            className="w-12 h-12 grid place-items-center rounded-full bg-white border border-slate-200 hover:border-slate-800 hover:bg-slate-50 transition-all shadow-sm group shrink-0"
+            disabled={loading || !!message.text}
+            onClick={() => handleSocialLogin('facebook')}
+            className="w-12 h-12 grid place-items-center rounded-full bg-white border border-slate-200 hover:border-[#1877F2]/30 hover:bg-blue-50 transition-all shadow-sm group shrink-0 disabled:opacity-40 cursor-pointer"
           >
-            <svg className="w-5 h-5 text-slate-400 group-hover:text-black transition-colors" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.48-2.48 4.25-2.51 1.34-.02 2.6.92 3.42.92.83 0 2.33-1.15 3.93-1.03.68.03 2.58.28 3.8 1.94-.1.06-2.27 1.32-2.24 3.93.03 3.14 2.73 4.25 2.76 4.26-.02.08-.43 1.48-1.36 3.26M15.97 4.17c.68-.81 1.14-1.95.99-3.08-1 .04-2.22.67-2.94 1.72-.64.91-1.2 2.07-1.02 3.18 1.12.08 2.27-.61 2.97-1.82z"/>
+            <svg className="w-[18px] h-[18px] text-slate-400 group-hover:text-[#1877F2] transition-colors" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
             </svg>
           </button>
+
+          
 
         </div>
 
