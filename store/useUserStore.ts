@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 // 1. Tentukan bentuk datanya (TypeScript)
 interface UserProfile {
+  id: string;
   full_name: string;
   role: string;
   balance: number;

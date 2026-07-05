@@ -3,10 +3,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
-  ArrowLeft, Search, ShoppingCart, Menu, Star, Lock, AlertTriangle,
-  Clock, BadgeCheck, MessageCircle, CalendarCheck, Tag, AlignLeft 
+  ArrowLeft, Search, ShoppingCart, Menu, Star, Lock, AlertTriangle, Edit3, LayoutDashboard,
+  Clock, BadgeCheck, MessageCircle, CalendarCheck, Tag, AlignLeft, ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 
 const ProductDetailPage = () => {
   const router = useRouter(); 
@@ -378,8 +379,9 @@ return (
 
           <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-6">
             <div className="flex justify-between items-center border-b border-slate-50 pb-4 mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-400 rounded-full flex items-center justify-center shadow-inner overflow-hidden border border-teal-100 text-white font-black text-xl">
+              {/* 🌟 DIBUNGKUS LINK MENUJU TOKO PUBLIK */}
+              <Link href={`/shop/${product.owner_id}`} className="flex items-center space-x-3 cursor-pointer group">
+                <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-400 rounded-full flex items-center justify-center shadow-inner overflow-hidden border border-teal-100 text-white font-black text-xl group-hover:ring-2 group-hover:ring-teal-200 transition-all">
                   {product.owner_avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={product.owner_avatar} alt={product.owner} className="w-full h-full object-cover" />
@@ -389,23 +391,49 @@ return (
                 </div>
                 <div>
                   <div className="flex items-center">
-                    <h3 className="font-bold text-slate-800 text-[15px]">{product.owner}</h3>
-                    {product.is_verified && <BadgeCheck className="w-4 h-4 text-blue-500 ml-1.5" />}
+                    <h3 className="font-bold text-slate-800 text-[15px] group-hover:text-teal-600 transition-colors">{product.owner}</h3>
+                    {product.is_verified && <BadgeCheck className="w-4 h-4 text-emerald-500 ml-1.5" />}
                   </div>
-                  <p className="text-[11px] font-medium text-slate-500">Kota Singkawang</p>
+                  {/* CSS Khusus untuk Panah Looping */}
+                  <style>{`
+                    @keyframes slideRightLoop {
+                      0%, 100% { transform: translateX(0); }
+                      50% { transform: translateX(4px); }
+                    }
+                    .animate-arrow-loop {
+                      animation: slideRightLoop 1s ease-in-out infinite;
+                    }
+                  `}</style>
+
+                  {/* Wadah Teks Animasi Swap */}
+                  <div className="relative h-4 mt-0.5 w-32 overflow-hidden">
+                    {/* Teks Default (Kota Singkawang): Hilang ke atas saat di-hover */}
+                    <p className="absolute inset-0 text-[11px] font-medium text-slate-500 transition-all duration-300 transform group-hover:-translate-y-full group-hover:opacity-0 flex items-center">
+                      Kota Singkawang
+                    </p>
+                    
+                    {/* Teks Rahasia (Kunjungi Toko): Muncul dari bawah saat di-hover */}
+                    <p className="absolute inset-0 text-[11px] font-bold text-teal-600 transition-all duration-300 transform translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 flex items-center">
+                      Kunjungi Toko 
+                      <ChevronRight className="w-3.5 h-3.5 ml-0.5 animate-arrow-loop" />
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <button 
-                onClick={handleToggleFollow}
-                disabled={isFollowLoading}
-                className={`px-5 py-1.5 rounded-full border-2 text-[11px] font-bold transition-all duration-300 disabled:opacity-50 ${
-                  isFollowing 
-                    ? 'bg-teal-50 border-teal-100 text-teal-600' // Jika sudah follow
-                    : 'border-teal-500 text-teal-600 hover:bg-teal-50' // Jika belum follow
-                }`}
-              >
-                {isFollowLoading ? '...' : isFollowing ? 'Mengikuti' : 'Ikuti'}
-              </button>
+              </Link>
+              {/* 🌟 LOGIKA: Sembunyikan tombol jika yang melihat adalah pemiliknya sendiri */}
+              {currentUserId !== product.owner_id && (
+                <button 
+                  onClick={handleToggleFollow}
+                  disabled={isFollowLoading}
+                  className={`px-5 py-1.5 rounded-full border-2 text-[11px] font-bold transition-all duration-300 disabled:opacity-50 ${
+                    isFollowing 
+                      ? 'bg-teal-50 border-teal-100 text-teal-600' 
+                      : 'border-teal-500 text-teal-600 hover:bg-teal-50' 
+                  }`}
+                >
+                  {isFollowLoading ? '...' : isFollowing ? 'Mengikuti' : 'Ikuti'}
+                </button>
+              )}
             </div>
             <div className="space-y-2 text-[12px] font-medium text-slate-500">
               <div className="flex items-center">
@@ -497,34 +525,65 @@ return (
       </div>
 
       <nav className="w-full bg-white/95 backdrop-blur-xl p-4 md:pb-8 pb-4 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] border-t border-slate-100 z-50 shrink-0">
-        <div className="flex items-center space-x-3">
-          <button 
-            disabled={!product}
-            onClick={() => {
-              if (product?.owner_id) {
-              router.push(`/chat?targetId=${product.owner_id}&targetName=${encodeURIComponent(product.owner)}&targetAvatar=${encodeURIComponent(product.owner_avatar || '')}`);              } else {
-                router.push('/chat'); 
-              }
-            }} 
-            className="flex-1 bg-teal-50 border-2 border-teal-100 text-teal-600 font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 hover:bg-teal-100 transition-colors disabled:opacity-50"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-[13px]">Chat Pemilik</span>
-          </button>
+        
+        {/* 🌟 LOGIKA CERDAS: Cek apakah user yang login adalah pemilik barang ini */}
+        {currentUserId === product.owner_id ? (
           
-          {/* 🌟 TOMBOL LUAR TETAP NORMAL & ELEGAN */}
-          <button 
-            disabled={product.stock === 0}
-            onClick={handleBooking} 
-            className="flex-1 bg-teal-500 text-white font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CalendarCheck className="w-5 h-5" />
-            <span className="text-[13px]">
-              {product.stock === 0 ? "Stok Habis" : "Sewa Sekarang"}
-            </span>
-          </button>
-          
-        </div>
+          // ================= TAMPILAN KHUSUS PEMILIK BARANG =================
+          <div className="flex items-center space-x-3 w-full">
+            
+            {/* 🌟 TOMBOL KOTAK KIRI (Jalan Pintas Edit Barang) */}
+            <button 
+              onClick={() => router.push(`/admin/items/edit/${id}`)} // ✅ Sesuai dengan struktur URL di image_5463a7.png
+              className="w-[52px] h-[52px] bg-teal-50 text-teal-600 border-2 border-teal-100 rounded-[18px] flex justify-center items-center shrink-0 hover:bg-teal-100 transition-all active:scale-[0.95] cursor-pointer shadow-sm"
+              title="Edit Data Alat Ini"
+            >
+              <Edit3 className="w-5 h-5" />
+            </button>
+
+            {/* 🌟 TOMBOL PANJANG KANAN (Masuk Dashboard Admin) */}
+            <button 
+              onClick={() => router.push('/admin')} 
+              className="flex-1 bg-teal-500 text-white font-bold h-[52px] rounded-[18px] flex justify-center items-center space-x-2 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <LayoutDashboard className="w-5 h-5" /> 
+              <span className="text-[13px] tracking-wide">Masuk Dashboard</span>
+            </button>
+            
+          </div>
+
+        ) : (
+
+          // ================= TAMPILAN NORMAL (UNTUK PEMBELI) =================
+          <div className="flex items-center space-x-3 w-full">
+            <button 
+              disabled={!product}
+              onClick={() => {
+                if (product?.owner_id) {
+                  router.push(`/chat?targetId=${product.owner_id}&targetName=${encodeURIComponent(product.owner)}&targetAvatar=${encodeURIComponent(product.owner_avatar || '')}`);              
+                } else {
+                  router.push('/chat'); 
+                }
+              }} 
+              className="flex-1 bg-teal-50 border-2 border-teal-100 text-teal-600 font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 hover:bg-teal-100 transition-colors disabled:opacity-50"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-[13px]">Chat Pemilik</span>
+            </button>
+            
+            <button 
+              disabled={product.stock === 0}
+              onClick={handleBooking} 
+              className="flex-1 bg-teal-500 text-white font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CalendarCheck className="w-5 h-5" />
+              <span className="text-[13px]">
+                {product.stock === 0 ? "Stok Habis" : "Sewa Sekarang"}
+              </span>
+            </button>
+          </div>
+
+        )}
       </nav>
       {/* =============================================================== */}
       {/* 🌟 MODAL GATEKEEPER DINAMIS (Profil & KTP) */}

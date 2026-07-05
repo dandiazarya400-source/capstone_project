@@ -62,6 +62,10 @@ export default function ProfilePage() {
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // 🌟 State untuk menyimpan barang milik admin
+  const [adminProducts, setAdminProducts] = useState<any[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   
 
   useEffect(() => {
@@ -101,6 +105,7 @@ export default function ProfilePage() {
 
         if (data) {
           const freshData = {
+            id: data.id,
             full_name: data.full_name || 'Pengguna Baru',
             role: data.role || 'user', 
             balance: data.balance || 0,
@@ -111,7 +116,23 @@ export default function ProfilePage() {
           
           setProfile(freshData);
           localStorage.setItem('user_profile_cache', JSON.stringify(freshData));
+
+          if (freshData.role === 'admin' || freshData.role === 'superadmin') {
+            setIsLoadingProducts(true);
+            const { data: itemsData, error: itemsError } = await supabase
+              .from('items')
+              .select('id, name, price_per_day, condition, image_urls, stock')
+              .eq('owner_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .limit(4); // Tampilkan 4 terbaru saja sebagai preview
+              
+            if (!itemsError && itemsData) {
+              setAdminProducts(itemsData);
+            }
+            setIsLoadingProducts(false);
+          }
         }
+        
         
 
       } catch (fatalError) {
@@ -348,7 +369,64 @@ export default function ProfilePage() {
               </div>
             </Link>
           </section>
+          
         )}
+
+        {/* ================= ETALASE TOKO SAYA (HANYA ADMIN) ================= */}
+        {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
+          <section className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm mt-5">
+            <div className="flex justify-between items-end mb-4">
+              <div>
+                <h2 className="font-bold text-slate-800 text-[15px] flex items-center gap-2">
+                  <Store className="w-4 h-4 text-teal-500" />
+                  Barang Toko Saya
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">Preview etalase publik Anda</p>
+              </div>
+              <Link href="/admin" className="text-[11px] font-bold text-teal-600 hover:underline bg-teal-50 px-3 py-1.5 rounded-full">
+                Kelola Semua
+              </Link>
+            </div>
+
+            {isLoadingProducts ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
+              </div>
+            ) : adminProducts.length === 0 ? (
+              <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <Box className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-[12px] font-medium text-slate-500">Belum ada barang yang diunggah.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {adminProducts.map((item) => (
+                  <ProductCard 
+                    key={item.id}
+                    id={item.id}
+                    title={item.name}
+                    price={`Rp ${item.price_per_day?.toLocaleString('id-ID')}`}
+                    rating="0.0" // Ganti dengan relasi rating asli jika ada
+                    sold="0"
+                    owner={profile.full_name}
+                    image={item.image_urls?.[0] || 'https://via.placeholder.com/150'}
+                    isVerified={true}
+                  />
+                ))}
+              </div>
+            )}
+            
+            {/* Tombol Lihat Etalase Publik */}
+            <button 
+              onClick={() => router.push(`/shop/${profile?.id}`)} // Arahkan ke halaman publik toko
+              className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-teal-100 text-teal-600 text-[13px] font-bold hover:bg-teal-50 transition-colors"
+            >
+              <Link2 className="w-4 h-4" />
+              Lihat Tampilan Toko Publik
+            </button>
+          </section>
+        )}
+
+        
 
         {/* ================= KOTAK MASUK ================= */}
         {profile?.role === 'user' && (
@@ -374,6 +452,32 @@ export default function ProfilePage() {
                   BARU
                 </span>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+              </div>
+
+            </div>
+          </Link>
+        </section>
+        )}
+
+        {/* ================= TOKO LANGGANAN (FAVORIT) ================= */}
+        {profile?.role === 'user' && (
+        <section className="mt-4">
+          <Link href="/following"> 
+            <div className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center justify-between hover:border-rose-200 transition-all duration-300 group cursor-pointer">
+              
+              <div className="flex items-center space-x-3 overflow-hidden pr-2">
+                <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  {/* Pastikan ikon Heart di-import dari lucide-react */}
+                  <Heart className="w-5 h-5 text-rose-500" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="font-bold text-slate-800 text-[14px] truncate">Toko Langganan</h2>
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate">Toko & alat favorit Anda</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2 shrink-0">
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-rose-500 transition-colors" />
               </div>
 
             </div>
@@ -408,31 +512,36 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* ================= SALDO ================= */}
-        <section className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm relative overflow-hidden">
-          <div className="relative z-10 flex flex-col gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center">
-                <Banknote className="w-6 h-6 text-teal-600" />
+        {/* ================= SALDO (HANYA UNTUK USER) ================= */}
+        {profile?.role === 'user' && (
+          <section className="bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm relative overflow-hidden">
+            <div className="relative z-10 flex flex-col gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center">
+                  <Banknote className="w-6 h-6 text-teal-600" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 mb-0.5">Saldo Aktif</p>
+                  <h3 className="font-black text-slate-800 text-[22px] tracking-tight truncate pr-2">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(profile?.balance || 0)}
+                  </h3>
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] font-medium text-slate-500 mb-0.5">Saldo Aktif</p>
-                {/* Tambahkan class "truncate" agar teks yang kepanjangan dipotong rapi */}
-                <h3 className="font-black text-slate-800 text-[22px] tracking-tight truncate pr-2">
-                  {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(profile?.balance || 0)}
-                </h3>
+              <div className="flex space-x-3 mt-1">
+                <button onClick={() => setShowTopupModal(true)} className="flex-1 bg-teal-50 text-teal-600 border border-teal-100 py-2.5 rounded-xl text-[13px] font-bold hover:bg-teal-100 transition-colors shadow-sm">
+                  Isi Saldo
+                </button>
+                <button className="flex-1 bg-slate-50 text-slate-600 border border-slate-200 py-2.5 rounded-xl text-[13px] font-bold hover:bg-slate-100 transition-colors shadow-sm">
+                  Tarik Dana
+                </button>
               </div>
             </div>
-            <div className="flex space-x-3 mt-1">
-              <button onClick={() => setShowTopupModal(true)} className="flex-1 bg-teal-50 text-teal-600 border border-teal-100 py-2.5 rounded-xl text-[13px] font-bold hover:bg-teal-100 transition-colors shadow-sm">
-                Isi Saldo
-              </button>
-              <button className="flex-1 bg-slate-50 text-slate-600 border border-slate-200 py-2.5 rounded-xl text-[13px] font-bold hover:bg-slate-100 transition-colors shadow-sm">
-                Tarik Dana
-              </button>
-            </div>
-          </div>
-        </section>
+          </section>
+          
+        )}
+
+        
+
 
         
 
@@ -503,6 +612,7 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      
 
       <BottomNav />
     </div>
