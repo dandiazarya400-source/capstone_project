@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, User, Save, CheckCircle2, Camera, Loader2, Crop, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Cropper from 'react-easy-crop';
@@ -42,6 +42,10 @@ const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
 
 const EditProfilePage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get('next');
+
+  const [ktpStatus, setKtpStatus] = useState('unverified');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 1. GHOST CACHE: State Form langsung diisi dari memori (0 milidetik)
@@ -89,10 +93,11 @@ const EditProfilePage = () => {
       // Tarik data terbaru dari DB di belakang layar
       const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('full_name, phone_number, address, avatar_url') 
+          .select('full_name, phone_number, address, avatar_url, verification_status') 
           .eq('id', currentUserId)
           .maybeSingle();
       if (data) { 
+        setKtpStatus(data.verification_status || 'unverified');
         const freshData = { 
           full_name: data.full_name || '', 
           phone_number: data.phone_number || '', 
@@ -175,7 +180,23 @@ const EditProfilePage = () => {
       }
 
       setSuccess(true);
-      setTimeout(() => { setSuccess(false); router.push('/profile'); }, 1500);
+      setTimeout(() => { 
+        setSuccess(false); 
+        
+        // 🌟 LOGIKA RANTAI KYC (KYC CHAINING)
+        if (ktpStatus === 'unverified' || ktpStatus === 'rejected') {
+          // Jika KTP belum kelar, oper ke halaman Verify beserta surat jalannya!
+          router.push(`/verify${nextUrl ? `?next=${encodeURIComponent(nextUrl)}` : ''}`);
+        } else if (nextUrl) {
+          // Jika KTP sudah aman, kembalikan ke Halaman Produk!
+          router.push(nextUrl);
+        } else {
+          // Jika tidak ada surat jalan (user mengedit profil secara manual), kembalikan ke profil
+          router.push('/profile'); 
+        }
+      }, 1500);
+
+    // 🌟 INI DIA YANG HILANG KOMANDAN! (Penutup try, catch, finally, dan penutup fungsi)
     } catch (error) { 
       console.error('Gagal menyimpan:', error); 
       alert('Terjadi kesalahan saat menyimpan profil.'); 
@@ -189,12 +210,34 @@ const EditProfilePage = () => {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-background text-main overflow-hidden relative animate-in fade-in duration-300">
-      <header className="w-full bg-background/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-primary/10 shrink-0">
-        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <h1 className="text-xl font-bold ml-2">Atur Profil</h1>
-      </header>
+      {/* ================= HEADER DINAMIS (STEPPER / NORMAL) ================= */}
+      {nextUrl ? (
+        // 🌟 TAMPILAN STEPPER (JIKA MAU SEWA BARANG)
+        <header className="w-full bg-white/95 backdrop-blur-md z-40 px-5 pt-12 pb-4 flex flex-col border-b border-slate-100 shrink-0 shadow-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={() => router.back()} className="p-1.5 -ml-1.5 bg-slate-50 text-slate-500 rounded-full hover:bg-slate-100 transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-teal-500 uppercase tracking-widest">Langkah 1 dari 2</span>
+              <h1 className="text-[16px] font-bold text-slate-800 leading-tight">Lengkapi Profil</h1>
+            </div>
+          </div>
+          {/* Progress Bar Visual */}
+          <div className="w-full flex gap-1.5">
+            <div className="h-1.5 flex-[1] bg-teal-500 rounded-full shadow-[0_0_10px_rgba(20,184,166,0.4)]"></div>
+            <div className="h-1.5 flex-[1] bg-slate-100 rounded-full"></div>
+          </div>
+        </header>
+      ) : (
+        // 🌟 TAMPILAN NORMAL (JIKA HANYA EDIT PROFIL BIASA)
+        <header className="w-full bg-background/95 backdrop-blur-md z-40 px-5 py-4 md:pt-12 pt-6 flex items-center border-b border-primary/10 shrink-0">
+          <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-xl font-bold ml-2">Atur Profil</h1>
+        </header>
+      )}
 
       {/* ================= NOTIFIKASI MELAYANG (TOAST) DI ATAS ================= */}
       <div className="absolute top-20 md:top-28 left-0 w-full flex justify-center z-50 pointer-events-none px-4">

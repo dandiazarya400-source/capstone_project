@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter,useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft, ShieldCheck, IdCard, User, 
@@ -11,6 +11,8 @@ import { useUserStore } from '@/store/useUserStore'; // 🌟 Import Zustand
 
 const VerifyPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get('next');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, type: 'success', message: '' });
 
@@ -145,7 +147,12 @@ const VerifyPage = () => {
       showToast('success', 'Data terkirim! Menunggu verifikasi admin.');
       
       setTimeout(() => {
-        router.push('/profile'); 
+        // 🌟 JIKA ADA SURAT JALAN, KEMBALIKAN KE HALAMAN PRODUK!
+        if (nextUrl) {
+          router.push(nextUrl);
+        } else {
+          router.push('/profile'); 
+        }
       }, 2000);
 
     } catch (error: any) {
@@ -172,17 +179,39 @@ const VerifyPage = () => {
       )}
 
       {/* Header */}
-      <header className="w-full px-5 py-4 border-b border-primary/10 flex items-center space-x-3 bg-background/95 backdrop-blur-md sticky top-0 z-50 shrink-0">
-        <button onClick={() => router.back()} className="text-main hover:text-primary transition-colors p-1 -ml-1 rounded-full">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <div>
-          <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            Verifikasi KTP
-          </h1>
-        </div>
-      </header>
+      {/* ================= HEADER DINAMIS (STEPPER / NORMAL) ================= */}
+      {nextUrl ? (
+        // 🌟 TAMPILAN STEPPER (LANGKAH 2)
+        <header className="w-full bg-white/95 backdrop-blur-md z-40 px-5 pt-12 pb-4 flex flex-col border-b border-slate-100 shrink-0 shadow-sm sticky top-0">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={() => router.back()} className="p-1.5 -ml-1.5 bg-slate-50 text-slate-500 rounded-full hover:bg-slate-100 transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-teal-500 uppercase tracking-widest">Langkah 2 dari 2</span>
+              <h1 className="text-[16px] font-bold text-slate-800 leading-tight">Verifikasi KTP</h1>
+            </div>
+          </div>
+          {/* Progress Bar Visual (Keduanya Hijau) */}
+          <div className="w-full flex gap-1.5">
+            <div className="h-1.5 flex-[1] bg-teal-500 rounded-full opacity-50"></div>
+            <div className="h-1.5 flex-[1] bg-teal-500 rounded-full shadow-[0_0_10px_rgba(20,184,166,0.4)]"></div>
+          </div>
+        </header>
+      ) : (
+        // 🌟 TAMPILAN NORMAL (JIKA VERIFIKASI BIASA)
+        <header className="w-full px-5 py-4 border-b border-primary/10 flex items-center space-x-3 bg-background/95 backdrop-blur-md sticky top-0 z-50 shrink-0">
+          <button onClick={() => router.back()} className="text-main hover:text-primary transition-colors p-1 -ml-1 rounded-full">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              Verifikasi KTP
+            </h1>
+          </div>
+        </header>
+      )}
 
       {/* Main Form */}
       <main className="flex-1 overflow-y-auto p-5 pb-24 space-y-8">

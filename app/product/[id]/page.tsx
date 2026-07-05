@@ -24,6 +24,9 @@ const ProductDetailPage = () => {
   // State untuk Validasi Reviewer
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userVerificationStatus, setUserVerificationStatus] = useState<string>('unverified');
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
+  const [gateModal, setGateModal] = useState<'none' | 'profile' | 'ktp' | 'pending' | 'rejected'>('none');
+
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [eligibleTxId, setEligibleTxId] = useState<string | null>(null); 
 
@@ -98,7 +101,10 @@ const ProductDetailPage = () => {
             .single();
             
           if (profileData) {
-            setUserVerificationStatus(profileData.verification_status || 'unverified');
+            const dataProfil = profileData as any; 
+            
+            setUserVerificationStatus(dataProfil.verification_status || 'unverified');
+            setIsProfileComplete(!!(dataProfil.phone_number && dataProfil.address));
           }
 
           const { data: txData } = await supabase.from('transactions')
@@ -252,19 +258,37 @@ const ProductDetailPage = () => {
   const handleBooking = () => {
     sessionStorage.removeItem('homeProductsCache');
     
-    // 1. Jika belum login, usir ke halaman login
+    // 🛑 POLISI 1: Cek Login
     if (!currentUserId) {
       router.push('/login');
       return;
     }
 
-    // 2. JURUS PENCEGATAN: Jika status KTP belum 'verified', gembok jalannya!
-    if (userVerificationStatus !== 'verified') {
-      setShowVerifyModal(true); // Nyalakan modal pop-up pelatnas
+    // 🛑 POLISI 2: Cek Kelengkapan Profil Dasar
+    if (!isProfileComplete) {
+      setGateModal('profile');
       return;
     }
 
-    // 3. Jika lolos verifikasi, silakan lanjut booking tanggal
+    // 🛑 POLISI 3: Cek Status KTP (Tahan jika masih diproses)
+    if (userVerificationStatus === 'pending') {
+      setGateModal('pending');
+      return;
+    }
+
+    // 🛑 POLISI 4: Cek Status KTP (Tolak jika ditolak admin)
+    if (userVerificationStatus === 'rejected') {
+      setGateModal('rejected');
+      return;
+    }
+
+    // 🛑 POLISI 5: Cek Status KTP (Wajib belum verified)
+    if (userVerificationStatus !== 'verified') {
+      setGateModal('ktp'); 
+      return;
+    }
+
+    // 🟢 JALUR HIJAU: Lolos semua hadangan, silakan menyewa!
     router.push(`/booking?stock=${product.stock}&id=${id}&price=${product.rawPrice}`);
   };
 
@@ -503,46 +527,66 @@ return (
         </div>
       </nav>
       {/* =============================================================== */}
-      {/* 🌟 MODAL JALAN TOL KE VERIFIKASI KTP (ABSOLUTE + STICKY) */}
+      {/* 🌟 MODAL GATEKEEPER DINAMIS (Profil & KTP) */}
       {/* =============================================================== */}
-      {showVerifyModal && (
+      {gateModal !== 'none' && (
         <div className="absolute inset-0 z-[110] pointer-events-none">
-          <div className="sticky top-0 w-full h-[100dvh] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto">
+          <div className="sticky top-0 w-full h-[100dvh] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto">
             
-            <div className="bg-white border border-slate-100 w-full max-w-[300px] rounded-[28px] p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            <div className="bg-white border border-slate-100 w-full max-w-[320px] rounded-[28px] p-6 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
               
-              <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-4 shadow-inner border border-rose-100 animate-bounce">
-                <Lock className="w-6 h-6" />
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-inner border animate-bounce ${
+                gateModal === 'pending' ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-rose-50 text-rose-500 border-rose-100'
+              }`}>
+                {gateModal === 'pending' ? <Clock className="w-7 h-7" /> : <Lock className="w-7 h-7" />}
               </div>
               
-              <h3 className="text-[17px] font-bold text-slate-800 mb-1.5">Verifikasi Diperlukan</h3>
+              <h3 className="text-[18px] font-black text-slate-800 mb-1.5">
+                {gateModal === 'profile' && "Lengkapi Profil!"}
+                {gateModal === 'ktp' && "Verifikasi KTP Diperlukan"}
+                {gateModal === 'pending' && "Sedang Direview"}
+                {gateModal === 'rejected' && "Verifikasi Ditolak"}
+              </h3>
               
-              <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">
-                {userVerificationStatus === 'rejected' 
-                  ? 'Pengajuan KTP Anda sebelumnya ditolak oleh Superadmin. Silakan periksa alasan di profil dan unggah ulang berkas yang valid.'
-                  : 'Untuk menjaga keamanan transaksi antar pengguna, Anda diwajibkan melakukan verifikasi KTP terlebih dahulu sebelum menyewa alat.'}
+              <p className="text-[12px] font-medium text-slate-500 mb-6 leading-relaxed">
+                {gateModal === 'profile' && "Sebelum mulai menyewa, yuk lengkapi informasi profil dan nomor HP Anda terlebih dahulu!"}
+                {gateModal === 'ktp' && "Untuk menjaga keamanan transaksi antar pengguna, Anda diwajibkan melakukan verifikasi KTP."}
+                {gateModal === 'pending' && "Sabar ya! Dokumen KTP Anda sedang diperiksa oleh tim kami. Silakan cek kembali nanti."}
+                {gateModal === 'rejected' && "Pengajuan KTP Anda ditolak. Silakan cek catatan di profil dan unggah ulang berkas yang valid."}
               </p>
 
               <div className="flex w-full gap-3">
                 <button 
-                  onClick={() => setShowVerifyModal(false)} 
-                  className="flex-1 py-3 rounded-2xl text-[12px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors"
+                  onClick={() => setGateModal('none')} 
+                  className="flex-1 py-3.5 rounded-2xl text-[13px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors"
                 >
-                  Batal
+                  {gateModal === 'pending' ? 'Tutup' : 'Batal'}
                 </button>
-                <button 
-                  onClick={() => {
-                    setShowVerifyModal(false);
-                    router.push('/verify'); // 🌟 LANGSUNG LEMPAR KE JALAN TOL VERIFIKASI KTP
-                  }} 
-                  className="flex-[1.5] py-3 rounded-2xl text-[12px] font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-md shadow-teal-500/20 transition-colors flex justify-center items-center gap-1.5"
-                >
-                  Verifikasi Sekarang
-                </button>
+                
+                {gateModal !== 'pending' && (
+                  <button 
+                    onClick={() => {
+                      setGateModal('none');
+                      // 🌟 AMBIL URL HALAMAN PRODUK INI SAAT INI
+                      const currentPath = window.location.pathname;
+                      
+                      // 🌟 LEMPAR USER SAMBIL MEMBAWA "SURAT JALAN" (?next=...)
+                      if (gateModal === 'profile') {
+                        // Rute ini BENAR sesuai struktur app/profile/edit
+                        router.push(`/profile/edit?next=${encodeURIComponent(currentPath)}`); 
+                      }  
+                      if (gateModal === 'ktp' || gateModal === 'rejected') {
+                        router.push(`/verify?next=${encodeURIComponent(currentPath)}`);
+                      }
+                    }} 
+                    className="flex-[1.5] py-3.5 rounded-2xl text-[13px] font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-md shadow-teal-500/20 transition-colors"
+                  >
+                    {gateModal === 'profile' ? 'Atur Profil' : 'Verifikasi KTP'}
+                  </button>
+                )}
               </div>
 
             </div>
-
           </div>
         </div>
       )}
