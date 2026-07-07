@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter,useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/store/useUserStore'; // 🌟 Import Zustand
 
-const VerifyPage = () => {
+const VerifyContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get('next');
@@ -311,6 +311,20 @@ const VerifyPage = () => {
         </form>
       </main>
     </div>
+  );
+};
+
+const VerifyPage = () => {
+  return (
+    <Suspense 
+      fallback={
+        <div className="h-[100dvh] w-full flex items-center justify-center bg-[#0B0416] text-emerald-500">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      }
+    >
+      <VerifyContent />
+    </Suspense>
   );
 };
 
