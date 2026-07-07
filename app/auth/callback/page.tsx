@@ -11,25 +11,22 @@ export default function AuthCallbackPage() {
     // 🌟 Saat halaman ini terbuka, Supabase secara otomatis sedang
     // menyedot token dari URL (#access_token=...) di belakang layar.
     
-    const handleGoogleLogin = async () => {
-      try {
-        // Kita pancing untuk memastikan sesi sudah tersimpan
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) throw error;
+   const handleGoogleLogin = async () => {
+    // 🌟 LOGIKA CERDAS: Ambil domain saat ini (localhost ATAU vercel.app)
+    // lalu tempelkan /auth/callback di belakangnya
+    const redirectUrl = `${window.location.origin}/auth/callback`;
 
-        if (session) {
-          // Jika token berhasil ditangkap, langsung tendang ke Beranda!
-          router.replace('/'); 
-        } else {
-          // Jika entah kenapa gagal, tendang balik ke halaman login
-          router.replace('/login');
-        }
-      } catch (err) {
-        console.error("Gagal menangkap token Google:", err);
-        router.replace('/login');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl, // 🌟 Paksa Google pulang ke alamat ini!
       }
-    };
+    });
+
+    if (error) {
+      console.error("Gagal login Google:", error);
+    }
+  };
 
     // Beri jeda setengah detik agar mesin Supabase selesai mencerna URL-nya
     const timer = setTimeout(() => {
