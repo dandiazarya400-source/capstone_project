@@ -285,7 +285,26 @@ const EditProfileContent = () => {
             <label className="text-[10px] font-bold text-muted uppercase ml-1 tracking-wider">Nomor WhatsApp</label>
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-primary" />
-              <input type="tel" placeholder="0895..." required className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-primary/50 transition-all shadow-inner" value={formData.phone_number} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} />
+              <input 
+                type="tel" 
+                placeholder="0895-xxxx-xxxx" 
+                required 
+                className="w-full bg-surface border border-primary/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:border-primary/50 transition-all shadow-inner" 
+                value={formData.phone_number} 
+                onChange={(e) => {
+                  // 🌟 1. Bersihkan: Hapus paksa semua karakter yang BUKAN angka (mencegah huruf masuk)
+                  const onlyNumbers = e.target.value.replace(/\D/g, '');
+                  
+                  // 🌟 2. Format: Tambahkan strip (-) setiap 4 angka berturut-turut
+                  const formattedNumber = onlyNumbers.replace(/(\d{4})(?=\d)/g, '$1-');
+                  
+                  // 🌟 3. Batasi panjang maksimal (misal 15 karakter = 12 angka + 3 strip, khas nomor Indonesia)
+                  const finalNumber = formattedNumber.substring(0, 16);
+                  
+                  // 4. Simpan ke state
+                  setFormData({...formData, phone_number: finalNumber});
+                }} 
+              />
             </div>
           </div>
           {/* ================= ALAMAT PENGIRIMAN & PETA ================= */}
