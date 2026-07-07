@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MapPin, Phone, User, Save, CheckCircle2, Camera, Loader2, Crop, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -40,7 +40,7 @@ const getCroppedImg = (imageSrc: string, pixelCrop: any) => {
   });
 };
 
-const EditProfilePage = () => {
+const EditProfileContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get('next');
@@ -377,6 +377,20 @@ const EditProfilePage = () => {
         </div>
       )}
     </div>
+  );
+};
+
+const EditProfilePage = () => {
+  return (
+    <Suspense 
+      fallback={
+        <div className="h-[100dvh] w-full flex items-center justify-center bg-[#0B0416] text-teal-500">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      }
+    >
+      <EditProfileContent />
+    </Suspense>
   );
 };
 
