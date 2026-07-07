@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   ArrowLeft, Search, ShoppingCart, Menu, Star, Lock, AlertTriangle, Edit3, LayoutDashboard,
-  Clock, BadgeCheck, MessageCircle, CalendarCheck, Tag, AlignLeft, ChevronRight
+  Clock, BadgeCheck, MessageCircle, CalendarCheck, Tag, AlignLeft, ChevronRight, Loader2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
@@ -30,6 +30,7 @@ const ProductDetailPage = () => {
 
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [eligibleTxId, setEligibleTxId] = useState<string | null>(null); 
+  const [isCheckingGate, setIsCheckingGate] = useState(false);
 
   
   // State untuk Form Input Review
@@ -256,41 +257,65 @@ const ProductDetailPage = () => {
     router.back();
   };
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
     sessionStorage.removeItem('homeProductsCache');
     
-    // 🛑 POLISI 1: Cek Login
+    // 🛑 POLISI 1: Cek Login (Bisa pakai state karena login jarang berubah tiba-tiba)
     if (!currentUserId) {
       router.push('/login');
       return;
     }
 
-    // 🛑 POLISI 2: Cek Kelengkapan Profil Dasar
-    if (!isProfileComplete) {
-      setGateModal('profile');
-      return;
-    }
+    // Nyalakan loading di tombol
+    setIsCheckingGate(true);
 
-    // 🛑 POLISI 3: Cek Status KTP (Tahan jika masih diproses)
-    if (userVerificationStatus === 'pending') {
-      setGateModal('pending');
-      return;
-    }
+    try {
+      // 🌟 TARIK DATA SEGAR DARI DATABASE (ABSOLUTE TRUTH)
+      const { data: freshProfile, error } = await supabase
+        .from('profiles')
+        .select('phone_number, address, verification_status')
+        .eq('id', currentUserId)
+        .single();
 
-    // 🛑 POLISI 4: Cek Status KTP (Tolak jika ditolak admin)
-    if (userVerificationStatus === 'rejected') {
-      setGateModal('rejected');
-      return;
-    }
+      if (error) throw error;
 
-    // 🛑 POLISI 5: Cek Status KTP (Wajib belum verified)
-    if (userVerificationStatus !== 'verified') {
-      setGateModal('ktp'); 
-      return;
-    }
+      const profileComplete = !!(freshProfile?.phone_number && freshProfile?.address);
+      const statusKtp = freshProfile?.verification_status || 'unverified';
 
-    // 🟢 JALUR HIJAU: Lolos semua hadangan, silakan menyewa!
-    router.push(`/booking?stock=${product.stock}&id=${id}&price=${product.rawPrice}`);
+      // 🛑 POLISI 2: Cek Kelengkapan Profil Dasar (Pakai data segar)
+      if (!profileComplete) {
+        setGateModal('profile');
+        return;
+      }
+
+      // 🛑 POLISI 3: Cek Status KTP (Tahan jika masih diproses)
+      if (statusKtp === 'pending') {
+        setGateModal('pending');
+        return;
+      }
+
+      // 🛑 POLISI 4: Cek Status KTP (Tolak jika ditolak admin)
+      if (statusKtp === 'rejected') {
+        setGateModal('rejected');
+        return;
+      }
+
+      // 🛑 POLISI 5: Cek Status KTP (Wajib belum verified)
+      if (statusKtp !== 'verified') {
+        setGateModal('ktp'); 
+        return;
+      }
+
+      // 🟢 JALUR HIJAU: Lolos semua hadangan, silakan menyewa!
+      router.push(`/booking?stock=${product.stock}&id=${id}&price=${product.rawPrice}`);
+
+    } catch (err) {
+      console.error("Gagal mengecek status profil:", err);
+      alert("Terjadi kesalahan sistem, silakan coba lagi.");
+    } finally {
+      // Matikan loading
+      setIsCheckingGate(false);
+    }
   };
 
   if (loading) return <div className="h-[100dvh] w-full flex items-center justify-center bg-[#F2FDFB] text-teal-600"><div className="animate-spin h-8 w-8 border-b-2 border-teal-500 rounded-full"></div></div>;
@@ -572,14 +597,23 @@ return (
             </button>
             
             <button 
-              disabled={product.stock === 0}
+              disabled={product.stock === 0 || isCheckingGate}
               onClick={handleBooking} 
               className="flex-1 bg-teal-500 text-white font-bold py-3.5 rounded-[18px] flex justify-center items-center space-x-2 shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <CalendarCheck className="w-5 h-5" />
-              <span className="text-[13px]">
-                {product.stock === 0 ? "Stok Habis" : "Sewa Sekarang"}
-              </span>
+              {isCheckingGate ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-[13px]">Memeriksa...</span>
+                </>
+              ) : (
+                <>
+                  <CalendarCheck className="w-5 h-5" />
+                  <span className="text-[13px]">
+                    {product.stock === 0 ? "Stok Habis" : "Sewa Sekarang"}
+                  </span>
+                </>
+              )}
             </button>
           </div>
 
